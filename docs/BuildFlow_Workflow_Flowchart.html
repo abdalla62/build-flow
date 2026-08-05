@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BuildFlow — System Workflow A to Z</title>
+  <style>
+    :root {
+      --bg: #eef2f7;
+      --line: #94a3b8;
+      --start: #1e3a5f;
+      --admin: #2563eb;
+      --setup: #16a34a;
+      --se: #ca8a04;
+      --pm: #7c3aed;
+      --decision: #db2777;
+      --reject: #dc2626;
+      --rfq: #0284c7;
+      --supplier: #0d9488;
+      --compare: #ea580c;
+      --best: #15803d;
+      --po: #0891b2;
+      --confirm: #6d28d9;
+      --plan: #a16207;
+      --delivery: #0369a1;
+      --receive: #b91c1c;
+      --inventory: #166534;
+      --pay: #1d4ed8;
+      --report: #6d28d9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: #0f172a;
+      padding: 32px 16px 64px;
+    }
+    .page {
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .header h1 {
+      margin: 0 0 6px;
+      font-size: 1.45rem;
+      letter-spacing: -0.02em;
+    }
+    .header p {
+      margin: 0;
+      color: #475569;
+      font-size: 0.92rem;
+    }
+    .flow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .oval {
+      background: var(--start);
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      padding: 12px 42px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+    }
+    .connector {
+      width: 3px;
+      height: 22px;
+      background: var(--line);
+    }
+    .arrow {
+      width: 0;
+      height: 0;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-top: 10px solid var(--line);
+      margin-bottom: 2px;
+    }
+    .card {
+      width: 100%;
+      border-radius: 14px;
+      padding: 14px 16px 14px 14px;
+      color: #fff;
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 12px;
+      align-items: start;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+    }
+    .icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+    }
+    .card h3 {
+      margin: 0 0 4px;
+      font-size: 0.98rem;
+      line-height: 1.25;
+    }
+    .card .meta {
+      margin: 0;
+      font-size: 0.78rem;
+      opacity: 0.95;
+      line-height: 1.35;
+    }
+    .card .role {
+      display: inline-block;
+      margin-top: 6px;
+      background: rgba(0,0,0,0.18);
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .diamond-wrap {
+      position: relative;
+      width: 180px;
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 4px 0;
+    }
+    .diamond {
+      width: 120px;
+      height: 120px;
+      background: var(--decision);
+      color: #fff;
+      transform: rotate(45deg);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 18px rgba(219, 39, 119, 0.35);
+    }
+    .diamond span {
+      transform: rotate(-45deg);
+      font-weight: 800;
+      text-align: center;
+      font-size: 0.95rem;
+      line-height: 1.2;
+    }
+    .branch {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 4px;
+    }
+    .branch-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .branch-label {
+      font-size: 0.75rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .branch-label.no { color: var(--reject); }
+    .branch-label.yes { color: var(--setup); }
+    .reject {
+      background: var(--reject);
+      width: 100%;
+      text-align: center;
+      padding: 14px 10px;
+      border-radius: 12px;
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.88rem;
+    }
+    .subflow {
+      width: 100%;
+      background: #e0f2fe;
+      border: 2px solid #0284c7;
+      border-radius: 16px;
+      padding: 14px;
+    }
+    .subflow h4 {
+      margin: 0 0 10px;
+      color: #0c4a6e;
+      font-size: 0.9rem;
+    }
+    .status-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .status {
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px 8px;
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #0f172a;
+      border: 1px solid #bae6fd;
+    }
+    .status.done { border-color: #86efac; background: #f0fdf4; color: #166534; }
+    .footer {
+      margin-top: 28px;
+      text-align: center;
+      color: #64748b;
+      font-size: 0.8rem;
+    }
+    @media print {
+      body { background: #fff; padding: 12px; }
+      .card, .oval, .diamond { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <h1>BuildFlow — System Workflow A to Z</h1>
+      <p>Construction Material Procurement · From Setup to Payment &amp; Reports</p>
+    </div>
+
+    <div class="flow">
+      <div class="oval">START</div>
+      <div class="connector"></div><div class="arrow"></div>
+
+      <div class="card" style="background:var(--admin)">
+        <div class="icon">⚙</div>
+        <div>
+          <h3>1. Admin Setup</h3>
+          <p class="meta">Users · Roles · Projects · Materials catalog base</p>
+          <span class="role">Administrator</span>
+        </div>
+      </div>
+      <div class="connector"></div><div class="arrow"></div>
+
+      <div class="card" style="background:var(--setup)">
+        <div class="icon">📁</div>
+        <div>
+          <h3>2. Project &amp; Material Setup</h3>
+          <p class="meta">Projects, Categories, Suppliers, Materials (stock &amp; price)</p>
+          <span class="role">Administrator / Procurement</span>
+        </div>
+      </div>
+      <div class="connector"></div><div class="arrow"></div>
+
+      <div class="card" style="background:var(--se)">
+        <div class="icon">👷</div>
+        <div>
+          <h3>3. Site Engineer Creates Material Request</h3>
+          <p class="meta">Project · Material · Qty · Priority · Required date · Reason</p>
+          <span class="role">Site Engineer</span>
+        </div>
+      </div>
+      <div class="connector"></div><div class="arrow"></div>
+
+      <div class="card" style="background:var(--pm)">
+        <div class="icon">👤</div>
+        <div>
+          <h3>4. Project Manager Reviews Material Request</h3>
+          <p class="meta">Check need &amp; project budget context</p>
+          <span class="role">Project Manager</span>
+        </div>
+      </div>
+      <div class="connector"></div><div class="arrow"></div>
+
+      <div class="diamond-wrap">
+        <div class="diamond"><span>Approved?</span></div>
+      </div>
+
+      <div class="branch">
+        <div class="branch-col">
+          <div class="branch-label no">NO</div>
+          <div class="connector"></div><div class="arrow"></div>
+          <div class="reject">✕ Reject / Return</div>
+        </div>
+        <div class="branch-col">
+          <div class="branch-label yes">YES</div>
+          <div class="connector"></div><div class="arrow"></div>
+          <div class="card" style="background:var(--rfq)">
+            <div class="icon">📨</div>
+            <div>
+              <h3>5. Send RFQ / Request Quotes</h3>
+              <p class="meta">Invite suppliers for the approved material need</p>
+              <span class="role">Procurement Officer</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="connector"></div><div class="arrow"></div>
+
+      <div class="card" style="background:var(--supplier)">
+        <div class="icon">📄</div>
+        <div>
+          <h3>6. Suppliers Submit Quotations</h3>
+          <p class="meta">Unit price · Delivery cost · Days · Payment terms · Warranty</p>
+          <span class="role">Supplier</span>
+        </div>
+      </div>
+      <div class="connector"></div><div class="arrow"></div>
+
+      <div class="card" style="background:var(--compare)">
+        <div class="icon">⚖</div>
+        <div>
+          <h3>7. Procurement Compares Quotations</h3>
+          <p class="meta">Price · Delivery time · Rating · Warranty</p>
+          <span class="role">Procurement Officer</span>
+        </div>
+      </div>
+      <div class="connector"></div><div class="arrow"></div>
+
+      <div class="card" style="background:var(--best)">
+        <div class="icon">🏆</div>
+        <div>
+          <h3>8. Best Supplier Selected</h3>
+          <p class="meta">Winning quote chosen for purchase</p>
+          <span class="role">Procurement Officer</span>
+        </div>
+      </div>
+      <div class="connector"></div><div class="arrow"></div>
+
+      <div class="card" style="background:var(--po)">
+        <div class="icon">PO</div>
+        <div>
+          <h3>9. System Generates Purchase Order (PO)</h3>
+          <p class="meta">Quantities · Prices · Tax/Discount · PO number</p>
+          <span class="role">Procurement / System</span>
+        </div>
+      </div>
+      <div class="connector"></div><div class="arrow"></div>
+
+      <div class="card" style="background:var(--confirm)">
+        <div class="icon">✓</div>
+        <div>
+          <h3>10. Supplier Confirms Purchase Order</h3>
+          <p class="meta">PO accepted · Invoice can be attached</p>
+          <span class="role">Supplier</span>
+        </div>
+      </div>
+      <div class="connector"></div><div class="arrow"></div>
+
+      <div class="card" style="background:var(--plan)">
+        <div class="icon">🚚</div>
+        <div>
+          <h3>11. Procurement Plans Delivery</h3>
+          <p class="meta">Driver · Vehicle · Address · Date · Time slot</p>
+          <span class="role">Procurement Officer</span>
+        </div>
+      </div>
+      <div class="connector"></div><div class="arrow"></div>
+
+      <div class="subflow">
+        <h4>12. Delivery Staff Updates Delivery Status</h4>
+        <div class="status-row">
+          <div class="status">📦 Preparing</div>
+          <div class="status">🚛 Dispatched</div>
+          <div class="status">🛣 In Transit</div>
+          <div class="status done">✅ Delivered</div>
+        </div>
+      </div>
+      <div class="connector"></div><div class="arrow"></div>
+
+      <div class="card" style="background:var(--receive)">
+        <div class="icon">👷</div>
+        <div>
+          <h3>13. Site Engineer Confirms Materials Received</h3>
+          <p class="meta">Received qty · Damaged qty · Comments</p>
+          <span class="role">Site Engineer</span>
+        </div>
+      </div>
+      <div class="connector"></div><div class="arrow"></div>
+
+      <div class="card" style="background:var(--inventory)">
+        <div class="icon">🏗</div>
+        <div>
+          <h3>14. Inventory Automatically Updates</h3>
+          <p class="meta">Stock In on Delivered · Stock Out if damaged · Ledger</p>
+          <span class="role">System</span>
+        </div>
+      </div>
+      <div class="connector"></div><div class="arrow"></div>
+
+      <div class="card" style="background:var(--pay)">
+        <div class="icon">$</div>
+        <div>
+          <h3>15. Accountant Records Payment</h3>
+          <p class="meta">WaafiPay / Mobile Wallet · Paid amount · Remaining · Payment status</p>
+          <span class="role">Accountant</span>
+        </div>
+      </div>
+      <div class="connector"></div><div class="arrow"></div>
+
+      <div class="card" style="background:var(--report)">
+        <div class="icon">📊</div>
+        <div>
+          <h3>16. System Generates Reports</h3>
+          <p class="meta">Procurement · Inventory · Financial · Notifications · Audit logs</p>
+          <span class="role">Administrator / System</span>
+        </div>
+      </div>
+      <div class="connector"></div><div class="arrow"></div>
+
+      <div class="oval">END</div>
+    </div>
+
+    <p class="footer">
+      BuildFlow · Optimizing Construction Procurement<br />
+      Distributed Web and Mobile System for Field Logistics and Financial Tracking<br />
+      Tip: Press <strong>Ctrl+P</strong> → Save as PDF, or take a full-page screenshot for WhatsApp.
+    </p>
+  </div>
+</body>
+</html>
