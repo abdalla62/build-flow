@@ -103,17 +103,25 @@ app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/audit', require('./routes/audit'));
 app.use('/api/reports', require('./routes/report'));
 
-// Root route
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Welcome to the Construction Material Procurement Management API',
-    status: 'Running',
-    version: '1.0.0'
-  });
-});
-
-// Centralized error handling
+// Centralized API error handling (before SPA fallback)
 app.use(errorHandler);
+
+// Production: serve built React web app (client/dist copied to server/public)
+const clientDist = path.join(__dirname, 'public');
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(clientDist));
+  app.get(/^\/(?!api\/|uploads\/).*/, (req, res) => {
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+} else {
+  app.get('/', (req, res) => {
+    res.json({
+      message: 'Welcome to the Construction Material Procurement Management API',
+      status: 'Running',
+      version: '1.0.0'
+    });
+  });
+}
 
 const PORT = process.env.PORT || 5000;
 
