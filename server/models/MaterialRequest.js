@@ -56,6 +56,11 @@ const MaterialRequestSchema = new mongoose.Schema({
     quantity: { type: Number, default: 0 },
     comments: { type: String, default: '' },
     reportedAt: { type: Date }
+  },
+  missingReported: {
+    quantity: { type: Number, default: 0 },
+    comments: { type: String, default: '' },
+    reportedAt: { type: Date }
   }
 }, {
   timestamps: true

@@ -35,7 +35,11 @@ const reviewValidation = [
 ];
 
 const receiveValidation = [
-  body('damagedQuantity', 'Damaged quantity must be positive').optional().isInt({ min: 0 }),
+  body('damagedQuantity', 'Damaged quantity must be a non-negative integer').optional().isInt({ min: 0 }),
+  body('missingQuantity', 'Missing quantity must be a non-negative integer').optional().isInt({ min: 0 }),
+  body('damagedComments').optional({ nullable: true }).isString(),
+  body('missingComments').optional({ nullable: true }).isString(),
+  body('comments').optional({ nullable: true }).isString(),
   validate
 ];
 

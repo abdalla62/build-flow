@@ -1,6 +1,8 @@
 const MaterialRequest = require('../models/MaterialRequest');
 const Approval = require('../models/Approval');
 const Project = require('../models/Project');
+const PurchaseOrder = require('../models/PurchaseOrder');
+const Delivery = require('../models/Delivery');
 const Notification = require('../models/Notification');
 const logActivity = require('../utils/audit');
 
@@ -68,10 +70,39 @@ exports.getRequests = async (req, res, next) => {
       .skip((page - 1) * limit)
       .sort({ createdAt: -1 });
 
-    // For Project Managers, load the Approval history for reviewed items
+    // Confirm Receipt only after Delivery Staff marks shipment Delivered
+    const orderedIds = requests
+      .filter((r) => r.status === 'Ordered')
+      .map((r) => r._id);
+
+    const readyRequestIds = new Set();
+    if (orderedIds.length > 0) {
+      const pos = await PurchaseOrder.find({ materialRequest: { $in: orderedIds } })
+        .select('_id materialRequest');
+      const poIds = pos.map((p) => p._id);
+      if (poIds.length > 0) {
+        const delivered = await Delivery.find({
+          purchaseOrder: { $in: poIds },
+          status: 'Delivered'
+        }).select('purchaseOrder');
+        const deliveredPoIds = new Set(delivered.map((d) => d.purchaseOrder.toString()));
+        pos.forEach((p) => {
+          if (deliveredPoIds.has(p._id.toString()) && p.materialRequest) {
+            readyRequestIds.add(p.materialRequest.toString());
+          }
+        });
+      }
+    }
+
+    const enrichedRequests = requests.map((r) => {
+      const obj = r.toObject();
+      obj.canConfirmReceipt = r.status === 'Ordered' && readyRequestIds.has(r._id.toString());
+      return obj;
+    });
+
     res.status(200).json({
       success: true,
-      requests,
+      requests: enrichedRequests,
       totalPages: Math.ceil(count / limit),
       currentPage: Number(page),
       totalRequests: count
@@ -283,54 +314,117 @@ exports.reviewRequest = async (req, res, next) => {
   }
 };
 
-// @desc    Site Engineer confirm receipt of materials / report damage
+// @desc    Site Engineer confirm receipt of materials / report damage or missing
 // @route   PUT /api/requests/:id/receive
 // @access  Private/Site Engineer
 exports.receiveMaterials = async (req, res, next) => {
   try {
-    const { damagedQuantity, comments } = req.body;
+    const damagedQty = Number(req.body.damagedQuantity) || 0;
+    const missingQty = Number(req.body.missingQuantity) || 0;
+    const damagedComments = req.body.damagedComments || req.body.comments || '';
+    const missingComments = req.body.missingComments || '';
 
     const request = await MaterialRequest.findById(req.params.id).populate('project material');
     if (!request) {
       return res.status(404).json({ success: false, error: 'Request not found' });
     }
 
-    if (request.requestedBy.toString() !== req.user.id) {
+    if (
+      request.requestedBy.toString() !== req.user.id &&
+      req.user.role !== 'Administrator'
+    ) {
       return res.status(403).json({ success: false, error: 'Not authorized to confirm receipt for this request' });
+    }
+
+    if (request.status !== 'Ordered') {
+      return res.status(400).json({
+        success: false,
+        error: `Cannot confirm receipt while request status is "${request.status}"`
+      });
+    }
+
+    // Require Delivery Staff to mark shipment Delivered first
+    const pos = await PurchaseOrder.find({ materialRequest: request._id }).select('_id');
+    const poIds = pos.map((p) => p._id);
+    const deliveredShipment = poIds.length
+      ? await Delivery.findOne({ purchaseOrder: { $in: poIds }, status: 'Delivered' })
+      : null;
+
+    if (!deliveredShipment) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot confirm receipt until delivery is marked Delivered by Delivery Staff'
+      });
+    }
+
+    if (damagedQty < 0 || missingQty < 0) {
+      return res.status(400).json({ success: false, error: 'Quantities cannot be negative' });
+    }
+
+    if (damagedQty + missingQty > request.quantity) {
+      return res.status(400).json({
+        success: false,
+        error: `Damaged + missing (${damagedQty + missingQty}) cannot exceed requested quantity (${request.quantity})`
+      });
     }
 
     request.status = 'Delivered';
 
-    if (damagedQuantity && damagedQuantity > 0) {
+    const Inventory = require('../models/Inventory');
+    const Material = require('../models/Material');
+
+    if (damagedQty > 0) {
       request.damagedReported = {
-        quantity: damagedQuantity,
-        comments: comments || 'No comments provided',
+        quantity: damagedQty,
+        comments: damagedComments || 'No comments provided',
         reportedAt: Date.now()
       };
-      
-      const Inventory = require('../models/Inventory');
-      const Material = require('../models/Material');
 
-      // Create a Stock Out adjustment log for the damaged quantity
       await Inventory.create({
         material: request.material._id,
         project: request.project._id,
-        quantity: damagedQuantity,
+        quantity: damagedQty,
         type: 'Stock Out',
         referenceType: 'Adjustment',
         referenceId: request._id
       });
 
-      // Deduct damaged quantity from material balance
       await Material.findByIdAndUpdate(request.material._id, {
-        $inc: { currentStock: -damagedQuantity }
+        $inc: { currentStock: -damagedQty }
       });
 
-      // Notify Procurement / Admin of damaged delivery
       await Notification.create({
         targetRole: 'Procurement Officer',
         title: 'Damaged Materials Reported',
-        message: `Site Engineer reported ${damagedQuantity} damaged ${request.material.unit} of ${request.material.name} on delivery receipt for "${request.project.name}".`,
+        message: `Site Engineer reported ${damagedQty} damaged ${request.material.unit} of ${request.material.name} on delivery receipt for "${request.project.name}".`,
+        type: 'General'
+      });
+    }
+
+    if (missingQty > 0) {
+      request.missingReported = {
+        quantity: missingQty,
+        comments: missingComments || 'No comments provided',
+        reportedAt: Date.now()
+      };
+
+      await Inventory.create({
+        material: request.material._id,
+        project: request.project._id,
+        quantity: missingQty,
+        type: 'Stock Out',
+        referenceType: 'Adjustment',
+        referenceId: request._id
+      });
+
+      await Material.findByIdAndUpdate(request.material._id, {
+        $inc: { currentStock: -missingQty }
+      });
+
+      await Notification.create({
+        targetRole: 'Procurement Officer',
+        title: 'Missing Materials Reported',
+        message: `Site Engineer reported ${missingQty} missing ${request.material.unit} of ${request.material.name} on delivery receipt for "${request.project.name}".`,
         type: 'General'
       });
     }
@@ -341,7 +435,7 @@ exports.receiveMaterials = async (req, res, next) => {
       req,
       req.user,
       'Receive Materials',
-      `Received materials. Damaged: ${damagedQuantity || 0} ${request.material.unit}`
+      `Received materials. Damaged: ${damagedQty} ${request.material.unit}, Missing: ${missingQty} ${request.material.unit}`
     );
 
     res.status(200).json({ success: true, request });

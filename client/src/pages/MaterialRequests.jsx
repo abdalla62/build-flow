@@ -66,6 +66,8 @@ const MaterialRequests = () => {
   const [receivingRequest, setReceivingRequest] = useState(null);
   const [damagedQuantity, setDamagedQuantity] = useState(0);
   const [damagedComments, setDamagedComments] = useState('');
+  const [missingQuantity, setMissingQuantity] = useState(0);
+  const [missingComments, setMissingComments] = useState('');
 
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [historyRequest, setHistoryRequest] = useState(null);
@@ -235,6 +237,8 @@ const MaterialRequests = () => {
     setReceivingRequest(request);
     setDamagedQuantity(0);
     setDamagedComments('');
+    setMissingQuantity(0);
+    setMissingComments('');
     setIsReceiveOpen(true);
   };
 
@@ -327,8 +331,18 @@ const MaterialRequests = () => {
 
   const postReceive = async () => {
     try {
+      const damaged = Number(damagedQuantity) || 0;
+      const missing = Number(missingQuantity) || 0;
+      const total = receivingRequest?.quantity || 0;
+      if (damaged + missing > total) {
+        toast.error(`Damaged + missing cannot exceed ${total}`);
+        return;
+      }
       const res = await axios.put(`/api/requests/${receivingRequest._id}/receive`, {
-        damagedQuantity,
+        damagedQuantity: damaged,
+        missingQuantity: missing,
+        damagedComments,
+        missingComments,
         comments: damagedComments
       });
       if (res.data.success) {
@@ -424,7 +438,7 @@ const MaterialRequests = () => {
                 </button>
               </>
             )}
-            {r.status === 'Ordered' && (
+            {r.status === 'Ordered' && r.canConfirmReceipt && (
               <button
                 onClick={() => handleOpenReceive(r)}
                 className="px-2.5 py-1.5 text-xs font-bold bg-green-700 hover:bg-green-600 text-white rounded-lg shadow-sm transition-colors"
@@ -921,9 +935,9 @@ const MaterialRequests = () => {
         {receivingRequest && (
           <div className="space-y-4 py-2">
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Confirm quantities of received materials on site. Report if any item arrived damaged or broken.
+              Confirm quantities received on site after delivery. Report damaged or missing items if any.
             </p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase">Total Requested</label>
                 <input
@@ -938,8 +952,21 @@ const MaterialRequests = () => {
                 <label className="block text-xs font-bold text-slate-400 uppercase">Damaged Quantity</label>
                 <input
                   type="number"
+                  min="0"
                   value={damagedQuantity}
                   onChange={(e) => setDamagedQuantity(Number(e.target.value))}
+                  placeholder="0"
+                  className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-850 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase">Missing Quantity</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={missingQuantity}
+                  onChange={(e) => setMissingQuantity(Number(e.target.value))}
                   placeholder="0"
                   className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-850 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
                 />
@@ -950,10 +977,23 @@ const MaterialRequests = () => {
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase">Damaged Materials Notes</label>
                 <textarea
-                  rows="3"
+                  rows="2"
                   value={damagedComments}
                   onChange={(e) => setDamagedComments(e.target.value)}
                   placeholder="Describe the nature of the damaged stock..."
+                  className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-850 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                />
+              </div>
+            )}
+
+            {missingQuantity > 0 && (
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase">Missing Materials Notes</label>
+                <textarea
+                  rows="2"
+                  value={missingComments}
+                  onChange={(e) => setMissingComments(e.target.value)}
+                  placeholder="Describe what is missing from the delivery..."
                   className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-850 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
                 />
               </div>
@@ -1033,6 +1073,21 @@ const MaterialRequests = () => {
                 </p>
                 <p className="text-xs italic text-slate-500 mt-1">
                   Note: "{historyRequest.damagedReported.comments}"
+                </p>
+              </div>
+            )}
+
+            {/* Missing Report Info */}
+            {historyRequest.missingReported && historyRequest.missingReported.quantity > 0 && (
+              <div className="rounded-xl border border-orange-100 bg-orange-50/20 dark:border-slate-850 dark:bg-slate-950/30 p-3.5 space-y-1 text-orange-800 dark:text-orange-400">
+                <div className="flex items-center gap-1 text-xs font-bold">
+                  <FiAlertTriangle /> Missing Materials Report
+                </div>
+                <p className="text-xs font-semibold">
+                  Reported: {historyRequest.missingReported.quantity} {historyRequest.material?.unit} missing.
+                </p>
+                <p className="text-xs italic text-slate-500 mt-1">
+                  Note: "{historyRequest.missingReported.comments}"
                 </p>
               </div>
             )}
