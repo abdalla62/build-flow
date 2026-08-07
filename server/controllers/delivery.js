@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Delivery = require('../models/Delivery');
 const PurchaseOrder = require('../models/PurchaseOrder');
 const MaterialRequest = require('../models/MaterialRequest');
@@ -6,6 +7,13 @@ const Inventory = require('../models/Inventory');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const logActivity = require('../utils/audit');
+
+const toObjectId = (id) => {
+  if (!id) return id;
+  if (id instanceof mongoose.Types.ObjectId) return id;
+  if (mongoose.Types.ObjectId.isValid(id)) return new mongoose.Types.ObjectId(id);
+  return id;
+};
 
 // @desc    Schedule delivery for accepted PO
 // @route   POST /api/deliveries
@@ -90,18 +98,45 @@ exports.getDeliveries = async (req, res, next) => {
 
     // Role filtration
     if (req.user.role === 'Delivery Staff') {
-      query.driver = req.user.id;
+      query.driver = toObjectId(req.user.id);
     } else if (req.user.role === 'Site Engineer') {
       // Find requests submitted by Engineer, and match deliveries linked to those request POs
       const requests = await MaterialRequest.find({ requestedBy: req.user.id });
       const requestIds = requests.map(r => r._id);
       const pos = await PurchaseOrder.find({ materialRequest: { $in: requestIds } });
       const poIds = pos.map(po => po._id);
-      query.purchaseOrder = { $in: poIds };
+      query.purchaseOrder = { $in: poIds.map(toObjectId) };
     }
 
     const count = await Delivery.countDocuments(query);
-    const deliveries = await Delivery.find(query)
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.max(1, Number(limit) || 10);
+
+    // Chronological queue: open jobs first (soonest date/slot), then completed
+    const sortedIds = await Delivery.aggregate([
+      { $match: query },
+      {
+        $addFields: {
+          isDone: {
+            $cond: [{ $in: ['$status', ['Delivered', 'Cancelled']] }, 1, 0]
+          }
+        }
+      },
+      {
+        $sort: {
+          isDone: 1,
+          deliveryDate: 1,
+          timeSlot: 1,
+          createdAt: 1
+        }
+      },
+      { $skip: (pageNum - 1) * limitNum },
+      { $limit: limitNum },
+      { $project: { _id: 1 } }
+    ]);
+
+    const idOrder = sortedIds.map((d) => d._id.toString());
+    const deliveriesRaw = await Delivery.find({ _id: { $in: sortedIds.map((d) => d._id) } })
       .populate('driver', 'name phone vehiclePlateCode vehicleType vehicleModel')
       .populate('scheduledBy', 'name role')
       .populate('rescheduleHistory.changedBy', 'name role')
@@ -112,16 +147,16 @@ exports.getDeliveries = async (req, res, next) => {
           { path: 'items.material', select: 'name unit' },
           { path: 'materialRequest', populate: { path: 'project', select: 'name location manager' } }
         ]
-      })
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .sort({ deliveryDate: 1 }); // Sorted by nearest date first
+      });
+
+    const byId = new Map(deliveriesRaw.map((d) => [d._id.toString(), d]));
+    const deliveries = idOrder.map((id) => byId.get(id)).filter(Boolean);
 
     res.status(200).json({
       success: true,
       deliveries,
-      totalPages: Math.ceil(count / limit) || 1,
-      currentPage: Number(page),
+      totalPages: Math.ceil(count / limitNum) || 1,
+      currentPage: pageNum,
       totalDeliveries: count
     });
   } catch (error) {
