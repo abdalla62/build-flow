@@ -99,16 +99,42 @@ const Deliveries = () => {
   } = useForm();
 
   const watchDriver = watch('driver');
+  const watchPurchaseOrder = watch('purchaseOrder');
 
+  const getRequiredDateYmd = (poId) => {
+    const selected = acceptedPOs.find((o) => o._id === poId);
+    const required = selected?.materialRequest?.requiredDate;
+    if (!required) return '';
+    return typeof required === 'string' ? required.split('T')[0] : toYMD(new Date(required));
+  };
+
+  const formatDisplayDate = (ymd) => {
+    if (!ymd) return '';
+    const [y, m, d] = ymd.split('-').map(Number);
+    if (!y || !m || !d) return ymd;
+    return new Date(y, m - 1, d).toLocaleDateString();
+  };
+
+  // Lock vehicle fields to the selected driver's registered profile
   useEffect(() => {
-    if (!watchDriver) return;
+    if (!watchDriver) {
+      setValue('vehicle', '');
+      setValue('vehicleType', '');
+      setValue('vehicleModel', '');
+      return;
+    }
     const selected = drivers.find((d) => d._id === watchDriver);
     if (selected) {
-      if (selected.vehiclePlateCode) setValue('vehicle', selected.vehiclePlateCode);
-      if (selected.vehicleType) setValue('vehicleType', selected.vehicleType);
-      if (selected.vehicleModel) setValue('vehicleModel', selected.vehicleModel);
+      setValue('vehicle', selected.vehiclePlateCode || '');
+      setValue('vehicleType', selected.vehicleType || '');
+      setValue('vehicleModel', selected.vehicleModel || '');
     }
   }, [watchDriver, drivers, setValue]);
+
+  // Clear manually entered date when PO changes (user must re-enter matching required date)
+  useEffect(() => {
+    setValue('deliveryDate', '');
+  }, [watchPurchaseOrder, setValue]);
 
   const fetchDeliveries = async () => {
     setLoading(true);
@@ -612,15 +638,19 @@ const Deliveries = () => {
               <label className="block text-xs font-bold text-slate-400 uppercase">Vehicle Plate Code</label>
               <input
                 type="text"
-                placeholder="e.g. TRK-4820"
+                readOnly
+                placeholder="Select a driver first"
                 className={`w-full mt-1.5 px-4 py-2 border ${
                   errors.vehicle ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
-                {...register('vehicle', { required: 'Required' })}
+                } bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-xl text-sm outline-none cursor-not-allowed`}
+                {...register('vehicle', {
+                  required: 'Selected driver has no registered vehicle plate'
+                })}
               />
               {errors.vehicle && (
                 <p className="mt-1 text-xs text-red-500 font-semibold">{errors.vehicle.message}</p>
               )}
+              <p className="mt-1 text-[11px] text-slate-400">Locked to driver profile — cannot be changed here.</p>
             </div>
           </div>
 
@@ -634,13 +664,28 @@ const Deliveries = () => {
                   errors.deliveryDate ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
                 } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
                 {...register('deliveryDate', {
-                  required: 'Required',
-                  validate: (value) =>
-                    !value || value >= todayMin || 'Cannot select a past date'
+                  required: 'Please enter the delivery date',
+                  validate: (value) => {
+                    if (!value) return 'Please enter the delivery date';
+                    if (value < todayMin) return 'Cannot select a past date';
+                    const requiredYmd = getRequiredDateYmd(watchPurchaseOrder);
+                    if (!requiredYmd) {
+                      return 'Selected PO has no required date from Site Engineer';
+                    }
+                    if (value !== requiredYmd) {
+                      return `Taariikhda ma saxna. Site Engineer-ku wuxuu soo codsaday in alaabta la geeyo ${formatDisplayDate(requiredYmd)}. Fadlan geli taariikhda saxda ah.`;
+                    }
+                    return true;
+                  }
                 })}
               />
               {errors.deliveryDate && (
                 <p className="mt-1 text-xs text-red-500 font-semibold">{errors.deliveryDate.message}</p>
+              )}
+              {watchPurchaseOrder && getRequiredDateYmd(watchPurchaseOrder) && !errors.deliveryDate && (
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Must match Site Engineer required date: {formatDisplayDate(getRequiredDateYmd(watchPurchaseOrder))}
+                </p>
               )}
             </div>
 

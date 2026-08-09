@@ -15,6 +15,17 @@ const toObjectId = (id) => {
   return id;
 };
 
+const toDateOnlyYMD = (value) => {
+  if (!value) return '';
+  if (typeof value === 'string') return value.split('T')[0];
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 // @desc    Schedule delivery for accepted PO
 // @route   POST /api/deliveries
 // @access  Private/Procurement Officer
@@ -23,9 +34,6 @@ exports.scheduleDelivery = async (req, res, next) => {
     const {
       purchaseOrder,
       driver,
-      vehicle,
-      vehicleType,
-      vehicleModel,
       deliveryAddress,
       deliveryDate,
       timeSlot
@@ -36,22 +44,51 @@ exports.scheduleDelivery = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Purchase order not found' });
     }
 
+    if (!po.materialRequest?.requiredDate) {
+      return res.status(400).json({
+        success: false,
+        error: 'Purchase order has no Site Engineer required date'
+      });
+    }
+
     // Verify driver is Delivery Staff
     const driverUser = await User.findById(driver);
     if (!driverUser || driverUser.role !== 'Delivery Staff') {
       return res.status(400).json({ success: false, error: 'Assigned user must be a Delivery Staff driver' });
     }
 
+    // Vehicle must come from the driver's registered profile (not client override)
+    const lockedVehicle = (driverUser.vehiclePlateCode || '').trim();
+    if (!lockedVehicle) {
+      return res.status(400).json({
+        success: false,
+        error: 'Selected driver has no registered vehicle plate code'
+      });
+    }
+
+    // Delivery date is entered manually, but must match the Site Engineer required date
+    const requiredYmd = toDateOnlyYMD(po.materialRequest.requiredDate);
+    const submittedYmd = toDateOnlyYMD(deliveryDate);
+    if (!submittedYmd || submittedYmd !== requiredYmd) {
+      const requiredDisplay = new Date(`${requiredYmd}T00:00:00`).toLocaleDateString();
+      return res.status(400).json({
+        success: false,
+        error: `Taariikhda ma saxna. Site Engineer-ku wuxuu soo codsaday in alaabta la geeyo ${requiredDisplay}. Fadlan geli taariikhda saxda ah.`
+      });
+    }
+
+    const lockedDeliveryDate = requiredYmd;
+
     const delivery = await Delivery.create({
       purchaseOrder,
       driver,
       scheduledBy: req.user.id,
-      vehicle: vehicle || driverUser.vehiclePlateCode,
-      vehicleType: vehicleType || driverUser.vehicleType || '',
-      vehicleModel: vehicleModel || driverUser.vehicleModel || '',
+      vehicle: lockedVehicle,
+      vehicleType: driverUser.vehicleType || '',
+      vehicleModel: driverUser.vehicleModel || '',
       deliveryAddress,
-      deliveryDate,
-      originalDeliveryDate: deliveryDate,
+      deliveryDate: lockedDeliveryDate,
+      originalDeliveryDate: lockedDeliveryDate,
       timeSlot,
       status: 'Scheduled'
     });
@@ -66,7 +103,7 @@ exports.scheduleDelivery = async (req, res, next) => {
     await Notification.create({
       user: driver,
       title: 'New Delivery Route Assigned',
-      message: `You have been assigned a delivery for PO ${po.purchaseOrderNumber} scheduled on ${new Date(deliveryDate).toLocaleDateString()} (${timeSlot}).`,
+      message: `You have been assigned a delivery for PO ${po.purchaseOrderNumber} scheduled on ${new Date(lockedDeliveryDate).toLocaleDateString()} (${timeSlot}).`,
       type: 'Delivery'
     });
 

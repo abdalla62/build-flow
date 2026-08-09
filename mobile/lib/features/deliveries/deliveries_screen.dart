@@ -838,17 +838,57 @@ class _ScheduleDispatchDialogState
     return parts.join(' - ');
   }
 
+  String _toYmd(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
+
+  String? _requiredDateYmdForPo(String? poId) {
+    if (poId == null || poId.isEmpty) return null;
+    final order = widget.orders.firstWhere(
+      (o) => popId(o) == poId,
+      orElse: () => <String, dynamic>{},
+    );
+    final mr = order['materialRequest'];
+    if (mr is! Map) return null;
+    final raw = mr['requiredDate']?.toString() ?? '';
+    if (raw.isEmpty) return null;
+    // Match web: use calendar date from ISO string (YYYY-MM-DD)
+    return raw.contains('T') ? raw.split('T').first : raw;
+  }
+
+  DateTime? _requiredDateForPo(String? poId) {
+    final ymd = _requiredDateYmdForPo(poId);
+    if (ymd == null || ymd.isEmpty) return null;
+    final parts = ymd.split('-');
+    if (parts.length != 3) return null;
+    final y = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+    final d = int.tryParse(parts[2]);
+    if (y == null || m == null || d == null) return null;
+    return DateTime(y, m, d);
+  }
+
+  void _onPoChanged(String? id) {
+    setState(() {
+      _poId = id;
+      _date = null; // user must re-enter date for the new PO
+      _error = null;
+    });
+  }
+
   void _onDriverChanged(String? id) {
     setState(() => _driverId = id);
-    if (id == null) return;
+    if (id == null) {
+      _vehicleCtrl.clear();
+      return;
+    }
     final driver = widget.drivers.firstWhere(
       (d) => popId(d) == id,
       orElse: () => <String, dynamic>{},
     );
-    final plate = driver['vehiclePlateCode']?.toString() ?? '';
-    if (plate.isNotEmpty) {
-      _vehicleCtrl.text = plate;
-    }
+    // Always use registered plate from driver profile (locked field)
+    _vehicleCtrl.text = driver['vehiclePlateCode']?.toString() ?? '';
   }
 
   Future<void> _pickDate() async {
@@ -871,13 +911,28 @@ class _ScheduleDispatchDialogState
       return;
     }
 
+    final requiredYmd = _requiredDateYmdForPo(_poId);
+    if (requiredYmd == null || requiredYmd.isEmpty) {
+      setState(() =>
+          _error = 'Selected PO has no required date from Site Engineer');
+      return;
+    }
+
+    final dateStr = _toYmd(_date!);
+    if (dateStr != requiredYmd) {
+      final requiredDate = _requiredDateForPo(_poId);
+      final display = requiredDate != null
+          ? DateFormat.yMd().format(requiredDate)
+          : requiredYmd;
+      setState(() {
+        _error =
+            'Taariikhda ma saxna. Site Engineer-ku wuxuu soo codsaday in alaabta la geeyo $display. Fadlan geli taariikhda saxda ah.';
+      });
+      return;
+    }
+
     setState(() => _submitting = true);
     try {
-      final dateStr =
-          '${_date!.year.toString().padLeft(4, '0')}-'
-          '${_date!.month.toString().padLeft(2, '0')}-'
-          '${_date!.day.toString().padLeft(2, '0')}';
-
       await ref.read(apiRepositoryProvider).scheduleDelivery({
         'purchaseOrder': _poId,
         'driver': _driverId,
@@ -904,6 +959,11 @@ class _ScheduleDispatchDialogState
 
   @override
   Widget build(BuildContext context) {
+    final requiredHintDate = _requiredDateForPo(_poId);
+    final requiredHint = requiredHintDate == null
+        ? null
+        : 'Must match Site Engineer required date: ${DateFormat.yMd().format(requiredHintDate)}';
+
     return AlertDialog(
       title: const Text('Schedule Shipment Dispatch'),
       content: SizedBox(
@@ -954,9 +1014,7 @@ class _ScheduleDispatchDialogState
                         ),
                       )
                       .toList(),
-                  onChanged: _submitting
-                      ? null
-                      : (v) => setState(() => _poId = v),
+                  onChanged: _submitting ? null : _onPoChanged,
                   validator: (v) =>
                       v == null || v.isEmpty ? 'Please select PO' : null,
                 ),
@@ -985,13 +1043,17 @@ class _ScheduleDispatchDialogState
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _vehicleCtrl,
-                  enabled: !_submitting,
+                  readOnly: true,
+                  enableInteractiveSelection: false,
                   decoration: const InputDecoration(
                     labelText: 'Vehicle Plate Code',
-                    hintText: 'e.g. TRK-4820',
+                    hintText: 'Select a driver first',
+                    helperText:
+                        'Locked to driver profile — cannot be changed here.',
                   ),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Selected driver has no registered vehicle plate'
+                      : null,
                 ),
                 const SizedBox(height: 12),
                 InkWell(
@@ -1002,6 +1064,7 @@ class _ScheduleDispatchDialogState
                       errorText: null,
                       suffixIcon: const Icon(Icons.calendar_today, size: 18),
                       enabled: !_submitting,
+                      helperText: requiredHint,
                     ),
                     child: Text(
                       _date == null
