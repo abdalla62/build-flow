@@ -140,15 +140,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     controller.dispose();
     if (ok != true || !mounted) return;
 
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final res = await ref.read(apiRepositoryProvider).clearPracticeData();
       if (!mounted) return;
       final msg = res['message']?.toString() ?? 'Practice data cleared';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      messenger.showSnackBar(SnackBar(content: Text(msg)));
       await _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceFirst('Exception: ', '')),
         ),

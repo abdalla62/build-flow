@@ -1,13 +1,35 @@
+import 'package:flutter/foundation.dart';
+
 /// API base URL configuration.
 ///
-/// Default = production Render (same data as web).
-/// Override for local backend:
-///   Android emulator: `--dart-define=API_BASE_URL=http://10.0.2.2:5000`
-///   Physical device:  `--dart-define=API_BASE_URL=http://YOUR_PC_IP:5000`
-///   Desktop/Chrome:   `--dart-define=API_BASE_URL=http://127.0.0.1:5000`
+/// - Debug (Start Debugging / `flutter run`): Android emulator → local server
+///   `http://10.0.2.2:5000` (Pixel / any AVD — same alias to your PC).
+/// - Release / profile: production Render.
+/// - Override anytime:
+///   `--dart-define=API_BASE_URL=http://YOUR_PC_IP:5000`
 class ApiConstants {
-  static const String baseUrl = String.fromEnvironment(
+  static const String _envUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://build-flow-inzo.onrender.com',
+    defaultValue: '',
   );
+
+  static const String productionUrl = 'https://build-flow-inzo.onrender.com';
+  static const String androidEmulatorLocalUrl = 'http://10.0.2.2:5000';
+  static const String desktopLocalUrl = 'http://127.0.0.1:5000';
+
+  static String get baseUrl {
+    if (_envUrl.isNotEmpty) return _envUrl;
+    if (kDebugMode) {
+      // Chrome / Windows desktop debug → localhost
+      if (kIsWeb ||
+          defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.macOS) {
+        return desktopLocalUrl;
+      }
+      // Android / iOS emulator debug → host machine
+      return androidEmulatorLocalUrl;
+    }
+    return productionUrl;
+  }
 }
