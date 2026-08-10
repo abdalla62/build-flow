@@ -335,7 +335,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     ? 'assets/images/accountant-dashboard-bg.png'
                     : role == 'Supplier'
                         ? 'assets/images/supplier-dashboard-bg.png'
-                        : 'assets/images/dashboard-bg.png',
+                        : role == 'Procurement Officer'
+                            ? 'assets/images/procurement-dashboard-bg.png'
+                            : 'assets/images/dashboard-bg.png',
             fit: BoxFit.cover,
             alignment: Alignment.center,
             errorBuilder: (_, _, _) => Container(

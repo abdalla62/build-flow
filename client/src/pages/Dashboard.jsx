@@ -292,7 +292,9 @@ const Dashboard = () => {
         ? '/images/accountant-dashboard-bg.png'
         : user?.role === 'Supplier'
           ? '/images/supplier-dashboard-bg.png'
-          : '/images/dashboard-bg.png';
+          : user?.role === 'Procurement Officer'
+            ? '/images/procurement-dashboard-bg.png'
+            : '/images/dashboard-bg.png';
 
   return (
     <div className="relative -m-4 min-h-[calc(100vh-4rem)] overflow-hidden sm:-m-6 md:-m-8">
