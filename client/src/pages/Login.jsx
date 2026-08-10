@@ -56,7 +56,7 @@ const Login = () => {
           transition={{ duration: 30, ease: 'linear', repeat: Infinity, repeatType: 'reverse' }}
         />
         <div className="absolute inset-0 bg-slate-950/65" />
-        <div className="absolute inset-0 bg-gradient-to-br from-teal-950/40 via-transparent to-amber-950/35" />
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/20 via-transparent to-amber-950/35" />
       </div>
 
       <motion.div
@@ -72,7 +72,7 @@ const Login = () => {
           transition={{ delay: 0.1 }}
         >
           <motion.div
-            className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-teal-600 text-white shadow-md shadow-teal-500/30"
+            className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-primary text-white shadow-md shadow-brand-primary/30"
             whileHover={{ scale: 1.08, rotate: -4 }}
             transition={{ type: 'spring', stiffness: 400, damping: 16 }}
           >
@@ -103,8 +103,8 @@ const Login = () => {
                 type="email"
                 placeholder="you@company.com"
                 className={`w-full rounded-xl border ${
-                  errors.email ? 'border-red-500 focus:ring-red-500' : 'border-white/10 focus:ring-teal-500'
-                } bg-slate-950/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none transition-all placeholder:text-slate-500 focus:border-teal-500 focus:bg-slate-950/80`}
+                  errors.email ? 'border-red-500 focus:ring-red-500' : 'border-white/10 focus:ring-brand-primary'
+                } bg-slate-950/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none transition-all placeholder:text-slate-500 focus:border-brand-primary focus:bg-slate-950/80`}
                 {...register('email', {
                   required: 'Email is required',
                   pattern: {
@@ -126,7 +126,7 @@ const Login = () => {
               </label>
               <Link
                 to="/forgot-password"
-                className="text-xs font-semibold text-teal-400 hover:text-teal-300 hover:underline"
+                className="text-xs font-semibold text-brand-primaryHover hover:text-teal-300 hover:underline"
               >
                 Forgot Password?
               </Link>
@@ -137,8 +137,8 @@ const Login = () => {
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 className={`w-full rounded-xl border ${
-                  errors.password ? 'border-red-500 focus:ring-red-500' : 'border-white/10 focus:ring-teal-500'
-                } bg-slate-950/60 py-2.5 pl-10 pr-12 text-sm text-white outline-none transition-all placeholder:text-slate-500 focus:border-teal-500 focus:bg-slate-950/80`}
+                  errors.password ? 'border-red-500 focus:ring-red-500' : 'border-white/10 focus:ring-brand-primary'
+                } bg-slate-950/60 py-2.5 pl-10 pr-12 text-sm text-white outline-none transition-all placeholder:text-slate-500 focus:border-brand-primary focus:bg-slate-950/80`}
                 {...register('password', { required: 'Password is required' })}
               />
               <button
@@ -160,7 +160,7 @@ const Login = () => {
             variants={fieldVariants}
             whileHover={{ scale: 1.02, y: -1 }}
             whileTap={{ scale: 0.98 }}
-            className="flex w-full items-center justify-center rounded-xl bg-teal-600 py-3 text-sm font-bold text-white shadow-lg shadow-teal-700/30 transition-colors hover:bg-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50"
+            className="flex w-full items-center justify-center rounded-xl bg-brand-primary py-3 text-sm font-bold text-white shadow-lg shadow-brand-primary/30 transition-colors hover:bg-brand-primaryHover focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50"
           >
             {isSubmitting ? (
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />

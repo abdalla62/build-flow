@@ -81,61 +81,56 @@ const Navbar = ({ toggleSidebar, sidebarCollapsed }) => {
   };
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 w-full items-center justify-between border-b border-slate-200/80 bg-white/80 px-3 sm:px-6 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/80 transition-colors duration-200">
-      
-      {/* Search & Collapse Trigger */}
-      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+    <header className="sticky top-0 z-10 flex h-16 w-full items-center justify-between border-b border-brand-border bg-brand-card/90 px-3 shadow-bf-sm backdrop-blur-md transition-colors duration-200 dark:border-brand-darkBorder dark:bg-brand-darkCard/90 sm:px-6">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-4">
         <button
           onClick={toggleSidebar}
-          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors shrink-0"
+          className="shrink-0 rounded-xl p-2 text-brand-muted transition-colors hover:bg-brand-bg dark:text-brand-darkMuted dark:hover:bg-white/5"
           aria-label="Toggle sidebar"
         >
           <FiMenu className="h-5 w-5" />
         </button>
 
         <div className="relative hidden sm:block">
-          <FiSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <FiSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
           <input
             type="text"
             placeholder="Search documents, materials..."
-            className="w-64 rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-sm outline-none focus:border-teal-500 focus:bg-white dark:border-slate-800 dark:bg-slate-950 dark:focus:border-teal-500 transition-all"
+            className="w-64 rounded-xl border border-brand-border bg-brand-bg py-2 pl-10 pr-4 text-sm text-brand-text outline-none transition-all focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 dark:border-brand-darkBorder dark:bg-brand-darkSecondary dark:text-slate-100 dark:focus:border-brand-primary"
           />
         </div>
       </div>
 
-      {/* User Actions Panel */}
       <div className="flex items-center gap-3">
-        {/* Dark Mode Toggle */}
         <button
           onClick={toggleTheme}
-          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
+          className="rounded-xl p-2 text-brand-muted transition-colors hover:bg-brand-bg dark:text-brand-darkMuted dark:hover:bg-white/5"
           title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
         >
           {theme === 'dark' ? <FiSun className="h-5 w-5" /> : <FiMoon className="h-5 w-5" />}
         </button>
 
-        {/* Notifications Dropdown */}
         <div className="relative" ref={notifyRef}>
           <button
             onClick={() => setNotificationsOpen(!notificationsOpen)}
-            className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
+            className="relative rounded-xl p-2 text-brand-muted transition-colors hover:bg-brand-bg dark:text-brand-darkMuted dark:hover:bg-white/5"
           >
             <FiBell className="h-5 w-5" />
             {unreadCount > 0 && (
-              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-slate-900">
+              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand-danger text-[10px] font-bold text-white ring-2 ring-brand-card dark:ring-brand-darkCard">
                 {unreadCount}
               </span>
             )}
           </button>
 
           {notificationsOpen && (
-            <div className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-1.25rem))] max-w-[calc(100vw-1.25rem)] rounded-xl border border-slate-200 bg-white py-2 shadow-xl dark:border-slate-800 dark:bg-slate-950 animate-in fade-in slide-in-from-top-3 duration-150">
-              <div className="flex items-center justify-between border-b border-slate-100 px-4 pb-2 dark:border-slate-800">
-                <span className="font-semibold text-slate-700 dark:text-slate-200">Notifications</span>
+            <div className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-1.25rem))] max-w-[calc(100vw-1.25rem)] rounded-card border border-brand-border bg-brand-card py-2 shadow-bf dark:border-brand-darkBorder dark:bg-brand-darkCard">
+              <div className="flex items-center justify-between border-b border-brand-border px-4 pb-2 dark:border-brand-darkBorder">
+                <span className="font-semibold text-brand-text dark:text-slate-200">Notifications</span>
                 {unreadCount > 0 && (
                   <button
                     onClick={markAllRead}
-                    className="text-xs font-semibold text-teal-600 hover:text-teal-500 dark:text-teal-400"
+                    className="text-xs font-semibold text-brand-primary hover:text-brand-primaryHover"
                   >
                     Mark all read
                   </button>
@@ -143,24 +138,24 @@ const Navbar = ({ toggleSidebar, sidebarCollapsed }) => {
               </div>
               <div className="max-h-64 overflow-y-auto">
                 {notifications.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-slate-400">No notifications</p>
+                  <p className="py-8 text-center text-sm text-brand-muted">No notifications</p>
                 ) : (
                   notifications.map((n) => (
                     <div
                       key={n._id}
                       onClick={() => !n.read && handleMarkOneRead(n._id)}
-                      className={`flex flex-col gap-1 border-b border-slate-100/50 px-4 py-3 hover:bg-slate-50 dark:border-slate-800/50 dark:hover:bg-slate-900/50 cursor-pointer ${
-                        !n.read ? 'bg-teal-50/20 dark:bg-teal-500/5' : ''
+                      className={`flex cursor-pointer flex-col gap-1 border-b border-brand-border/60 px-4 py-3 hover:bg-brand-bg dark:border-brand-darkBorder/60 dark:hover:bg-white/5 ${
+                        !n.read ? 'bg-brand-primary/5 dark:bg-brand-primary/10' : ''
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wide">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-brand-primary">
                           {n.type}
                         </span>
-                        <span className="text-[10px] text-slate-400">{getFormatTime(n.createdAt)}</span>
+                        <span className="text-[10px] text-brand-muted">{getFormatTime(n.createdAt)}</span>
                       </div>
-                      <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-snug">{n.title}</h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{n.message}</p>
+                      <h4 className="text-sm font-bold leading-snug text-brand-text dark:text-slate-200">{n.title}</h4>
+                      <p className="text-xs leading-relaxed text-brand-muted dark:text-brand-darkMuted">{n.message}</p>
                     </div>
                   ))
                 )}
@@ -169,41 +164,39 @@ const Navbar = ({ toggleSidebar, sidebarCollapsed }) => {
           )}
         </div>
 
-        {/* Vertical divider */}
-        <div className="h-6 w-px bg-slate-200 dark:bg-slate-800"></div>
+        <div className="h-6 w-px bg-brand-border dark:bg-brand-darkBorder" />
 
-        {/* User Profile Menu */}
         <div className="relative" ref={profileRef}>
           <button
             onClick={() => setProfileOpen(!profileOpen)}
-            className="flex items-center gap-2 rounded-lg p-1 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="flex items-center gap-2 rounded-xl p-1 transition-colors hover:bg-brand-bg dark:hover:bg-white/5"
           >
             {user?.avatar ? (
               <img
                 src={user.avatar}
                 alt={user.name}
-                className="h-8 w-8 rounded-full object-cover border border-teal-500 shadow-sm"
+                className="h-8 w-8 rounded-full border border-brand-primary/40 object-cover shadow-bf-sm"
               />
             ) : (
-              <div className="h-8 w-8 rounded-full bg-teal-600 border border-teal-500 flex items-center justify-center text-white font-semibold shadow-sm">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-brand-primary/40 bg-brand-primary text-sm font-semibold text-white shadow-bf-sm">
                 {user?.name?.charAt(0).toUpperCase() || 'U'}
               </div>
             )}
-            <span className="hidden text-sm font-semibold text-slate-700 dark:text-slate-200 md:block pr-1">
+            <span className="hidden pr-1 text-sm font-semibold text-brand-text dark:text-slate-200 md:block">
               {user?.name}
             </span>
           </button>
 
           {profileOpen && (
-            <div className="absolute right-0 mt-2 w-48 rounded-xl border border-slate-200 bg-white py-2 shadow-xl dark:border-slate-800 dark:bg-slate-950 animate-in fade-in slide-in-from-top-3 duration-150">
-              <div className="border-b border-slate-100 px-4 py-2 dark:border-slate-800">
-                <p className="text-xs text-slate-400">Signed in as</p>
-                <p className="truncate text-sm font-bold text-slate-800 dark:text-slate-200">{user?.email}</p>
+            <div className="absolute right-0 mt-2 w-48 rounded-card border border-brand-border bg-brand-card py-2 shadow-bf dark:border-brand-darkBorder dark:bg-brand-darkCard">
+              <div className="border-b border-brand-border px-4 py-2 dark:border-brand-darkBorder">
+                <p className="text-xs text-brand-muted">Signed in as</p>
+                <p className="truncate text-sm font-bold text-brand-text dark:text-slate-200">{user?.email}</p>
               </div>
               <Link
                 to="/profile"
                 onClick={() => setProfileOpen(false)}
-                className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                className="flex items-center gap-2 px-4 py-2 text-sm text-brand-text hover:bg-brand-bg dark:text-slate-300 dark:hover:bg-white/5"
               >
                 <FiSettings className="h-4 w-4" />
                 Profile Settings
@@ -213,7 +206,7 @@ const Navbar = ({ toggleSidebar, sidebarCollapsed }) => {
                   setProfileOpen(false);
                   logout();
                 }}
-                className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20"
+                className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-brand-danger hover:bg-rose-50 dark:hover:bg-rose-950/20"
               >
                 <FiLogOut className="h-4 w-4" />
                 Logout
@@ -223,6 +216,7 @@ const Navbar = ({ toggleSidebar, sidebarCollapsed }) => {
         </div>
       </div>
     </header>
+
   );
 };
 

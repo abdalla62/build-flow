@@ -1,6 +1,5 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import {
   FiGrid,
@@ -83,37 +82,28 @@ const Sidebar = ({ collapsed, mobileOpen = false, onNavigate }) => {
   };
 
   const menuItems = getMenuLinks();
-  // On mobile drawer always show labels; on desktop respect collapsed
   const showLabels = mobileOpen || !collapsed;
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-40 h-screen bg-[#0F172A] text-slate-400 transition-transform duration-300 md:transition-all ${
+      className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-slate-800 bg-brand-navy text-slate-400 transition-transform duration-300 md:transition-all ${
         showLabels ? 'w-64' : 'w-20'
-      } flex flex-col border-r border-slate-800 ${
-        mobileOpen ? 'translate-x-0' : '-translate-x-full'
-      } md:translate-x-0`}
+      } ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
     >
-      {/* Brand Header */}
-      <div className="flex h-16 items-center justify-center border-b border-slate-800 px-6">
+      <div className="flex h-16 items-center justify-center border-b border-slate-800/80 px-6">
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-600 text-white">
-            <FiBox className="h-6 w-6 animate-pulse" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-primary text-white shadow-bf-sm">
+            <FiBox className="h-5 w-5" />
           </div>
           {showLabels && (
-            <motion.h1
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-lg font-bold text-white tracking-wider whitespace-nowrap"
-            >
-              BUILD<span className="text-teal-400">FLOW</span>
-            </motion.h1>
+            <h1 className="whitespace-nowrap text-lg font-bold tracking-wider text-white">
+              BUILD<span className="text-brand-primaryHover">FLOW</span>
+            </h1>
           )}
         </div>
       </div>
 
-      {/* Navigation List */}
-      <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
         {menuItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -123,52 +113,43 @@ const Sidebar = ({ collapsed, mobileOpen = false, onNavigate }) => {
               end={item.path === '/'}
               onClick={() => onNavigate?.()}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                `flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors duration-200 ${
                   isActive
-                    ? 'bg-teal-700 text-white shadow-md shadow-teal-900/30'
-                    : 'hover:bg-slate-800/60 hover:text-white'
+                    ? 'bg-brand-primary text-white shadow-bf-sm'
+                    : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
                 }`
               }
             >
               <Icon className="h-5 w-5 shrink-0" />
-              {showLabels && (
-                <motion.span
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="whitespace-nowrap"
-                >
-                  {item.label}
-                </motion.span>
-              )}
+              {showLabels && <span className="whitespace-nowrap">{item.label}</span>}
             </NavLink>
           );
         })}
       </nav>
 
-      {/* User Footer Profile */}
-      <div className="border-t border-slate-800 p-4">
+      <div className="border-t border-slate-800/80 p-4">
         {showLabels && (
-          <div className="mb-4 rounded-lg bg-slate-800/40 p-3 flex items-center gap-3 overflow-hidden">
+          <div className="mb-3 flex items-center gap-3 overflow-hidden rounded-xl bg-white/5 p-3">
             {user?.avatar ? (
               <img
                 src={user.avatar}
                 alt={user.name}
-                className="h-9 w-9 rounded-full object-cover border border-teal-500/40 shrink-0"
+                className="h-9 w-9 shrink-0 rounded-full border border-brand-primary/40 object-cover"
               />
             ) : (
-              <div className="h-9 w-9 rounded-full bg-teal-600/30 border border-teal-500/40 flex items-center justify-center text-teal-400 font-semibold shrink-0">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-primary/40 bg-brand-primary/20 text-sm font-semibold text-brand-primaryHover">
                 {user?.name?.charAt(0).toUpperCase() || 'U'}
               </div>
             )}
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
-              <p className="text-xs text-slate-500 truncate">{user?.role}</p>
+              <p className="truncate text-sm font-semibold text-slate-100">{user?.name}</p>
+              <p className="truncate text-xs text-slate-500">{user?.role}</p>
             </div>
           </div>
         )}
         <button
           onClick={logout}
-          className="flex w-full items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors duration-200"
+          className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-rose-400 transition-colors hover:bg-rose-500/10"
         >
           <FiLogOut className="h-5 w-5 shrink-0" />
           {showLabels && <span>Logout</span>}

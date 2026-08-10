@@ -17,7 +17,7 @@ const Unauthorized = () => {
       <div className="mt-8">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-6 py-3 text-sm font-semibold text-white hover:bg-teal-600 shadow-lg shadow-teal-700/20 transition-all"
+          className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-6 py-3 text-sm font-semibold text-white hover:bg-brand-primaryHover shadow-lg shadow-teal-700/20 transition-all"
         >
           <FiArrowLeft className="h-4 w-4" />
           Back to Dashboard

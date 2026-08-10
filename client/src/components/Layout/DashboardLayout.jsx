@@ -42,13 +42,12 @@ const DashboardLayout = () => {
   const closeMobile = () => setMobileOpen(false);
 
   return (
-    <div className="min-h-screen bg-brand-bg dark:bg-brand-darkBg transition-colors duration-200">
-      {/* Mobile backdrop */}
+    <div className="min-h-screen bg-brand-bg transition-colors duration-200 dark:bg-brand-darkBg">
       {mobileOpen && (
         <button
           type="button"
           aria-label="Close menu"
-          className="fixed inset-0 z-30 bg-slate-950/60 backdrop-blur-[1px] md:hidden"
+          className="fixed inset-0 z-30 bg-brand-navy/50 md:hidden"
           onClick={closeMobile}
         />
       )}
@@ -59,7 +58,6 @@ const DashboardLayout = () => {
         onNavigate={closeMobile}
       />
 
-      {/* Main: full width on mobile; padded for fixed sidebar on md+ */}
       <div
         className={`flex min-h-screen flex-col transition-all duration-300 ${
           sidebarCollapsed ? 'md:pl-20' : 'md:pl-64'

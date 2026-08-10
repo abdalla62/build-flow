@@ -404,7 +404,7 @@ const MaterialRequests = () => {
     }},
     { key: 'status', label: 'Request Status', render: (r) => {
       let colors = 'bg-slate-50 text-slate-600 dark:bg-slate-800/40';
-      if (r.status === 'Approved') colors = 'bg-teal-50 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400';
+      if (r.status === 'Approved') colors = 'bg-brand-primary/10 text-brand-primary dark:bg-brand-primary/10 dark:text-brand-primaryHover';
       if (r.status === 'Returned') colors = 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400';
       if (r.status === 'Rejected') colors = 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400';
       if (r.status === 'Ordered') colors = 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400';
@@ -462,7 +462,7 @@ const MaterialRequests = () => {
             {r.status === 'Pending' && (
               <button
                 onClick={() => handleOpenReview(r)}
-                className="px-2.5 py-1.5 text-xs font-bold bg-teal-700 hover:bg-teal-600 text-white rounded-lg shadow-sm transition-colors"
+                className="px-2.5 py-1.5 text-xs font-bold bg-brand-primary hover:bg-brand-primaryHover text-white rounded-lg shadow-sm transition-colors"
               >
                 Review Request
               </button>
@@ -488,15 +488,15 @@ const MaterialRequests = () => {
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">Material Requests</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <h1 className="bf-page-title">Material Requests</h1>
+          <p className="bf-page-subtitle">
             Submit material orders, review remaining budgets, and complete approvals workflow.
           </p>
         </div>
         {isSiteEng && (
           <button
             onClick={handleOpenSubmit}
-            className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-600 shadow-md transition-all self-start sm:self-auto"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-primaryHover shadow-md transition-all self-start sm:self-auto"
           >
             <FiPlus className="h-5 w-5" />
             Request Material
@@ -505,7 +505,7 @@ const MaterialRequests = () => {
       </div>
 
       {/* Filter panel */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm">
+      <div className="flex flex-col md:flex-row gap-4 justify-between bg-brand-card dark:bg-brand-darkCard border border-brand-border dark:border-brand-darkBorder p-4 rounded-card shadow-bf-sm">
         <div className="flex flex-wrap gap-3">
           <select
             value={statusFilter}
@@ -513,7 +513,7 @@ const MaterialRequests = () => {
               setStatusFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 outline-none text-sm focus:border-teal-500 focus:bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400"
+            className="px-4 py-2 border border-brand-border dark:border-brand-darkBorder rounded-xl bg-slate-50 outline-none text-sm focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 text-slate-600 dark:text-slate-400"
           >
             <option value="">All Statuses</option>
             <option value="Pending">Pending</option>
@@ -531,7 +531,7 @@ const MaterialRequests = () => {
               setPriorityFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 outline-none text-sm focus:border-teal-500 focus:bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400"
+            className="px-4 py-2 border border-brand-border dark:border-brand-darkBorder rounded-xl bg-slate-50 outline-none text-sm focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 text-slate-600 dark:text-slate-400"
           >
             <option value="">All Priorities</option>
             <option value="Low">Low</option>
@@ -565,8 +565,8 @@ const MaterialRequests = () => {
             <label className="block text-xs font-bold text-slate-400 uppercase">Target Project</label>
             <select
               className={`w-full mt-1.5 px-4 py-2.5 border ${
-                errors.project ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white`}
+                errors.project ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card`}
               {...register('project', { required: 'Project selection is required' })}
             >
               <option value="">Select Project</option>
@@ -588,8 +588,8 @@ const MaterialRequests = () => {
                   <label className="block text-xs font-bold text-slate-400 uppercase">Material Item</label>
                   <select
                     className={`w-full mt-1.5 px-4 py-2.5 border ${
-                      errors.material ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                    } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white`}
+                      errors.material ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                    } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card`}
                     {...register('material', { required: 'Please select material' })}
                   >
                     <option value="">Select Material</option>
@@ -610,8 +610,8 @@ const MaterialRequests = () => {
                     type="number"
                     placeholder="1"
                     className={`w-full mt-1.5 px-4 py-2 border ${
-                      errors.quantity ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                    } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white`}
+                      errors.quantity ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                    } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card`}
                     {...register('quantity', { required: 'Required', min: { value: 1, message: 'Must be at least 1' } })}
                   />
                   {errors.quantity && (
@@ -621,11 +621,11 @@ const MaterialRequests = () => {
               </div>
 
               {watchQty > 0 && selectedMaterialPrice > 0 && (
-                <div className="rounded-xl border border-teal-100 bg-teal-50/20 dark:border-slate-800 dark:bg-slate-950/40 p-3 flex items-center justify-between">
+                <div className="rounded-xl border border-brand-primary/20 bg-brand-primary/5 dark:border-slate-800 dark:bg-slate-950/40 p-3 flex items-center justify-between">
                   <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium">
                     <FiInfo /> Estimated unit price index: ${selectedMaterialPrice}
                   </span>
-                  <span className="text-sm font-extrabold text-teal-600 dark:text-teal-400">
+                  <span className="text-sm font-extrabold text-brand-primary dark:text-brand-primaryHover">
                     Est. Total: ${(watchQty * selectedMaterialPrice).toLocaleString()}
                   </span>
                 </div>
@@ -637,8 +637,8 @@ const MaterialRequests = () => {
                 <label className="block text-xs font-bold text-slate-400 uppercase">Material Item</label>
                 <select
                   className={`w-full mt-1.5 px-4 py-2.5 border ${
-                    linesError ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                  } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white`}
+                    linesError ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                  } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card`}
                   defaultValue=""
                   onChange={handleAddMaterialLine}
                 >
@@ -663,7 +663,7 @@ const MaterialRequests = () => {
                     return (
                       <div
                         key={line.materialId}
-                        className="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2"
+                        className="flex items-center gap-3 rounded-xl border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 px-3 py-2"
                       >
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">
@@ -683,7 +683,7 @@ const MaterialRequests = () => {
                               )
                             }
                             disabled={Number(line.quantity) <= 1}
-                            className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-teal-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-brand-card dark:bg-brand-darkCard text-slate-600 dark:text-slate-300 hover:border-brand-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                             aria-label="Decrease quantity"
                           >
                             <FiMinus size={14} />
@@ -695,7 +695,7 @@ const MaterialRequests = () => {
                             onChange={(e) =>
                               handleLineQuantityChange(line.materialId, e.target.value)
                             }
-                            className="w-12 px-1 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-sm text-center outline-none focus:border-teal-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="w-12 px-1 py-1.5 border border-slate-200 dark:border-slate-700 bg-brand-card dark:bg-brand-darkCard rounded-lg text-sm text-center outline-none focus:border-brand-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             aria-label={`Quantity for ${mat?.name || 'material'}`}
                           />
                           <button
@@ -706,7 +706,7 @@ const MaterialRequests = () => {
                                 Number(line.quantity) + 1
                               )
                             }
-                            className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-teal-500 transition-colors"
+                            className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-brand-card dark:bg-brand-darkCard text-slate-600 dark:text-slate-300 hover:border-brand-primary transition-colors"
                             aria-label="Increase quantity"
                           >
                             <FiPlus size={14} />
@@ -727,11 +727,11 @@ const MaterialRequests = () => {
               )}
 
               {selectedLines.length > 0 && multiEstTotal > 0 && (
-                <div className="rounded-xl border border-teal-100 bg-teal-50/20 dark:border-slate-800 dark:bg-slate-950/40 p-3 flex items-center justify-between">
+                <div className="rounded-xl border border-brand-primary/20 bg-brand-primary/5 dark:border-slate-800 dark:bg-slate-950/40 p-3 flex items-center justify-between">
                   <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium">
                     <FiInfo /> {selectedLines.length} item{selectedLines.length > 1 ? 's' : ''} selected
                   </span>
-                  <span className="text-sm font-extrabold text-teal-600 dark:text-teal-400">
+                  <span className="text-sm font-extrabold text-brand-primary dark:text-brand-primaryHover">
                     Est. Total: ${multiEstTotal.toLocaleString()}
                   </span>
                 </div>
@@ -743,7 +743,7 @@ const MaterialRequests = () => {
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase">Priority</label>
               <select
-                className="w-full mt-1.5 px-4 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white"
+                className="w-full mt-1.5 px-4 py-2.5 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card"
                 {...register('priority')}
               >
                 <option value="Low">Low</option>
@@ -760,8 +760,8 @@ const MaterialRequests = () => {
                   type="date"
                   min={todayMin}
                   className={`w-full px-4 py-2 pr-10 border ${
-                    errors.requiredDate ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                  } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white`}
+                    errors.requiredDate ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                  } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card`}
                   {...register('requiredDate', {
                     required: 'Required Date is required',
                     validate: (value) =>
@@ -785,8 +785,8 @@ const MaterialRequests = () => {
               rows="3"
               placeholder="e.g. Needed for concrete pouring on slab C..."
               className={`w-full mt-1.5 px-4 py-2 border ${
-                errors.reason ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white`}
+                errors.reason ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card`}
               {...register('reason', { required: 'Reason is required' })}
             />
             {errors.reason && (
@@ -796,7 +796,7 @@ const MaterialRequests = () => {
 
           <button
             type="submit"
-            className="w-full mt-4 bg-teal-700 hover:bg-teal-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
           >
             {editingRequest ? 'Resubmit Request' : 'Submit Request'}
           </button>
@@ -833,7 +833,7 @@ const MaterialRequests = () => {
               </p>
               <div
                 className={`mt-1.5 max-h-40 overflow-y-auto rounded-xl border ${
-                  suppliersError ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
+                  suppliersError ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
                 } bg-slate-50 dark:bg-slate-950 p-2 space-y-1`}
               >
                 {suppliers.length === 0 ? (
@@ -848,7 +848,7 @@ const MaterialRequests = () => {
                         type="checkbox"
                         checked={selectedSuppliers.includes(s._id)}
                         onChange={() => toggleSupplier(s._id)}
-                        className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                        className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                       />
                       <span className="text-sm text-slate-700 dark:text-slate-200">
                         {s.company || s.name}
@@ -861,7 +861,7 @@ const MaterialRequests = () => {
                 <p className="mt-1 text-xs text-red-500 font-semibold">{suppliersError}</p>
               )}
               {selectedSuppliers.length > 0 && (
-                <p className="mt-1 text-[10px] text-teal-600 dark:text-teal-400 font-medium">
+                <p className="mt-1 text-[10px] text-brand-primary dark:text-brand-primaryHover font-medium">
                   {selectedSuppliers.length} supplier{selectedSuppliers.length > 1 ? 's' : ''} selected
                 </p>
               )}
@@ -869,11 +869,11 @@ const MaterialRequests = () => {
 
             {/* Budget warning checks */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="border border-slate-200 dark:border-slate-800 p-3 rounded-xl">
+              <div className="border border-brand-border dark:border-brand-darkBorder p-3 rounded-xl">
                 <span className="text-[10px] font-bold text-slate-400 uppercase">Estimated request cost</span>
                 <p className="text-base font-extrabold text-slate-900 dark:text-white mt-1">${budgetDetails.cost.toLocaleString()}</p>
               </div>
-              <div className="border border-slate-200 dark:border-slate-800 p-3 rounded-xl">
+              <div className="border border-brand-border dark:border-brand-darkBorder p-3 rounded-xl">
                 <span className="text-[10px] font-bold text-slate-400 uppercase">Project Budget</span>
                 <p className="text-base font-extrabold text-slate-900 dark:text-white mt-1">${budgetDetails.budget.toLocaleString()}</p>
               </div>
@@ -897,7 +897,7 @@ const MaterialRequests = () => {
               <select
                 value={reviewAction}
                 onChange={(e) => setReviewAction(e.target.value)}
-                className="w-full mt-1.5 px-4 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white"
+                className="w-full mt-1.5 px-4 py-2.5 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card"
               >
                 <option value="Approve">Approve</option>
                 <option value="Return">Return</option>
@@ -912,13 +912,13 @@ const MaterialRequests = () => {
                 value={reviewComments}
                 onChange={(e) => setReviewComments(e.target.value)}
                 placeholder="Include details about budget approval status or reason for returning..."
-                className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white"
+                className="w-full mt-1.5 px-4 py-2 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card"
               />
             </div>
 
             <button
               onClick={postReview}
-              className="w-full mt-4 bg-teal-700 hover:bg-teal-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+              className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
             >
               Post Review Decision
             </button>
@@ -956,7 +956,7 @@ const MaterialRequests = () => {
                   value={damagedQuantity}
                   onChange={(e) => setDamagedQuantity(Number(e.target.value))}
                   placeholder="0"
-                  className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-850 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                  className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-850 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
                 />
               </div>
 
@@ -968,7 +968,7 @@ const MaterialRequests = () => {
                   value={missingQuantity}
                   onChange={(e) => setMissingQuantity(Number(e.target.value))}
                   placeholder="0"
-                  className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-850 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                  className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-850 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
                 />
               </div>
             </div>
@@ -981,7 +981,7 @@ const MaterialRequests = () => {
                   value={damagedComments}
                   onChange={(e) => setDamagedComments(e.target.value)}
                   placeholder="Describe the nature of the damaged stock..."
-                  className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-850 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                  className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-850 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
                 />
               </div>
             )}
@@ -994,7 +994,7 @@ const MaterialRequests = () => {
                   value={missingComments}
                   onChange={(e) => setMissingComments(e.target.value)}
                   placeholder="Describe what is missing from the delivery..."
-                  className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-850 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                  className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-850 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
                 />
               </div>
             )}
@@ -1036,7 +1036,7 @@ const MaterialRequests = () => {
               <div className="space-y-4">
                 {approvalHistory.map((step) => {
                   let badge = 'bg-slate-50 text-slate-600 dark:bg-slate-850/30';
-                  if (step.action === 'Approve') badge = 'bg-teal-50 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400';
+                  if (step.action === 'Approve') badge = 'bg-brand-primary/10 text-brand-primary dark:bg-brand-primary/10 dark:text-brand-primaryHover';
                   if (step.action === 'Reject') badge = 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400';
                   if (step.action === 'Return') badge = 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400';
 

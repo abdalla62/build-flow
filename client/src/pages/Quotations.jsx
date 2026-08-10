@@ -158,7 +158,7 @@ const Quotations = () => {
     { key: 'bidsCount', label: 'Submitted Bids', render: (r) => {
       const count = quotations.filter(q => q.materialRequest?._id === r._id).length;
       return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-lg bg-teal-50 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400">
+        <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-lg bg-brand-primary/10 text-brand-primary dark:bg-brand-primary/10 dark:text-brand-primaryHover">
           {count} bid{count !== 1 ? 's' : ''}
         </span>
       );
@@ -168,7 +168,7 @@ const Quotations = () => {
         {isSupplier && (
           <button
             onClick={() => handleOpenBid(r)}
-            className="px-3 py-1.5 text-xs font-bold bg-teal-700 hover:bg-teal-600 text-white rounded-lg shadow-sm transition-colors"
+            className="px-3 py-1.5 text-xs font-bold bg-brand-primary hover:bg-brand-primaryHover text-white rounded-lg shadow-sm transition-colors"
           >
             Submit Bid
           </button>
@@ -190,8 +190,8 @@ const Quotations = () => {
       
       {/* Title */}
       <div>
-        <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">Supplier Bidding Board</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+        <h1 className="bf-page-title">Supplier Bidding Board</h1>
+        <p className="bf-page-subtitle">
           Review approved requests, submit bidding quotes, and compare options for contract awards.
         </p>
       </div>
@@ -230,8 +230,8 @@ const Quotations = () => {
                   type="number"
                   step="0.01"
                   className={`w-full mt-1.5 px-4 py-2 border ${
-                    errors.unitPrice ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                  } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                    errors.unitPrice ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                  } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
                   {...register('unitPrice', { required: 'Required', min: { value: 0, message: 'Must be positive' } })}
                 />
               </div>
@@ -242,8 +242,8 @@ const Quotations = () => {
                   type="number"
                   step="0.01"
                   className={`w-full mt-1.5 px-4 py-2 border ${
-                    errors.deliveryCost ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                  } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                    errors.deliveryCost ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                  } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
                   {...register('deliveryCost', { required: 'Required', min: { value: 0, message: 'Must be positive' } })}
                 />
               </div>
@@ -255,8 +255,8 @@ const Quotations = () => {
                 <input
                   type="number"
                   className={`w-full mt-1.5 px-4 py-2 border ${
-                    errors.deliveryTimeDays ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                  } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                    errors.deliveryTimeDays ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                  } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
                   {...register('deliveryTimeDays', { required: 'Required', min: { value: 1, message: 'At least 1 day' } })}
                 />
               </div>
@@ -265,7 +265,7 @@ const Quotations = () => {
                 <label className="block text-xs font-bold text-slate-400 uppercase">Warranty Limit (Months)</label>
                 <input
                   type="number"
-                  className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                  className="w-full mt-1.5 px-4 py-2 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
                   {...register('warrantyMonths')}
                 />
               </div>
@@ -274,7 +274,7 @@ const Quotations = () => {
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase">Payment Terms offered</label>
               <select
-                className="w-full mt-1.5 px-4 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                className="w-full mt-1.5 px-4 py-2.5 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
                 {...register('paymentTerms')}
               >
                 <option value="Cash on Delivery">Cash on Delivery</option>
@@ -286,7 +286,7 @@ const Quotations = () => {
 
             <button
               type="submit"
-              className="w-full mt-4 bg-teal-700 hover:bg-teal-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+              className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
             >
               Post Bid Quotation
             </button>
@@ -328,7 +328,7 @@ const Quotations = () => {
                       className={`p-4 border rounded-2xl relative space-y-3 transition-shadow hover:shadow-md ${
                         isLowest
                           ? 'border-green-500/50 bg-green-50/5 dark:bg-green-950/5'
-                          : 'border-slate-200 dark:border-slate-800'
+                          : 'border-brand-border dark:border-brand-darkBorder'
                       }`}
                     >
                       {/* Top Supplier Profile */}
@@ -360,9 +360,9 @@ const Quotations = () => {
                           <span className="text-[10px] font-bold text-slate-400 uppercase">Shipping Fee</span>
                           <p className="text-sm font-extrabold text-slate-900 dark:text-white mt-0.5">${quote.deliveryCost.toFixed(2)}</p>
                         </div>
-                        <div className="border border-slate-100 dark:border-slate-800/80 p-2.5 rounded-xl bg-teal-50/10 dark:bg-teal-950/10 border-teal-500/20">
+                        <div className="border border-slate-100 dark:border-slate-800/80 p-2.5 rounded-xl bg-teal-50/10 dark:bg-teal-950/10 border-brand-primary/20">
                           <span className="text-[10px] font-bold text-slate-400 uppercase">Est. Grand Total</span>
-                          <p className="text-sm font-extrabold text-teal-600 dark:text-teal-400 mt-0.5">
+                          <p className="text-sm font-extrabold text-brand-primary dark:text-brand-primaryHover mt-0.5">
                             ${(comparingRequest.quantity * quote.unitPrice + quote.deliveryCost).toLocaleString()}
                           </p>
                         </div>
@@ -385,7 +385,7 @@ const Quotations = () => {
                       {/* Select button */}
                       <button
                         onClick={() => handleAwardContract(quote._id)}
-                        className="w-full inline-flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-xl bg-teal-700 hover:bg-teal-600 text-white shadow-md transition-colors"
+                        className="w-full inline-flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-xl bg-brand-primary hover:bg-brand-primaryHover text-white shadow-md transition-colors"
                       >
                         <FiAward /> Award Contract & Issue PO
                       </button>

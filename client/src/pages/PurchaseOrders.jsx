@@ -211,7 +211,7 @@ const PurchaseOrders = () => {
   const headers = [
     { key: 'poNumber', label: 'PO Details', render: (o) => (
       <div className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-lg bg-teal-50 dark:bg-teal-950/30 text-teal-700 flex items-center justify-center shrink-0">
+        <div className="h-9 w-9 rounded-lg bg-brand-primary/10 dark:bg-brand-primary/10 text-brand-primary flex items-center justify-center shrink-0">
           <FiFileText className="h-5 w-5" />
         </div>
         <div>
@@ -245,7 +245,7 @@ const PurchaseOrders = () => {
     )},
     { key: 'status', label: 'PO Status', render: (o) => {
       let colors = 'bg-slate-50 text-slate-600 dark:bg-slate-850/30';
-      if (o.status === 'Accepted') colors = 'bg-teal-50 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400';
+      if (o.status === 'Accepted') colors = 'bg-brand-primary/10 text-brand-primary dark:bg-brand-primary/10 dark:text-brand-primaryHover';
       if (o.status === 'Rejected') colors = 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400';
       if (o.status === 'Preparing') colors = 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400';
       if (o.status === 'Dispatched') colors = 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400';
@@ -280,7 +280,7 @@ const PurchaseOrders = () => {
               toast.error('Invoice file not found');
             }
           }}
-          className="text-teal-600 hover:text-teal-500 dark:text-teal-400 hover:underline flex items-center gap-1 text-xs font-semibold"
+          className="text-brand-primary hover:text-brand-primaryHover dark:text-brand-primaryHover hover:underline flex items-center gap-1 text-xs font-semibold"
         >
           <FiDownload /> Download PDF
         </a>
@@ -313,13 +313,13 @@ const PurchaseOrders = () => {
           <>
             <button
               onClick={() => handleOpenStatus(o)}
-              className="px-2.5 py-1.5 text-xs font-bold border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-50 text-slate-700 dark:text-slate-300 transition-colors"
+              className="px-2.5 py-1.5 text-xs font-bold border border-brand-border dark:border-brand-darkBorder rounded-lg hover:bg-slate-50 text-slate-700 dark:text-slate-300 transition-colors"
             >
               Update Status
             </button>
             <button
               onClick={() => handleOpenInvoice(o)}
-              className="px-2.5 py-1.5 text-xs font-bold bg-teal-700 hover:bg-teal-600 text-white rounded-lg shadow-sm transition-colors flex items-center gap-1"
+              className="px-2.5 py-1.5 text-xs font-bold bg-brand-primary hover:bg-brand-primaryHover text-white rounded-lg shadow-sm transition-colors flex items-center gap-1"
             >
               <FiUpload /> Invoice
             </button>
@@ -334,14 +334,14 @@ const PurchaseOrders = () => {
       
       {/* Title */}
       <div>
-        <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">Purchase Orders</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+        <h1 className="bf-page-title">Purchase Orders</h1>
+        <p className="bf-page-subtitle">
           Monitor auto-incremented PO indexes, review fulfillment progress, and verify payment states.
         </p>
       </div>
 
       {/* Filter panel */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm">
+      <div className="flex flex-col md:flex-row gap-4 justify-between bg-brand-card dark:bg-brand-darkCard border border-brand-border dark:border-brand-darkBorder p-4 rounded-card shadow-bf-sm">
         <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
           <input
@@ -349,7 +349,7 @@ const PurchaseOrders = () => {
             placeholder="Search PO number (e.g. PO-2026-00001)..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 outline-none focus:border-teal-500 focus:bg-white dark:bg-slate-950 text-sm transition-all"
+            className="w-full pl-9 pr-4 py-2 border border-brand-border dark:border-brand-darkBorder rounded-xl bg-slate-50 outline-none focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 text-sm transition-all"
           />
         </form>
 
@@ -360,7 +360,7 @@ const PurchaseOrders = () => {
               setStatusFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 outline-none text-sm focus:border-teal-500 focus:bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400"
+            className="px-4 py-2 border border-brand-border dark:border-brand-darkBorder rounded-xl bg-slate-50 outline-none text-sm focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 text-slate-600 dark:text-slate-400"
           >
             <option value="">All PO Statuses</option>
             <option value="Pending">Pending</option>
@@ -378,7 +378,7 @@ const PurchaseOrders = () => {
               setPaymentFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 outline-none text-sm focus:border-teal-500 focus:bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400"
+            className="px-4 py-2 border border-brand-border dark:border-brand-darkBorder rounded-xl bg-slate-50 outline-none text-sm focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 text-slate-600 dark:text-slate-400"
           >
             <option value="">All Payment Statuses</option>
             <option value="Unpaid">Unpaid</option>
@@ -420,8 +420,8 @@ const PurchaseOrders = () => {
                   type="number"
                   min={1}
                   className={`w-full mt-1.5 px-4 py-2 border ${
-                    editErrors.quantity ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                  } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                    editErrors.quantity ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                  } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
                   {...registerEdit('quantity', {
                     required: 'Required',
                     min: { value: 1, message: 'Min 1' }
@@ -438,8 +438,8 @@ const PurchaseOrders = () => {
                   min={0}
                   step="0.01"
                   className={`w-full mt-1.5 px-4 py-2 border ${
-                    editErrors.unitPrice ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                  } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                    editErrors.unitPrice ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                  } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
                   {...registerEdit('unitPrice', {
                     required: 'Required',
                     min: { value: 0, message: 'Must be positive' }
@@ -458,7 +458,7 @@ const PurchaseOrders = () => {
                   type="number"
                   min={0}
                   step="0.01"
-                  className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                  className="w-full mt-1.5 px-4 py-2 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
                   {...registerEdit('tax')}
                 />
               </div>
@@ -468,7 +468,7 @@ const PurchaseOrders = () => {
                   type="number"
                   min={0}
                   step="0.01"
-                  className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                  className="w-full mt-1.5 px-4 py-2 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
                   {...registerEdit('discount')}
                 />
               </div>
@@ -477,7 +477,7 @@ const PurchaseOrders = () => {
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase">PO Status</label>
               <select
-                className="w-full mt-1.5 px-4 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                className="w-full mt-1.5 px-4 py-2.5 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
                 {...registerEdit('status')}
               >
                 <option value="Pending">Pending</option>
@@ -495,7 +495,7 @@ const PurchaseOrders = () => {
 
             <button
               type="submit"
-              className="w-full mt-4 bg-teal-700 hover:bg-teal-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+              className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
             >
               Save Changes
             </button>
@@ -519,7 +519,7 @@ const PurchaseOrders = () => {
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full mt-1.5 px-4 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                className="w-full mt-1.5 px-4 py-2.5 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
               >
                 <option value="Accepted">Accept Order</option>
                 <option value="Rejected">Reject Order</option>
@@ -529,7 +529,7 @@ const PurchaseOrders = () => {
             </div>
             <button
               onClick={postStatus}
-              className="w-full mt-4 bg-teal-700 hover:bg-teal-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+              className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
             >
               Post Status Update
             </button>
@@ -545,18 +545,18 @@ const PurchaseOrders = () => {
       >
         {invoicingOrder && (
           <form onSubmit={onInvoiceSubmit} className="space-y-4 py-2">
-            <div className="rounded-xl border border-teal-200 bg-teal-50/70 p-4 dark:border-teal-900 dark:bg-teal-950/30">
-              <p className="text-sm font-bold text-teal-900 dark:text-teal-200">
+            <div className="rounded-xl border border-brand-primary/30 bg-brand-primary/10 p-4 dark:border-brand-primary/40 dark:bg-brand-primary/10">
+              <p className="text-sm font-bold text-brand-text dark:text-teal-300">
                 Habka fudud (lagula talinayaa)
               </p>
-              <p className="mt-1 text-xs text-teal-800/90 dark:text-teal-300/90">
+              <p className="mt-1 text-xs text-brand-muted dark:text-teal-300/90">
                 System-ku wuxuu PDF invoice ka sameynayaa xogta PO-gan — Word uma baahnid.
               </p>
               <button
                 type="button"
                 disabled={invoiceUploading}
                 onClick={generateInvoiceFromPO}
-                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-600 disabled:opacity-50"
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-primaryHover disabled:opacity-50"
               >
                 <FiFileText />{' '}
                 {invoiceUploading ? 'Generating…' : 'Generate Invoice from PO (1 click)'}
@@ -573,8 +573,8 @@ const PurchaseOrders = () => {
             </p>
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase">Invoice Document</label>
-              <label className="mt-1.5 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center hover:border-teal-500 hover:bg-teal-50/40 dark:border-slate-600 dark:bg-slate-800 dark:hover:border-teal-500 dark:hover:bg-teal-950/20">
-                <FiUpload className="h-6 w-6 text-teal-700 dark:text-teal-400" />
+              <label className="mt-1.5 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center hover:border-brand-primary hover:bg-brand-primary/5 dark:border-slate-600 dark:bg-slate-800 dark:hover:border-brand-primary dark:hover:bg-brand-primary/10">
+                <FiUpload className="h-6 w-6 text-brand-primary dark:text-brand-primaryHover" />
                 <span className="text-sm font-semibold text-slate-700 dark:text-slate-100">
                   {invoiceFileObj ? invoiceFileObj.name : 'Click to choose invoice file'}
                 </span>

@@ -189,7 +189,7 @@ const Materials = () => {
         {m.image ? (
           <img src={m.image} alt={m.name} className="h-10 w-10 rounded-lg object-cover shrink-0 border border-slate-200 dark:border-slate-700" />
         ) : (
-          <div className="h-10 w-10 rounded-lg bg-teal-50 dark:bg-teal-950/30 text-teal-700 flex items-center justify-center shrink-0">
+          <div className="h-10 w-10 rounded-lg bg-brand-primary/10 dark:bg-brand-primary/10 text-brand-primary flex items-center justify-center shrink-0">
             <FiBox className="h-5 w-5" />
           </div>
         )}
@@ -284,15 +284,15 @@ const Materials = () => {
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">Material Catalog</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <h1 className="bf-page-title">Material Catalog</h1>
+          <p className="bf-page-subtitle">
             Browse construction materials, track current inventory levels, estimated prices, and set replenishment alert flags.
           </p>
         </div>
         {hasAccess && (
           <button
             onClick={handleOpenCreate}
-            className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-600 shadow-md transition-all self-start sm:self-auto"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-primaryHover shadow-md transition-all self-start sm:self-auto"
           >
             <FiPlus className="h-5 w-5" />
             Add Material
@@ -301,7 +301,7 @@ const Materials = () => {
       </div>
 
       {/* Filter panel */}
-      <div className="flex flex-col xl:flex-row gap-4 justify-between bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm">
+      <div className="flex flex-col xl:flex-row gap-4 justify-between bg-brand-card dark:bg-brand-darkCard border border-brand-border dark:border-brand-darkBorder p-4 rounded-card shadow-bf-sm">
         <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
           <input
@@ -309,7 +309,7 @@ const Materials = () => {
             placeholder="Search materials by name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 outline-none focus:border-teal-500 focus:bg-white dark:bg-slate-950 text-sm transition-all"
+            className="w-full pl-9 pr-4 py-2 border border-brand-border dark:border-brand-darkBorder rounded-xl bg-slate-50 outline-none focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 text-sm transition-all"
           />
         </form>
 
@@ -321,7 +321,7 @@ const Materials = () => {
               setCategoryFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 outline-none text-sm focus:border-teal-500 focus:bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400"
+            className="px-4 py-2 border border-brand-border dark:border-brand-darkBorder rounded-xl bg-slate-50 outline-none text-sm focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 text-slate-600 dark:text-slate-400"
           >
             <option value="">All Categories</option>
             {categories.map((c) => (
@@ -338,7 +338,7 @@ const Materials = () => {
               setSupplierFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 outline-none text-sm focus:border-teal-500 focus:bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400"
+            className="px-4 py-2 border border-brand-border dark:border-brand-darkBorder rounded-xl bg-slate-50 outline-none text-sm focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 text-slate-600 dark:text-slate-400"
           >
             <option value="">All Suppliers</option>
             {suppliers.map((s) => (
@@ -349,7 +349,7 @@ const Materials = () => {
           </select>
 
           {/* Low Stock Toggle checkbox */}
-          <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 bg-slate-50 dark:bg-slate-950 cursor-pointer select-none">
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300 border border-brand-border dark:border-brand-darkBorder rounded-xl px-4 py-2 bg-slate-50 dark:bg-slate-950 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={lowStockFilter}
@@ -357,7 +357,7 @@ const Materials = () => {
                 setLowStockFilter(e.target.checked);
                 setCurrentPage(1);
               }}
-              className="rounded text-teal-600 focus:ring-teal-500 h-4 w-4"
+              className="rounded text-brand-primary focus:ring-brand-primary h-4 w-4"
             />
             <span className="flex items-center gap-1">
               <FiAlertTriangle className="text-red-500" />
@@ -393,8 +393,8 @@ const Materials = () => {
               type="text"
               placeholder="e.g. Portland Cement Grade 43"
               className={`w-full mt-1.5 px-4 py-2.5 border ${
-                errors.name ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white`}
+                errors.name ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card`}
               {...register('name', { required: 'Stock name is required' })}
             />
             {errors.name && (
@@ -407,8 +407,8 @@ const Materials = () => {
               <label className="block text-xs font-bold text-slate-400 uppercase">Category</label>
               <select
                 className={`w-full mt-1.5 px-4 py-2.5 border ${
-                  errors.category ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white`}
+                  errors.category ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card`}
                 {...register('category', { required: 'Please select a category' })}
               >
                 <option value="">Select Category</option>
@@ -426,7 +426,7 @@ const Materials = () => {
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase">Unit of Measure</label>
               <select
-                className="w-full mt-1.5 px-4 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white"
+                className="w-full mt-1.5 px-4 py-2.5 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card"
                 {...register('unit')}
               >
                 <option value="Bags">Bags</option>
@@ -447,8 +447,8 @@ const Materials = () => {
                 step="0.01"
                 placeholder="e.g. 15.50"
                 className={`w-full mt-1.5 px-4 py-2 border ${
-                  errors.estimatedPrice ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white`}
+                  errors.estimatedPrice ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card`}
                 {...register('estimatedPrice', { required: 'Required', min: { value: 0, message: 'Must be positive' } })}
               />
               {errors.estimatedPrice && (
@@ -461,7 +461,7 @@ const Materials = () => {
               <input
                 type="number"
                 placeholder="0"
-                className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white"
+                className="w-full mt-1.5 px-4 py-2 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card"
                 {...register('currentStock', { min: { value: 0, message: 'Stock must be positive' } })}
               />
             </div>
@@ -471,7 +471,7 @@ const Materials = () => {
               <input
                 type="number"
                 placeholder="50"
-                className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white"
+                className="w-full mt-1.5 px-4 py-2 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card"
                 {...register('minimumStock', { min: { value: 0, message: 'Must be positive' } })}
               />
             </div>
@@ -484,7 +484,7 @@ const Materials = () => {
             <p className="mt-1 text-[10px] text-slate-400">Select one or more suppliers for this material.</p>
             <div
               className={`mt-1.5 max-h-36 overflow-y-auto rounded-xl border ${
-                suppliersError ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
+                suppliersError ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
               } bg-slate-50 dark:bg-slate-950 p-2 space-y-1`}
             >
               {suppliers.length === 0 ? (
@@ -499,7 +499,7 @@ const Materials = () => {
                       type="checkbox"
                       checked={selectedSuppliers.includes(s._id)}
                       onChange={() => toggleSupplier(s._id)}
-                      className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                      className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                     />
                     <span className="text-sm text-slate-700 dark:text-slate-200">
                       {s.company} ({s.name})
@@ -512,7 +512,7 @@ const Materials = () => {
               <p className="mt-1 text-xs text-red-500 font-semibold">{suppliersError}</p>
             )}
             {selectedSuppliers.length > 0 && (
-              <p className="mt-1 text-[10px] text-teal-600 dark:text-teal-400 font-medium">
+              <p className="mt-1 text-[10px] text-brand-primary dark:text-brand-primaryHover font-medium">
                 {selectedSuppliers.length} supplier{selectedSuppliers.length > 1 ? 's' : ''} selected
               </p>
             )}
@@ -521,7 +521,7 @@ const Materials = () => {
           <div>
             <label className="block text-xs font-bold text-slate-400 uppercase">Status</label>
             <select
-              className="w-full mt-1.5 px-4 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white"
+              className="w-full mt-1.5 px-4 py-2.5 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card"
               {...register('status')}
             >
               <option value="Active">Active</option>
@@ -534,14 +534,14 @@ const Materials = () => {
             <textarea
               rows="3"
               placeholder="Provide technical specifications or comments..."
-              className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white"
+              className="w-full mt-1.5 px-4 py-2 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card"
               {...register('description')}
             />
           </div>
 
           <button
             type="submit"
-            className="w-full mt-4 bg-teal-700 hover:bg-teal-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
           >
             {editingMaterial ? 'Save Changes' : 'Create Material'}
           </button>

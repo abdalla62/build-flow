@@ -128,21 +128,21 @@ const AuditLogs = () => {
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">Audit Security Logs</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <h1 className="bf-page-title">Audit Security Logs</h1>
+          <p className="bf-page-subtitle">
             Monitor system actions logs, trace staff adjustments, and audit authorization transaction events.
           </p>
         </div>
         <button
           onClick={handleExportCSV}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 transition-all shadow-sm self-start sm:self-auto"
+          className="inline-flex items-center gap-2 rounded-xl border border-brand-border dark:border-brand-darkBorder bg-brand-card dark:bg-brand-darkCard px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 transition-all shadow-sm self-start sm:self-auto"
         >
           <FiDownload /> Export CSV
         </button>
       </div>
 
       {/* Filter panel */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm">
+      <div className="flex flex-col md:flex-row gap-4 justify-between bg-brand-card dark:bg-brand-darkCard border border-brand-border dark:border-brand-darkBorder p-4 rounded-card shadow-bf-sm">
         <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
           <input
@@ -150,7 +150,7 @@ const AuditLogs = () => {
             placeholder="Search email, details, or userName..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 outline-none focus:border-teal-500 focus:bg-white dark:bg-slate-950 text-sm transition-all"
+            className="w-full pl-9 pr-4 py-2 border border-brand-border dark:border-brand-darkBorder rounded-xl bg-slate-50 outline-none focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 text-sm transition-all"
           />
         </form>
 
@@ -161,7 +161,7 @@ const AuditLogs = () => {
               setRoleFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 outline-none text-sm focus:border-teal-500 focus:bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400"
+            className="px-4 py-2 border border-brand-border dark:border-brand-darkBorder rounded-xl bg-slate-50 outline-none text-sm focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 text-slate-600 dark:text-slate-400"
           >
             <option value="">All Roles</option>
             <option value="Administrator">Administrator</option>

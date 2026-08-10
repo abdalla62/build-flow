@@ -41,7 +41,7 @@ const ResetPassword = () => {
         className="relative z-10 w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-xl dark:border-slate-800 dark:bg-slate-900"
       >
         <div className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-teal-600 text-white shadow-md shadow-teal-500/20">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-primary text-white shadow-md shadow-teal-500/20">
             <FiLock className="h-6 w-6" />
           </div>
           <h2 className="mt-4 text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">Reset Password</h2>
@@ -61,8 +61,8 @@ const ResetPassword = () => {
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 className={`w-full rounded-xl border ${
-                  errors.password ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-teal-500 dark:border-slate-800'
-                } bg-slate-50 py-2.5 pl-10 pr-12 text-sm outline-none focus:border-teal-500 focus:bg-white dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
+                  errors.password ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-brand-primary dark:border-slate-800'
+                } bg-slate-50 py-2.5 pl-10 pr-12 text-sm outline-none focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
                 {...register('password', {
                   required: 'Password is required',
                   minLength: {
@@ -87,7 +87,7 @@ const ResetPassword = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex w-full items-center justify-center rounded-xl bg-teal-700 py-3 text-sm font-bold text-white hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-50 transition-colors shadow-lg shadow-teal-700/20"
+            className="flex w-full items-center justify-center rounded-xl bg-brand-primary py-3 text-sm font-bold text-white hover:bg-brand-primaryHover focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 disabled:opacity-50 transition-colors shadow-lg shadow-teal-700/20"
           >
             {isSubmitting ? (
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />

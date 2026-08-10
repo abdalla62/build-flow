@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiX } from 'react-icons/fi';
 
 const Modal = ({ isOpen, onClose, title, children }) => {
-  // Bind escape key to close modal
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -19,36 +18,32 @@ const Modal = ({ isOpen, onClose, title, children }) => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          {/* Backdrop Overlay */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm"
+            className="fixed inset-0 bg-brand-navy/45 backdrop-blur-sm"
           />
 
-          {/* Modal Container */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            initial={{ opacity: 0, scale: 0.96, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            exit={{ opacity: 0, scale: 0.96, y: 10 }}
             transition={{ type: 'spring', duration: 0.3 }}
-            className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 z-10"
+            className="relative z-10 w-full max-w-lg rounded-card border border-brand-border bg-brand-card p-6 shadow-bf dark:border-brand-darkBorder dark:bg-brand-darkCard"
           >
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-5">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{title}</h3>
+            <div className="mb-5 flex items-center justify-between border-b border-brand-border pb-3 dark:border-brand-darkBorder">
+              <h3 className="text-lg font-bold text-brand-text dark:text-white">{title}</h3>
               <button
                 onClick={onClose}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+                className="rounded-xl p-1.5 text-brand-muted transition-colors hover:bg-brand-bg hover:text-brand-text dark:hover:bg-white/5 dark:hover:text-slate-200"
               >
                 <FiX className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Contents */}
             <div className="max-h-[70vh] overflow-y-auto pr-1">
               {children}
             </div>

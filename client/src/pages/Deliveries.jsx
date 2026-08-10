@@ -442,7 +442,7 @@ const Deliveries = () => {
               toast.error('Delivery note not found');
             }
           }}
-          className="text-teal-600 hover:text-teal-500 dark:text-teal-400 hover:underline flex items-center gap-1 text-xs font-semibold"
+          className="text-brand-primary hover:text-brand-primaryHover dark:text-brand-primaryHover hover:underline flex items-center gap-1 text-xs font-semibold"
         >
           <FiDownload /> Open / Download
         </a>
@@ -462,7 +462,7 @@ const Deliveries = () => {
             </button>
             <button
               onClick={() => handleOpenNote(d)}
-              className="px-2.5 py-1.5 text-xs font-bold bg-teal-700 hover:bg-teal-600 text-white rounded-lg shadow-sm transition-colors flex items-center gap-1"
+              className="px-2.5 py-1.5 text-xs font-bold bg-brand-primary hover:bg-brand-primaryHover text-white rounded-lg shadow-sm transition-colors flex items-center gap-1"
             >
               <FiUpload /> Note
             </button>
@@ -472,7 +472,7 @@ const Deliveries = () => {
           <>
             <button
               onClick={() => handleOpenReschedule(d)}
-              className="px-2.5 py-1.5 text-xs font-bold border border-teal-200 text-teal-700 dark:border-teal-800 dark:text-teal-400 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-950/20 transition-colors flex items-center gap-1"
+              className="px-2.5 py-1.5 text-xs font-bold border border-brand-primary/30 text-brand-primary dark:border-teal-800 dark:text-brand-primaryHover rounded-lg hover:bg-teal-50 dark:hover:bg-brand-primary/10 transition-colors flex items-center gap-1"
               title="Reschedule Delivery"
             >
               <FiCalendar /> Reschedule
@@ -496,15 +496,15 @@ const Deliveries = () => {
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">Delivery Shipments</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <h1 className="bf-page-title">Delivery Shipments</h1>
+          <p className="bf-page-subtitle">
             Schedule logistics dispatch timelines, monitor driver updates, and confirm site arrivals.
           </p>
         </div>
         {isProc && (
           <button
             onClick={handleOpenSchedule}
-            className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-600 shadow-md transition-all self-start sm:self-auto"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-primaryHover shadow-md transition-all self-start sm:self-auto"
           >
             <FiPlus className="h-5 w-5" />
             Schedule Delivery
@@ -513,7 +513,7 @@ const Deliveries = () => {
       </div>
 
       {/* Filter panel */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm">
+      <div className="flex flex-col md:flex-row gap-4 justify-between bg-brand-card dark:bg-brand-darkCard border border-brand-border dark:border-brand-darkBorder p-4 rounded-card shadow-bf-sm">
         <div className="flex flex-wrap gap-3 items-center">
           <select
             value={statusFilter}
@@ -521,7 +521,7 @@ const Deliveries = () => {
               setStatusFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 outline-none text-sm focus:border-teal-500 focus:bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400"
+            className="px-4 py-2 border border-brand-border dark:border-brand-darkBorder rounded-xl bg-slate-50 outline-none text-sm focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 text-slate-600 dark:text-slate-400"
           >
             <option value="">All Shipping Statuses</option>
             <option value="Scheduled">Scheduled</option>
@@ -534,13 +534,13 @@ const Deliveries = () => {
             <option value="Cancelled">Cancelled</option>
           </select>
         </div>
-        <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-800 p-1 bg-slate-50 dark:bg-slate-950">
+        <div className="inline-flex rounded-xl border border-brand-border dark:border-brand-darkBorder p-1 bg-slate-50 dark:bg-slate-950">
           <button
             type="button"
             onClick={() => setViewMode('list')}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
               viewMode === 'list'
-                ? 'bg-teal-700 text-white shadow-sm'
+                ? 'bg-brand-primary text-white shadow-sm'
                 : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
@@ -551,7 +551,7 @@ const Deliveries = () => {
             onClick={() => setViewMode('calendar')}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
               viewMode === 'calendar'
-                ? 'bg-teal-700 text-white shadow-sm'
+                ? 'bg-brand-primary text-white shadow-sm'
                 : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
@@ -596,8 +596,8 @@ const Deliveries = () => {
             <label className="block text-xs font-bold text-slate-400 uppercase">Select Accepted PO</label>
             <select
               className={`w-full mt-1.5 px-4 py-2.5 border ${
-                errors.purchaseOrder ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                errors.purchaseOrder ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
               {...register('purchaseOrder', { required: 'Please select PO' })}
             >
               <option value="">Select PO</option>
@@ -617,8 +617,8 @@ const Deliveries = () => {
               <label className="block text-xs font-bold text-slate-400 uppercase">Assign Driver</label>
               <select
                 className={`w-full mt-1.5 px-4 py-2.5 border ${
-                  errors.driver ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                  errors.driver ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
                 {...register('driver', { required: 'Please assign a driver' })}
               >
                 <option value="">Select Driver</option>
@@ -641,7 +641,7 @@ const Deliveries = () => {
                 readOnly
                 placeholder="Select a driver first"
                 className={`w-full mt-1.5 px-4 py-2 border ${
-                  errors.vehicle ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
+                  errors.vehicle ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
                 } bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-xl text-sm outline-none cursor-not-allowed`}
                 {...register('vehicle', {
                   required: 'Selected driver has no registered vehicle plate'
@@ -661,8 +661,8 @@ const Deliveries = () => {
                 type="date"
                 min={todayMin}
                 className={`w-full mt-1.5 px-4 py-2 border ${
-                  errors.deliveryDate ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                  errors.deliveryDate ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
                 {...register('deliveryDate', {
                   required: 'Please enter the delivery date',
                   validate: (value) => {
@@ -692,7 +692,7 @@ const Deliveries = () => {
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase">Time Slot</label>
               <select
-                className="w-full mt-1.5 px-4 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                className="w-full mt-1.5 px-4 py-2.5 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
                 {...register('timeSlot')}
               >
                 <option value="9 AM - 12 PM">9 AM - 12 PM</option>
@@ -708,8 +708,8 @@ const Deliveries = () => {
               type="text"
               placeholder="e.g. Building B, Main Street"
               className={`w-full mt-1.5 px-4 py-2.5 border ${
-                errors.deliveryAddress ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                errors.deliveryAddress ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
               {...register('deliveryAddress', { required: 'Destination is required' })}
             />
             {errors.deliveryAddress && (
@@ -719,7 +719,7 @@ const Deliveries = () => {
 
           <button
             type="submit"
-            className="w-full mt-4 bg-teal-700 hover:bg-teal-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
           >
             Dispatch & Notify Driver
           </button>
@@ -742,7 +742,7 @@ const Deliveries = () => {
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full mt-1.5 px-4 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                className="w-full mt-1.5 px-4 py-2.5 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
               >
                 <option value="Preparing">Preparing Cargo</option>
                 <option value="Dispatched">Dispatched / Left Depot</option>
@@ -752,7 +752,7 @@ const Deliveries = () => {
               </select>
             </div>
             {selectedStatus === 'Delivered' && (
-              <div className="rounded-xl border border-teal-100 bg-teal-50/20 dark:border-slate-800 dark:bg-slate-950/40 p-3 flex gap-2 text-teal-600 dark:text-teal-400 text-xs leading-relaxed font-semibold">
+              <div className="rounded-xl border border-brand-primary/20 bg-brand-primary/5 dark:border-slate-800 dark:bg-slate-950/40 p-3 flex gap-2 text-brand-primary dark:text-brand-primaryHover text-xs leading-relaxed font-semibold">
                 <FiAlertCircle className="h-5 w-5 shrink-0" />
                 <span>
                   Confirming "Delivered" will automatically add these materials to site inventory and increment stock quantities.
@@ -761,7 +761,7 @@ const Deliveries = () => {
             )}
             <button
               onClick={postStatusUpdate}
-              className="w-full mt-4 bg-teal-700 hover:bg-teal-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+              className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
             >
               Post Tracking Update
             </button>
@@ -783,8 +783,8 @@ const Deliveries = () => {
             </p>
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase">Delivery Note Document</label>
-              <label className="mt-1.5 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center hover:border-teal-500 hover:bg-teal-50/40 dark:border-slate-600 dark:bg-slate-800 dark:hover:border-teal-500 dark:hover:bg-teal-950/20">
-                <FiUpload className="h-6 w-6 text-teal-700 dark:text-teal-400" />
+              <label className="mt-1.5 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center hover:border-brand-primary hover:bg-brand-primary/5 dark:border-slate-600 dark:bg-slate-800 dark:hover:border-brand-primary dark:hover:bg-brand-primary/10">
+                <FiUpload className="h-6 w-6 text-brand-primary dark:text-brand-primaryHover" />
                 <span className="text-sm font-semibold text-slate-700 dark:text-slate-100">
                   {noteFileObj ? noteFileObj.name : 'Click to choose delivery note'}
                 </span>
@@ -802,7 +802,7 @@ const Deliveries = () => {
             <button
               type="submit"
               disabled={noteUploading}
-              className="w-full mt-4 bg-teal-700 hover:bg-teal-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
+              className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
             >
               <FiUpload /> {noteUploading ? 'Uploading…' : 'Post Delivery Note'}
             </button>
@@ -837,8 +837,8 @@ const Deliveries = () => {
                   type="date"
                   min={todayMin}
                   className={`w-full mt-1.5 px-4 py-2 border ${
-                    rescheduleErrors.newDeliveryDate ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                  } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                    rescheduleErrors.newDeliveryDate ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                  } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
                   {...registerReschedule('newDeliveryDate', {
                     required: 'Required',
                     validate: (v) => !v || v >= todayMin || 'Cannot select a past date'
@@ -851,7 +851,7 @@ const Deliveries = () => {
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase">Time Slot</label>
                 <select
-                  className="w-full mt-1.5 px-4 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                  className="w-full mt-1.5 px-4 py-2.5 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
                   {...registerReschedule('timeSlot')}
                 >
                   <option value="9 AM - 12 PM">9 AM - 12 PM</option>
@@ -867,8 +867,8 @@ const Deliveries = () => {
                 rows={3}
                 placeholder="e.g. Supplier delay, site access, weather…"
                 className={`w-full mt-1.5 px-4 py-2.5 border ${
-                  rescheduleErrors.reason ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                  rescheduleErrors.reason ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
                 {...registerReschedule('reason', { required: 'Reason is required' })}
               />
               {rescheduleErrors.reason && (
@@ -897,7 +897,7 @@ const Deliveries = () => {
             <button
               type="submit"
               disabled={rescheduleSubmitting}
-              className="w-full mt-2 bg-teal-700 hover:bg-teal-600 disabled:opacity-60 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+              className="w-full mt-2 bg-brand-primary hover:bg-brand-primaryHover disabled:opacity-60 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
             >
               {rescheduleSubmitting ? 'Saving…' : 'Confirm Reschedule'}
             </button>
@@ -942,7 +942,7 @@ function DeliveryCalendarPanel({
 
   return (
     <div className="space-y-4">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
+      <div className="bg-brand-card dark:bg-brand-darkCard border border-brand-border dark:border-brand-darkBorder rounded-2xl p-4 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <button
             type="button"
@@ -993,13 +993,13 @@ function DeliveryCalendarPanel({
                   onClick={() => onSelectDay(key)}
                   className={`min-h-[72px] rounded-xl border p-1.5 text-left transition-colors ${
                     isSelected
-                      ? 'border-teal-500 bg-teal-50 dark:bg-teal-950/30'
+                      ? 'border-brand-primary bg-brand-primary/10 dark:bg-brand-primary/10'
                       : overlap
                         ? 'border-amber-300 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20'
                         : 'border-slate-100 dark:border-slate-800 hover:border-teal-300 dark:hover:border-teal-700'
                   } ${isToday ? 'ring-1 ring-teal-500/40' : ''}`}
                 >
-                  <span className={`text-xs font-bold ${isToday ? 'text-teal-600' : 'text-slate-700 dark:text-slate-200'}`}>
+                  <span className={`text-xs font-bold ${isToday ? 'text-brand-primary' : 'text-slate-700 dark:text-slate-200'}`}>
                     {day}
                   </span>
                   {count > 0 && (
@@ -1018,7 +1018,7 @@ function DeliveryCalendarPanel({
         )}
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
+      <div className="bg-brand-card dark:bg-brand-darkCard border border-brand-border dark:border-brand-darkBorder rounded-2xl p-4 shadow-sm">
         <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-3">
           {selectedKey
             ? `Deliveries on ${new Date(selectedKey + 'T12:00:00').toLocaleDateString()}`
@@ -1042,13 +1042,13 @@ function DeliveryCalendarPanel({
                   <p className="text-xs text-slate-500">
                     {d.driver?.name} · {d.deliveryAddress}
                   </p>
-                  <p className="text-[10px] font-semibold text-teal-600 mt-0.5">{d.status}</p>
+                  <p className="text-[10px] font-semibold text-brand-primary mt-0.5">{d.status}</p>
                 </div>
                 {isProc && d.status !== 'Delivered' && d.status !== 'Cancelled' && (
                   <button
                     type="button"
                     onClick={() => onReschedule(d)}
-                    className="px-2.5 py-1.5 text-xs font-bold bg-teal-700 text-white rounded-lg"
+                    className="px-2.5 py-1.5 text-xs font-bold bg-brand-primary text-white rounded-lg"
                   >
                     Reschedule
                   </button>

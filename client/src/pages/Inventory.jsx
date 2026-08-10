@@ -191,7 +191,7 @@ const Inventory = () => {
         <span
           className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg ${
             l.type === 'Stock In'
-              ? 'bg-teal-50 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400'
+              ? 'bg-brand-primary/10 text-brand-primary dark:bg-brand-primary/10 dark:text-brand-primaryHover'
               : 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400'
           }`}
         >
@@ -237,15 +237,15 @@ const Inventory = () => {
     <div className="space-y-8 animate-in fade-in duration-200">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">Inventory Controls</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <h1 className="bf-page-title">Inventory Controls</h1>
+          <p className="bf-page-subtitle">
             View stock balances and post manual stock adjustments only. Add/edit products under Materials.
           </p>
         </div>
         {isAdmin && (
           <button
             onClick={handleOpenAdjust}
-            className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-600 shadow-md transition-all self-start sm:self-auto"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-primaryHover shadow-md transition-all self-start sm:self-auto"
           >
             <FiSettings className="h-5 w-5" />
             Stock Adjustment
@@ -312,8 +312,8 @@ const Inventory = () => {
             <label className="block text-xs font-bold text-slate-400 uppercase">Select Material Item</label>
             <select
               className={`w-full mt-1.5 px-4 py-2.5 border ${
-                errors.material ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                errors.material ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
               {...register('material', { required: 'Please select material' })}
             >
               <option value="">Select Material</option>
@@ -332,7 +332,7 @@ const Inventory = () => {
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase">Adjustment Type</label>
               <select
-                className="w-full mt-1.5 px-4 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                className="w-full mt-1.5 px-4 py-2.5 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
                 {...register('type')}
               >
                 <option value="Stock In">Stock In (+)</option>
@@ -342,7 +342,7 @@ const Inventory = () => {
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase">Project Site (Optional)</label>
               <select
-                className="w-full mt-1.5 px-4 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                className="w-full mt-1.5 px-4 py-2.5 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
                 {...register('project')}
               >
                 <option value="">Central Depot</option>
@@ -361,8 +361,8 @@ const Inventory = () => {
               type="number"
               placeholder="1"
               className={`w-full mt-1.5 px-4 py-2.5 border ${
-                errors.quantity ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                errors.quantity ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
               {...register('quantity', { required: 'Required', min: { value: 1, message: 'Must be at least 1' } })}
             />
             {errors.quantity && (
@@ -375,14 +375,14 @@ const Inventory = () => {
             <textarea
               rows="3"
               placeholder="e.g. Audit correction, damages..."
-              className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+              className="w-full mt-1.5 px-4 py-2 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
               {...register('comments')}
             />
           </div>
 
           <button
             type="submit"
-            className="w-full mt-4 bg-teal-700 hover:bg-teal-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors flex items-center justify-center gap-1"
+            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors flex items-center justify-center gap-1"
           >
             <FiSettings /> Log Stock Adjustment
           </button>

@@ -200,7 +200,7 @@ const Payments = () => {
       label: 'Purchase Order',
       render: (p) => (
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-lg bg-teal-50 dark:bg-teal-950/30 text-teal-700 flex items-center justify-center shrink-0">
+          <div className="h-9 w-9 rounded-lg bg-brand-primary/10 dark:bg-brand-primary/10 text-brand-primary flex items-center justify-center shrink-0">
             <FiFileText className="h-5 w-5" />
           </div>
           <div>
@@ -229,7 +229,7 @@ const Payments = () => {
             {p.referenceNumber}
           </span>
           {p.waafiTransactionId && (
-            <p className="text-[10px] text-teal-600 mt-0.5">Waafi: {p.waafiTransactionId}</p>
+            <p className="text-[10px] text-brand-primary mt-0.5">Waafi: {p.waafiTransactionId}</p>
           )}
         </div>
       )
@@ -294,7 +294,7 @@ const Payments = () => {
                 toast.error('Receipt file not found');
               }
             }}
-            className="inline-flex items-center gap-1 text-xs font-bold text-teal-700 dark:text-teal-400 hover:underline"
+            className="inline-flex items-center gap-1 text-xs font-bold text-brand-primary dark:text-brand-primaryHover hover:underline"
           >
             <FiDownload /> View / Download
           </a>
@@ -308,15 +308,15 @@ const Payments = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">Payment Management</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <h1 className="bf-page-title">Payment Management</h1>
+          <p className="bf-page-subtitle">
             Pay delivered &amp; invoiced POs via WaafiPay mobile wallet, or record offline payments.
           </p>
         </div>
         {isAccountant && (
           <button
             onClick={handleOpenRecord}
-            className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-600 shadow-md transition-all self-start sm:self-auto"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-primaryHover shadow-md transition-all self-start sm:self-auto"
           >
             <FiPlus className="h-5 w-5" />
             Record Payment
@@ -324,7 +324,7 @@ const Payments = () => {
         )}
       </div>
 
-      <div className="rounded-xl border border-teal-100 bg-teal-50/60 dark:border-teal-900/40 dark:bg-teal-950/20 px-4 py-3 text-xs text-teal-800 dark:text-teal-300 space-y-1">
+      <div className="rounded-xl border border-brand-primary/20 bg-brand-primary/10 dark:border-brand-primary/40/40 dark:bg-brand-primary/10 px-4 py-3 text-xs text-teal-800 dark:text-teal-300 space-y-1">
         <p className="font-bold flex items-center gap-1">
           <FiCheckCircle /> Payment rules
         </p>
@@ -353,8 +353,8 @@ const Payments = () => {
             <label className="block text-xs font-bold text-slate-400 uppercase">Select Purchase Order</label>
             <select
               className={`w-full mt-1.5 px-4 py-2.5 border ${
-                errors.purchaseOrder ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                errors.purchaseOrder ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
               {...register('purchaseOrder', { required: 'Please select a PO' })}
             >
               <option value="">Select PO (Delivered + Invoice)</option>
@@ -388,7 +388,7 @@ const Payments = () => {
                 </div>
                 <div>
                   <p className="text-slate-400">Outstanding Bal</p>
-                  <p className="font-extrabold text-teal-600 dark:text-teal-400">${Number(poRemaining).toFixed(2)}</p>
+                  <p className="font-extrabold text-brand-primary dark:text-brand-primaryHover">${Number(poRemaining).toFixed(2)}</p>
                 </div>
               </div>
             </div>
@@ -398,7 +398,7 @@ const Payments = () => {
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase">Payment Method</label>
               <select
-                className="w-full mt-1.5 px-4 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                className="w-full mt-1.5 px-4 py-2.5 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
                 {...register('paymentMethod')}
               >
                 <option value="Mobile Wallet">Mobile Wallet (WaafiPay)</option>
@@ -416,8 +416,8 @@ const Payments = () => {
                 inputMode="decimal"
                 placeholder="0.01 or 001"
                 className={`w-full mt-1.5 px-4 py-2.5 border ${
-                  errors.paidAmount ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                  errors.paidAmount ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
                 {...register('paidAmount', {
                   required: 'Required',
                   validate: (v) => {
@@ -446,8 +446,8 @@ const Payments = () => {
                 type="text"
                 placeholder="2526XXXXXXXX"
                 className={`w-full mt-1.5 px-4 py-2 border ${
-                  errors.accountNo ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                  errors.accountNo ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
                 {...register('accountNo', {
                   required: 'Mobile account is required for WaafiPay',
                   pattern: {
@@ -470,8 +470,8 @@ const Payments = () => {
                 type="text"
                 placeholder="e.g. TXN-94920942"
                 className={`w-full mt-1.5 px-4 py-2 border ${
-                  errors.referenceNumber ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                  errors.referenceNumber ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
                 {...register('referenceNumber', {
                   required: watchMethod !== 'Mobile Wallet' ? 'Transaction reference is required' : false
                 })}
@@ -486,8 +486,8 @@ const Payments = () => {
             <label className="block text-xs font-bold text-slate-400 uppercase">
               Payment Receipt (optional)
             </label>
-            <label className="mt-1.5 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center hover:border-teal-500 hover:bg-teal-50/40 dark:border-slate-600 dark:bg-slate-800 dark:hover:border-teal-500 dark:hover:bg-teal-950/20">
-              <FiUpload className="h-5 w-5 text-teal-700 dark:text-teal-400" />
+            <label className="mt-1.5 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center hover:border-brand-primary hover:bg-brand-primary/5 dark:border-slate-600 dark:bg-slate-800 dark:hover:border-brand-primary dark:hover:bg-brand-primary/10">
+              <FiUpload className="h-5 w-5 text-brand-primary dark:text-brand-primaryHover" />
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-100">
                 {receiptFileObj ? receiptFileObj.name : 'Click to choose receipt (optional)'}
               </span>
@@ -519,7 +519,7 @@ const Payments = () => {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full mt-4 bg-teal-700 hover:bg-teal-600 disabled:opacity-60 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors flex items-center justify-center gap-1"
+            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover disabled:opacity-60 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors flex items-center justify-center gap-1"
           >
             <FiDollarSign />
             {submitting

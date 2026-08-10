@@ -50,7 +50,7 @@ const Register = () => {
         className="relative z-10 w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-xl dark:border-slate-800 dark:bg-slate-900"
       >
         <div className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-teal-600 text-white shadow-md shadow-teal-500/20">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-primary text-white shadow-md shadow-teal-500/20">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-9-4.5a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0ZM6.75 13.5a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm0 6a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm11.25-6a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm0 6a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0ZM13.5 5.25a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm0 6a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm0 6a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
             </svg>
@@ -74,8 +74,8 @@ const Register = () => {
                 type="text"
                 placeholder="John Doe"
                 className={`w-full rounded-xl border ${
-                  errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-teal-500 dark:border-slate-800'
-                } bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-teal-500 focus:bg-white dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
+                  errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-brand-primary dark:border-slate-800'
+                } bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
                 {...register('name', { required: 'Name is required' })}
               />
             </div>
@@ -95,8 +95,8 @@ const Register = () => {
                 type="email"
                 placeholder="john@company.com"
                 className={`w-full rounded-xl border ${
-                  errors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-teal-500 dark:border-slate-800'
-                } bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-teal-500 focus:bg-white dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
+                  errors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-brand-primary dark:border-slate-800'
+                } bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
                 {...register('email', {
                   required: 'Email is required',
                   pattern: {
@@ -122,8 +122,8 @@ const Register = () => {
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 className={`w-full rounded-xl border ${
-                  errors.password ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-teal-500 dark:border-slate-800'
-                } bg-slate-50 py-2.5 pl-10 pr-12 text-sm outline-none focus:border-teal-500 focus:bg-white dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
+                  errors.password ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-brand-primary dark:border-slate-800'
+                } bg-slate-50 py-2.5 pl-10 pr-12 text-sm outline-none focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
                 {...register('password', {
                   required: 'Password is required',
                   minLength: {
@@ -153,7 +153,7 @@ const Register = () => {
             <div className="relative mt-1.5">
               <FiBriefcase className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
               <select
-                className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-10 text-sm outline-none focus:border-teal-500 focus:bg-white dark:border-slate-800 dark:bg-slate-950 dark:focus:bg-slate-900 transition-all"
+                className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-10 text-sm outline-none focus:border-brand-primary focus:bg-brand-card dark:border-slate-800 dark:bg-slate-950 dark:focus:bg-slate-900 transition-all"
                 {...register('role', { required: 'Please select a role' })}
               >
                 {enterpriseRoles.map((role) => (
@@ -177,7 +177,7 @@ const Register = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex w-full items-center justify-center rounded-xl bg-teal-700 py-3 text-sm font-bold text-white hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-50 transition-colors shadow-lg shadow-teal-700/20"
+            className="flex w-full items-center justify-center rounded-xl bg-brand-primary py-3 text-sm font-bold text-white hover:bg-brand-primaryHover focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 disabled:opacity-50 transition-colors shadow-lg shadow-teal-700/20"
           >
             {isSubmitting ? (
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -191,7 +191,7 @@ const Register = () => {
           Already have an account?{' '}
           <Link
             to="/login"
-            className="font-bold text-teal-600 hover:text-teal-500 dark:text-teal-400 hover:underline"
+            className="font-bold text-brand-primary hover:text-brand-primaryHover dark:text-brand-primaryHover hover:underline"
           >
             Sign in
           </Link>

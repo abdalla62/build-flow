@@ -87,8 +87,8 @@ const Profile = () => {
       
       {/* Title */}
       <div>
-        <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">Profile Settings</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+        <h1 className="bf-page-title">Profile Settings</h1>
+        <p className="bf-page-subtitle">
           Manage your personal information and password preferences.
         </p>
       </div>
@@ -96,9 +96,9 @@ const Profile = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         
         {/* Form 1: Details */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+        <div className="bg-brand-card dark:bg-brand-darkCard border border-brand-border dark:border-brand-darkBorder rounded-2xl p-6 shadow-sm">
           <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4 mb-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-primary/10 dark:bg-brand-primary/10 text-brand-primary dark:text-brand-primaryHover">
               <FiUser className="h-5 w-5" />
             </div>
             <div>
@@ -115,10 +115,10 @@ const Profile = () => {
                   <img
                     src={avatarPreview}
                     alt="Avatar"
-                    className="h-16 w-16 rounded-full object-cover border-2 border-teal-500/40"
+                    className="h-16 w-16 rounded-full object-cover border-2 border-brand-primary/40"
                   />
                 ) : (
-                  <div className="h-16 w-16 rounded-full bg-teal-50 dark:bg-teal-950/40 text-teal-600 flex items-center justify-center text-xl font-bold border border-teal-500/30">
+                  <div className="h-16 w-16 rounded-full bg-teal-50 dark:bg-teal-950/40 text-brand-primary flex items-center justify-center text-xl font-bold border border-brand-primary/30">
                     {user?.name?.charAt(0).toUpperCase() || 'U'}
                   </div>
                 )}
@@ -154,8 +154,8 @@ const Profile = () => {
                   type="text"
                   placeholder="Your Name"
                   className={`w-full rounded-xl border ${
-                    profileErrors.name ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                  } bg-slate-50 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-teal-500 focus:bg-white dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
+                    profileErrors.name ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                  } bg-slate-50 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
                   {...registerProfile('name', {
                     required: 'Full name is required',
                     validate: (v) => String(v || '').trim().length >= 2 || 'Full name is required (min 2 characters)'
@@ -175,8 +175,8 @@ const Profile = () => {
                   type="email"
                   placeholder="you@company.com"
                   className={`w-full rounded-xl border ${
-                    profileErrors.email ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                  } bg-slate-50 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-teal-500 focus:bg-white dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
+                    profileErrors.email ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                  } bg-slate-50 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
                   {...registerProfile('email', {
                     required: 'Email is required',
                     validate: (v) => {
@@ -206,7 +206,7 @@ const Profile = () => {
             <button
               type="submit"
               disabled={profileSubmitting}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-teal-700 py-2.5 text-sm font-semibold text-white hover:bg-teal-600 transition-colors disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-primary py-2.5 text-sm font-semibold text-white hover:bg-brand-primaryHover transition-colors disabled:opacity-50"
             >
               {profileSubmitting ? (
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -221,7 +221,7 @@ const Profile = () => {
         </div>
 
         {/* Form 2: Password Change */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+        <div className="bg-brand-card dark:bg-brand-darkCard border border-brand-border dark:border-brand-darkBorder rounded-2xl p-6 shadow-sm">
           <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4 mb-6">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400">
               <FiKey className="h-5 w-5" />
@@ -241,8 +241,8 @@ const Profile = () => {
                   type="password"
                   placeholder="••••••••"
                   className={`w-full rounded-xl border ${
-                    passwordErrors.currentPassword ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                  } bg-slate-50 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-teal-500 focus:bg-white dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
+                    passwordErrors.currentPassword ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                  } bg-slate-50 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
                   {...registerPassword('currentPassword', { required: 'Current password is required' })}
                 />
               </div>
@@ -259,8 +259,8 @@ const Profile = () => {
                   type="password"
                   placeholder="••••••••"
                   className={`w-full rounded-xl border ${
-                    passwordErrors.newPassword ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                  } bg-slate-50 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-teal-500 focus:bg-white dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
+                    passwordErrors.newPassword ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                  } bg-slate-50 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
                   {...registerPassword('newPassword', {
                     required: 'New password is required',
                     minLength: {
@@ -283,8 +283,8 @@ const Profile = () => {
                   type="password"
                   placeholder="••••••••"
                   className={`w-full rounded-xl border ${
-                    passwordErrors.confirmPassword ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                  } bg-slate-50 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-teal-500 focus:bg-white dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
+                    passwordErrors.confirmPassword ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                  } bg-slate-50 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
                   {...registerPassword('confirmPassword', {
                     required: 'Confirm password is required',
                     validate: (v) => v === watchNewPassword || 'Passwords do not match'
@@ -299,7 +299,7 @@ const Profile = () => {
             <button
               type="submit"
               disabled={passwordSubmitting}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-teal-700 py-2.5 text-sm font-semibold text-white hover:bg-teal-600 transition-colors disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-primary py-2.5 text-sm font-semibold text-white hover:bg-brand-primaryHover transition-colors disabled:opacity-50"
             >
               {passwordSubmitting ? (
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />

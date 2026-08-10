@@ -158,53 +158,53 @@ const Dashboard = () => {
     if (role === 'Administrator') {
       const v = (n) => (adminLoading ? '…' : adminStats ? String(n ?? 0) : '—');
       return [
-        { label: 'Total Users', value: v(adminStats?.totalUsers), icon: FiUsers, color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40' },
-        { label: 'Total Projects', value: v(adminStats?.totalProjects), icon: FiBriefcase, color: 'text-teal-600 bg-teal-50 dark:bg-teal-950/40' },
-        { label: 'Total Materials', value: v(adminStats?.totalMaterials), icon: FiBox, color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40' },
-        { label: 'Total Suppliers', value: v(adminStats?.totalSuppliers), icon: FiTruck, color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40' },
-        { label: 'Total Purchase Orders', value: v(adminStats?.totalPurchaseOrders), icon: FiFileText, color: 'text-slate-600 bg-slate-100 dark:bg-slate-800 dark:text-slate-300' },
-        { label: 'Total Deliveries', value: v(adminStats?.totalDeliveries), icon: FiCheckCircle, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40' },
-        { label: 'Total Payments', value: v(adminStats?.totalPayments), icon: FiDollarSign, color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/40' }
+        { label: 'Total Users', value: v(adminStats?.totalUsers), icon: FiUsers, iconClass: 'bf-icon-users' },
+        { label: 'Total Projects', value: v(adminStats?.totalProjects), icon: FiBriefcase, iconClass: 'bf-icon-projects' },
+        { label: 'Total Materials', value: v(adminStats?.totalMaterials), icon: FiBox, iconClass: 'bf-icon-materials' },
+        { label: 'Total Suppliers', value: v(adminStats?.totalSuppliers), icon: FiTruck, iconClass: 'bf-icon-suppliers' },
+        { label: 'Total Purchase Orders', value: v(adminStats?.totalPurchaseOrders), icon: FiFileText, iconClass: 'bf-icon-orders' },
+        { label: 'Total Deliveries', value: v(adminStats?.totalDeliveries), icon: FiCheckCircle, iconClass: 'bf-icon-deliveries' },
+        { label: 'Total Payments', value: v(adminStats?.totalPayments), icon: FiDollarSign, iconClass: 'bf-icon-payments' }
       ];
     } else if (role === 'Site Engineer') {
       const v = (n) => (siteLoading ? '…' : siteStats ? String(n ?? 0) : '—');
       return [
-        { label: 'My Requests', value: v(siteStats?.myRequests), icon: FiFileText, color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40' },
-        { label: 'Pending Requests', value: v(siteStats?.pendingRequests), icon: FiClock, color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40' },
-        { label: 'Approved Requests', value: v(siteStats?.approvedRequests), icon: FiCheckCircle, color: 'text-teal-600 bg-teal-50 dark:bg-teal-950/40' },
-        { label: 'Delivered Materials', value: v(siteStats?.deliveredMaterials), icon: FiTruck, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40' }
+        { label: 'My Requests', value: v(siteStats?.myRequests), icon: FiFileText, iconClass: 'bf-icon-users' },
+        { label: 'Pending Requests', value: v(siteStats?.pendingRequests), icon: FiClock, iconClass: 'bf-icon-suppliers' },
+        { label: 'Approved Requests', value: v(siteStats?.approvedRequests), icon: FiCheckCircle, iconClass: 'bf-icon-projects' },
+        { label: 'Delivered Materials', value: v(siteStats?.deliveredMaterials), icon: FiTruck, iconClass: 'bf-icon-deliveries' }
       ];
     } else if (role === 'Project Manager') {
       const v = (n) => (pmLoading ? '…' : pmStats ? String(n ?? 0) : '—');
       const money = (n) =>
         pmLoading ? '…' : pmStats ? `$${Number(n ?? 0).toLocaleString()}` : '—';
       return [
-        { label: 'Pending Requests', value: v(pmStats?.pendingRequests), icon: FiClock, color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40' },
-        { label: 'Approved Requests', value: v(pmStats?.approvedRequests), icon: FiCheckCircle, color: 'text-teal-600 bg-teal-50 dark:bg-teal-950/40' },
-        { label: 'Rejected Requests', value: v(pmStats?.rejectedRequests), icon: FiAlertTriangle, color: 'text-red-600 bg-red-50 dark:bg-red-950/40' },
-        { label: 'Budget Requests', value: money(pmStats?.budgetRequests), icon: FiDollarSign, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40' }
+        { label: 'Pending Requests', value: v(pmStats?.pendingRequests), icon: FiClock, iconClass: 'bf-icon-suppliers' },
+        { label: 'Approved Requests', value: v(pmStats?.approvedRequests), icon: FiCheckCircle, iconClass: 'bf-icon-projects' },
+        { label: 'Rejected Requests', value: v(pmStats?.rejectedRequests), icon: FiAlertTriangle, iconClass: 'bf-icon-payments' },
+        { label: 'Budget Requests', value: money(pmStats?.budgetRequests), icon: FiDollarSign, iconClass: 'bf-icon-deliveries' }
       ];
     } else if (role === 'Procurement Officer') {
       const v = (n) => (procLoading ? '…' : procStats ? String(n ?? 0) : '—');
       return [
-        { label: 'Approved Requests', value: v(procStats?.approvedRequests), icon: FiCheckCircle, color: 'text-teal-600 bg-teal-50 dark:bg-teal-950/40' },
-        { label: 'Active Quotations', value: v(procStats?.activeQuotations), icon: FiFileText, color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40' },
-        { label: 'Draft POs', value: v(procStats?.draftPOs), icon: FiClock, color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40' },
-        { label: 'Deliveries Scheduled', value: v(procStats?.deliveriesScheduled), icon: FiTruck, color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40' }
+        { label: 'Approved Requests', value: v(procStats?.approvedRequests), icon: FiCheckCircle, iconClass: 'bf-icon-projects' },
+        { label: 'Active Quotations', value: v(procStats?.activeQuotations), icon: FiFileText, iconClass: 'bf-icon-users' },
+        { label: 'Draft POs', value: v(procStats?.draftPOs), icon: FiClock, iconClass: 'bf-icon-suppliers' },
+        { label: 'Deliveries Scheduled', value: v(procStats?.deliveriesScheduled), icon: FiTruck, iconClass: 'bf-icon-materials' }
       ];
     } else if (role === 'Supplier') {
       return [
-        { label: 'Open Unpaid POs', value: paySummary ? `${paySummary.unpaidCount}` : '—', icon: FiFileText, color: 'text-teal-600 bg-teal-50 dark:bg-teal-950/40' },
-        { label: 'Payment Outstanding', value: paySummary ? `$${Number(paySummary.outstandingTotal).toLocaleString()}` : '—', icon: FiDollarSign, color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40' },
-        { label: 'Paid This Month', value: paySummary ? `$${Number(paySummary.paidThisMonth).toLocaleString()}` : '—', icon: FiCheckCircle, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40' },
-        { label: 'Overdue', value: paySummary ? `${paySummary.overdueCount}` : '—', icon: FiAlertTriangle, color: 'text-red-600 bg-red-50 dark:bg-red-950/40' }
+        { label: 'Open Unpaid POs', value: paySummary ? `${paySummary.unpaidCount}` : '—', icon: FiFileText, iconClass: 'bf-icon-projects' },
+        { label: 'Payment Outstanding', value: paySummary ? `$${Number(paySummary.outstandingTotal).toLocaleString()}` : '—', icon: FiDollarSign, iconClass: 'bf-icon-materials' },
+        { label: 'Paid This Month', value: paySummary ? `$${Number(paySummary.paidThisMonth).toLocaleString()}` : '—', icon: FiCheckCircle, iconClass: 'bf-icon-deliveries' },
+        { label: 'Overdue', value: paySummary ? `${paySummary.overdueCount}` : '—', icon: FiAlertTriangle, iconClass: 'bf-icon-payments' }
       ];
     } else if (role === 'Accountant') {
       return [
-        { label: 'Unpaid Invoices', value: paySummary ? `${paySummary.unpaidCount} items` : '—', icon: FiClock, color: 'text-red-600 bg-red-50 dark:bg-red-950/40' },
-        { label: 'Total Outstanding', value: paySummary ? `$${Number(paySummary.outstandingTotal).toLocaleString()}` : '—', icon: FiDollarSign, color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40' },
-        { label: 'Total Paid (Month)', value: paySummary ? `$${Number(paySummary.paidThisMonth).toLocaleString()}` : '—', icon: FiCheckCircle, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40' },
-        { label: 'Overdue Payments', value: paySummary ? `${paySummary.overdueCount} invoices` : '—', icon: FiAlertTriangle, color: 'text-red-600 bg-red-50 dark:bg-red-950/40' }
+        { label: 'Unpaid Invoices', value: paySummary ? `${paySummary.unpaidCount} items` : '—', icon: FiClock, iconClass: 'bf-icon-payments' },
+        { label: 'Total Outstanding', value: paySummary ? `$${Number(paySummary.outstandingTotal).toLocaleString()}` : '—', icon: FiDollarSign, iconClass: 'bf-icon-suppliers' },
+        { label: 'Total Paid (Month)', value: paySummary ? `$${Number(paySummary.paidThisMonth).toLocaleString()}` : '—', icon: FiCheckCircle, iconClass: 'bf-icon-deliveries' },
+        { label: 'Overdue Payments', value: paySummary ? `${paySummary.overdueCount} invoices` : '—', icon: FiAlertTriangle, iconClass: 'bf-icon-payments' }
       ];
     } else if (role === 'Delivery Staff') {
       const assigned = deliveryStats?.assignedShipments ?? 0;
@@ -215,7 +215,7 @@ const Dashboard = () => {
           label: 'Assigned Shipments',
           value: deliveryLoading ? '…' : deliveryStats ? `${assigned} Pending` : '—',
           icon: FiTruck,
-          color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40'
+          iconClass: 'bf-icon-users'
         },
         {
           label: 'Completed Deliveries',
@@ -225,7 +225,7 @@ const Dashboard = () => {
               ? `${completed} successfully`
               : '—',
           icon: FiCheckCircle,
-          color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40'
+          iconClass: 'bf-icon-deliveries'
         },
         {
           label: 'Delayed Shipments',
@@ -235,7 +235,7 @@ const Dashboard = () => {
               ? `${delayed} alert${delayed === 1 ? '' : 's'}`
               : '—',
           icon: FiAlertTriangle,
-          color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40'
+          iconClass: 'bf-icon-suppliers'
         },
         {
           label: 'Active Route',
@@ -243,12 +243,12 @@ const Dashboard = () => {
             ? '…'
             : deliveryStats?.activeRoute || 'No active route',
           icon: FiActivity,
-          color: 'text-teal-600 bg-teal-50 dark:bg-teal-950/40'
+          iconClass: 'bf-icon-projects'
         }
       ];
     } else {
       return [
-        { label: 'Welcome', value: '—', icon: FiActivity, color: 'text-teal-600 bg-teal-50 dark:bg-teal-950/40' }
+        { label: 'Welcome', value: '—', icon: FiActivity, iconClass: 'bf-icon-projects' }
       ];
     }
   };
@@ -256,44 +256,48 @@ const Dashboard = () => {
   const stats = getRoleStats();
 
   return (
-    <div className="relative -m-6 md:-m-8 min-h-[calc(100vh-4rem)] overflow-hidden">
-      {/* Atmospheric construction background */}
+    <div className="relative -m-4 min-h-[calc(100vh-4rem)] overflow-hidden sm:-m-6 md:-m-8">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <motion.div
-          className="absolute inset-0 bg-cover bg-center"
+          className="absolute inset-0 bg-cover bg-center brightness-[1.02] contrast-[1.04] saturate-[1.08] dark:brightness-[0.92] dark:contrast-[1.1] dark:saturate-[1.15]"
           style={{ backgroundImage: "url('/images/dashboard-bg.png')" }}
-          initial={{ scale: 1.05 }}
-          animate={{ scale: 1.12 }}
-          transition={{ duration: 28, ease: 'linear', repeat: Infinity, repeatType: 'reverse' }}
+          initial={{ scale: 1.03 }}
+          animate={{ scale: 1.08 }}
+          transition={{ duration: 36, ease: 'linear', repeat: Infinity, repeatType: 'reverse' }}
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-950/55 via-slate-900/45 to-amber-950/40 dark:from-slate-950/75 dark:via-slate-950/70 dark:to-slate-900/80" />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-50/55 to-transparent dark:from-slate-950/90 dark:via-slate-950/50 dark:to-transparent" />
+        {/* Light: soft slate/teal wash — photo visible, not milky */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-100/80 via-slate-200/55 to-teal-100/45 dark:hidden" />
+        <div className="absolute inset-0 bg-gradient-to-t from-brand-bg/90 via-transparent to-slate-100/40 dark:hidden" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(15,157,148,0.14),_transparent_55%)] dark:hidden" />
+        {/* Dark: keep cinematic depth */}
+        <div className="absolute inset-0 hidden bg-gradient-to-br from-slate-950/80 via-teal-950/45 to-slate-950/55 dark:block" />
+        <div className="absolute inset-0 hidden bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-slate-900/50 dark:block" />
+        <div className="absolute inset-0 hidden bg-[radial-gradient(ellipse_at_top_right,_rgba(15,157,148,0.22),_transparent_50%)] dark:block" />
         <motion.div
-          className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-teal-400/20 blur-3xl dark:bg-teal-500/10"
-          animate={{ x: [0, 30, 0], y: [0, 20, 0] }}
+          className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-brand-primary/20 blur-3xl dark:bg-brand-primary/25"
+          animate={{ x: [0, 20, 0], y: [0, 14, 0], opacity: [0.35, 0.55, 0.35] }}
           transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
-          className="absolute bottom-0 left-10 h-56 w-56 rounded-full bg-amber-300/15 blur-3xl dark:bg-amber-500/10"
-          animate={{ x: [0, -20, 0], y: [0, -15, 0] }}
+          className="absolute bottom-8 left-0 h-56 w-56 rounded-full bg-amber-300/20 blur-3xl dark:bg-amber-400/15"
+          animate={{ x: [0, -14, 0], y: [0, -10, 0], opacity: [0.25, 0.45, 0.25] }}
           transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }}
         />
       </div>
 
       <motion.div
-        className="relative z-10 space-y-8 p-6 md:p-8"
+        className="relative z-10 space-y-8 p-4 sm:p-6 md:p-8"
         variants={pageVariants}
         initial="hidden"
         animate="show"
       >
-        {/* Header */}
         <motion.div
           variants={itemVariants}
           className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div>
             <motion.h1
-              className="text-3xl font-extrabold tracking-tight text-white drop-shadow-md"
+              className="text-3xl font-extrabold tracking-tight text-brand-text drop-shadow-sm dark:text-white"
               initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ type: 'spring', stiffness: 300, damping: 24 }}
@@ -301,33 +305,27 @@ const Dashboard = () => {
               Dashboard
             </motion.h1>
             <motion.p
-              className="mt-1 text-sm text-slate-100/90 drop-shadow"
+              className="mt-1 text-sm text-brand-muted dark:text-slate-300"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.15 }}
             >
               Overview of procurement metrics and activities for{' '}
-              <strong className="font-semibold text-teal-300">{user?.role}</strong>.
+              <strong className="font-semibold text-brand-primary dark:text-teal-300">{user?.role}</strong>.
             </motion.p>
           </div>
           <motion.span
-            className="inline-flex items-center gap-1.5 rounded-xl border border-white/30 bg-white/20 px-3 py-1.5 text-xs font-semibold text-white shadow-sm backdrop-blur-md"
-            whileHover={{ scale: 1.04, y: -2 }}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-brand-card/90 px-3 py-1.5 text-xs font-semibold text-brand-text shadow-bf-sm dark:border-brand-primary/30 dark:bg-brand-darkCard/80 dark:text-slate-100"
+            whileHover={{ scale: 1.03, y: -1 }}
             transition={{ type: 'spring', stiffness: 400, damping: 18 }}
           >
-            <motion.span
-              animate={{ rotate: [0, 12, -12, 0] }}
-              transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 4 }}
-            >
-              <FiClock />
-            </motion.span>
+            <FiClock className="text-brand-primary" />
             Local Time: {new Date().toLocaleDateString()}
           </motion.span>
         </motion.div>
 
-        {/* Metric cards */}
         <motion.div
-          className={`grid grid-cols-1 gap-6 sm:grid-cols-2 ${
+          className={`grid grid-cols-1 gap-5 sm:grid-cols-2 ${
             user?.role === 'Administrator' ? 'lg:grid-cols-4 xl:grid-cols-4' : 'lg:grid-cols-4'
           }`}
           variants={pageVariants}
@@ -339,27 +337,27 @@ const Dashboard = () => {
                 key={stat.label}
                 variants={cardVariants}
                 whileHover={{
-                  y: -6,
-                  scale: 1.02,
-                  boxShadow: '0 18px 40px -12px rgba(15, 23, 42, 0.18)'
+                  y: -4,
+                  scale: 1.015,
+                  boxShadow: '0 12px 28px rgba(15, 23, 42, 0.1)'
                 }}
-                whileTap={{ scale: 0.98 }}
-                className="rounded-2xl border border-white/70 bg-white/80 p-6 shadow-sm backdrop-blur-md dark:border-slate-700/70 dark:bg-slate-900/75"
+                whileTap={{ scale: 0.99 }}
+                className="bf-card p-6"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  <span className="text-xs font-bold uppercase tracking-wider text-brand-muted dark:text-brand-darkMuted">
                     {stat.label}
                   </span>
                   <motion.div
-                    className={`rounded-xl p-2.5 ${stat.color}`}
-                    whileHover={{ rotate: [0, -8, 8, 0], scale: 1.1 }}
-                    transition={{ duration: 0.45 }}
+                    className={stat.iconClass}
+                    whileHover={{ rotate: [0, -6, 6, 0], scale: 1.08 }}
+                    transition={{ duration: 0.4 }}
                   >
                     <Icon className="h-5 w-5" />
                   </motion.div>
                 </div>
                 <motion.p
-                  className="mt-4 text-2xl font-extrabold text-slate-900 dark:text-white"
+                  className="mt-4 text-2xl font-extrabold text-brand-text dark:text-white"
                   key={`${stat.label}-${stat.value}`}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -372,19 +370,16 @@ const Dashboard = () => {
           })}
         </motion.div>
 
-        {/* Charts */}
         {isAdmin && (
           <motion.div className="grid grid-cols-1 gap-6 lg:grid-cols-3" variants={pageVariants}>
             <motion.div
               variants={itemVariants}
-              whileHover={{ y: -4 }}
-              className="rounded-2xl border border-white/70 bg-white/80 p-6 shadow-sm backdrop-blur-md dark:border-slate-700/70 dark:bg-slate-900/75 lg:col-span-2"
+              whileHover={{ y: -3 }}
+              className="bf-card p-6 lg:col-span-2"
             >
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-slate-900 dark:text-white">Procurement expenditure</h3>
-                  <p className="text-xs text-slate-400">Real monthly PO totals from the system</p>
-                </div>
+              <div className="mb-6">
+                <h3 className="font-bold text-brand-text dark:text-white">Procurement expenditure</h3>
+                <p className="text-xs text-brand-muted dark:text-brand-darkMuted">Real monthly PO totals from the system</p>
               </div>
               <motion.div
                 className="h-72"
@@ -393,7 +388,7 @@ const Dashboard = () => {
                 transition={{ delay: 0.25, duration: 0.5 }}
               >
                 {monthlyExpenditure.length === 0 ? (
-                  <div className="flex h-full items-center justify-center text-sm font-semibold text-slate-400">
+                  <div className="flex h-full items-center justify-center text-sm font-semibold text-brand-muted">
                     No purchase order spend data yet
                   </div>
                 ) : (
@@ -401,8 +396,8 @@ const Dashboard = () => {
                     <AreaChart data={monthlyExpenditure} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorExpenditure" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#0F766E" stopOpacity={0.2} />
-                          <stop offset="95%" stopColor="#0F766E" stopOpacity={0} />
+                          <stop offset="5%" stopColor="#0F9D94" stopOpacity={0.22} />
+                          <stop offset="95%" stopColor="#0F9D94" stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" className="dark:stroke-slate-800" />
@@ -410,9 +405,9 @@ const Dashboard = () => {
                       <YAxis stroke="#94A3B8" fontSize={12} tickLine={false} axisLine={false} />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#1E293B',
+                          backgroundColor: '#0F172A',
                           border: 'none',
-                          borderRadius: '8px',
+                          borderRadius: '12px',
                           color: '#fff'
                         }}
                         formatter={(v) => [`$${Number(v).toLocaleString()}`, 'Spent']}
@@ -420,7 +415,7 @@ const Dashboard = () => {
                       <Area
                         type="monotone"
                         dataKey="expenditure"
-                        stroke="#0F766E"
+                        stroke="#0F9D94"
                         strokeWidth={2}
                         fillOpacity={1}
                         fill="url(#colorExpenditure)"
@@ -436,12 +431,12 @@ const Dashboard = () => {
 
             <motion.div
               variants={itemVariants}
-              whileHover={{ y: -4 }}
-              className="flex flex-col justify-between rounded-2xl border border-white/70 bg-white/80 p-6 shadow-sm backdrop-blur-md dark:border-slate-700/70 dark:bg-slate-900/75"
+              whileHover={{ y: -3 }}
+              className="bf-card flex flex-col justify-between p-6"
             >
               <div>
-                <h3 className="font-bold text-slate-900 dark:text-white">Spend by Category</h3>
-                <p className="text-xs text-slate-400">PO line totals grouped by stock category</p>
+                <h3 className="font-bold text-brand-text dark:text-white">Spend by Category</h3>
+                <p className="text-xs text-brand-muted dark:text-brand-darkMuted">PO line totals grouped by stock category</p>
               </div>
               <motion.div
                 className="relative my-4 flex h-44 items-center justify-center"
@@ -450,7 +445,7 @@ const Dashboard = () => {
                 transition={{ delay: 0.35, type: 'spring', stiffness: 200, damping: 20 }}
               >
                 {categoryData.length === 0 ? (
-                  <p className="text-sm font-semibold text-slate-400">No category spend yet</p>
+                  <p className="text-sm font-semibold text-brand-muted">No category spend yet</p>
                 ) : (
                   <>
                     <ResponsiveContainer width="100%" height="100%">
@@ -474,10 +469,10 @@ const Dashboard = () => {
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="pointer-events-none absolute flex flex-col items-center justify-center">
-                      <span className="text-xl font-black text-slate-900 dark:text-white">
+                      <span className="text-xl font-black text-brand-text dark:text-white">
                         ${Number(adminCharts.totalCategorySpend || 0).toLocaleString()}
                       </span>
-                      <span className="text-[10px] font-bold uppercase text-slate-400">Total spent</span>
+                      <span className="text-[10px] font-bold uppercase text-brand-muted">Total spent</span>
                     </div>
                   </>
                 )}
@@ -486,7 +481,7 @@ const Dashboard = () => {
                 {categoryData.map((item, i) => (
                   <motion.div
                     key={item.name}
-                    className="flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-400"
+                    className="flex items-center justify-between text-xs font-semibold text-brand-muted dark:text-brand-darkMuted"
                     initial={{ opacity: 0, x: 12 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.45 + i * 0.06 }}
@@ -505,6 +500,7 @@ const Dashboard = () => {
         )}
       </motion.div>
     </div>
+
   );
 };
 

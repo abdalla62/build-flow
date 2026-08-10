@@ -61,8 +61,8 @@ const ForgotPassword = () => {
                     type="email"
                     placeholder="you@company.com"
                     className={`w-full rounded-xl border ${
-                      errors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-teal-500 dark:border-slate-800'
-                    } bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-teal-500 focus:bg-white dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
+                      errors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-brand-primary dark:border-slate-800'
+                    } bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 dark:focus:bg-slate-900 transition-all`}
                     {...register('email', {
                       required: 'Email is required',
                       pattern: {
@@ -80,7 +80,7 @@ const ForgotPassword = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex w-full items-center justify-center rounded-xl bg-teal-700 py-3 text-sm font-bold text-white hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-50 transition-colors shadow-lg shadow-teal-700/20"
+                className="flex w-full items-center justify-center rounded-xl bg-brand-primary py-3 text-sm font-bold text-white hover:bg-brand-primaryHover focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 disabled:opacity-50 transition-colors shadow-lg shadow-teal-700/20"
               >
                 {isSubmitting ? (
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />

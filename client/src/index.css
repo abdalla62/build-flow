@@ -3,8 +3,103 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --bf-primary: #0F9D94;
+    --bf-primary-hover: #14B8A6;
+    --bf-bg: #F1F5F9;
+    --bf-card: #F8FAFC;
+    --bf-border: #E2E8F0;
+    --bf-text: #0F172A;
+    --bf-muted: #64748B;
+    --bf-success: #10B981;
+    --bf-warning: #F59E0B;
+    --bf-danger: #E11D48;
+  }
+
+  .dark {
+    --bf-primary: #0F9D94;
+    --bf-primary-hover: #14B8A6;
+    --bf-bg: #0F172A;
+    --bf-card: #111827;
+    --bf-border: #1E293B;
+    --bf-text: #F8FAFC;
+    --bf-muted: #94A3B8;
+  }
+
   body {
-    @apply antialiased;
+    @apply antialiased font-sans bg-brand-bg text-brand-text dark:bg-brand-darkBg dark:text-slate-100;
+  }
+}
+
+@layer components {
+  .bf-card {
+    @apply rounded-card border border-brand-border bg-brand-card text-brand-text shadow-bf
+      dark:border-brand-darkBorder dark:bg-brand-darkCard dark:text-slate-100;
+  }
+
+  .bf-panel {
+    @apply rounded-card border border-brand-border bg-brand-card shadow-bf-sm
+      dark:border-brand-darkBorder dark:bg-brand-darkCard;
+  }
+
+  .bf-page-title {
+    @apply text-2xl font-bold tracking-tight text-brand-text dark:text-slate-50 sm:text-3xl;
+  }
+
+  .bf-page-subtitle {
+    @apply mt-1 text-sm text-brand-muted dark:text-brand-darkMuted;
+  }
+
+  .bf-label {
+    @apply block text-xs font-semibold uppercase tracking-wide text-brand-muted dark:text-brand-darkMuted;
+  }
+
+  .bf-input {
+    @apply w-full rounded-xl border border-brand-border bg-brand-card px-4 py-2.5 text-sm text-brand-text
+      outline-none transition-colors
+      placeholder:text-brand-muted
+      focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30
+      dark:border-brand-darkBorder dark:bg-brand-darkSecondary dark:text-slate-100
+      dark:focus:border-brand-primary;
+  }
+
+  .bf-btn-primary {
+    @apply inline-flex items-center justify-center rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white
+      shadow-bf-sm transition-colors hover:bg-brand-primaryHover
+      focus:outline-none focus:ring-2 focus:ring-brand-primary/40 focus:ring-offset-2
+      disabled:opacity-50 dark:focus:ring-offset-brand-darkBg;
+  }
+
+  .bf-btn-danger {
+    @apply inline-flex items-center justify-center rounded-xl bg-brand-danger px-4 py-2.5 text-sm font-semibold text-white
+      transition-colors hover:bg-rose-600 disabled:opacity-50;
+  }
+
+  .bf-btn-success {
+    @apply inline-flex items-center justify-center rounded-xl bg-brand-success px-4 py-2.5 text-sm font-semibold text-white
+      transition-colors hover:bg-emerald-600 disabled:opacity-50;
+  }
+
+  .bf-icon-users {
+    @apply rounded-xl bg-brand-usersBg p-2.5 text-brand-users dark:bg-blue-950/40 dark:text-blue-400;
+  }
+  .bf-icon-projects {
+    @apply rounded-xl bg-brand-projectsBg p-2.5 text-brand-projects dark:bg-teal-950/40 dark:text-teal-400;
+  }
+  .bf-icon-materials {
+    @apply rounded-xl bg-brand-materialsBg p-2.5 text-brand-materials dark:bg-indigo-950/40 dark:text-indigo-400;
+  }
+  .bf-icon-suppliers {
+    @apply rounded-xl bg-brand-suppliersBg p-2.5 text-brand-suppliers dark:bg-amber-950/40 dark:text-amber-400;
+  }
+  .bf-icon-orders {
+    @apply rounded-xl bg-brand-ordersBg p-2.5 text-brand-orders dark:bg-slate-800 dark:text-slate-300;
+  }
+  .bf-icon-deliveries {
+    @apply rounded-xl bg-brand-deliveriesBg p-2.5 text-brand-deliveries dark:bg-emerald-950/40 dark:text-emerald-400;
+  }
+  .bf-icon-payments {
+    @apply rounded-xl bg-brand-paymentsBg p-2.5 text-brand-payments dark:bg-rose-950/40 dark:text-rose-400;
   }
 }
 
@@ -24,7 +119,7 @@
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: #334155;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -33,19 +128,4 @@
 
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #64748b;
-}
-
-/* Glassmorphism Classes */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-}
-
-.dark .glass-panel {
-  background: rgba(30, 41, 59, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
 }

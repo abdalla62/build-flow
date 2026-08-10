@@ -171,7 +171,7 @@ const Users = () => {
   const headers = [
     { key: 'name', label: 'User Details', render: (u) => (
       <div className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-full bg-teal-50 border border-teal-200/50 dark:bg-slate-800 text-teal-600 flex items-center justify-center font-extrabold shrink-0">
+        <div className="h-9 w-9 rounded-full bg-teal-50 border border-brand-primary/30/50 dark:bg-slate-800 text-brand-primary flex items-center justify-center font-extrabold shrink-0">
           {u.name.charAt(0).toUpperCase()}
         </div>
         <div>
@@ -182,7 +182,7 @@ const Users = () => {
     )},
     { key: 'role', label: 'Enterprise Role', render: (u) => (
       <div>
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-teal-50 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-brand-primary/10 text-brand-primary dark:bg-brand-primary/10 dark:text-brand-primaryHover">
           <FiShield className="h-3.5 w-3.5" />
           {u.role}
         </span>
@@ -239,14 +239,14 @@ const Users = () => {
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">User Management</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <h1 className="bf-page-title">User Management</h1>
+          <p className="bf-page-subtitle">
             Admin dashboard to manage employee accounts, configure roles, and change system access status.
           </p>
         </div>
         <button
           onClick={handleOpenCreate}
-          className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-600 shadow-md transition-all self-start sm:self-auto"
+          className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-primaryHover shadow-md transition-all self-start sm:self-auto"
         >
           <FiPlus className="h-5 w-5" />
           Add Employee
@@ -254,7 +254,7 @@ const Users = () => {
       </div>
 
       {/* Filter panel */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm">
+      <div className="flex flex-col md:flex-row gap-4 justify-between bg-brand-card dark:bg-brand-darkCard border border-brand-border dark:border-brand-darkBorder p-4 rounded-card shadow-bf-sm">
         <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
           <input
@@ -262,7 +262,7 @@ const Users = () => {
             placeholder="Search by name or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 outline-none focus:border-teal-500 focus:bg-white dark:bg-slate-950 text-sm transition-all"
+            className="w-full pl-9 pr-4 py-2 border border-brand-border dark:border-brand-darkBorder rounded-xl bg-slate-50 outline-none focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 text-sm transition-all"
           />
         </form>
 
@@ -273,7 +273,7 @@ const Users = () => {
               setRoleFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 outline-none text-sm focus:border-teal-500 focus:bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400"
+            className="px-4 py-2 border border-brand-border dark:border-brand-darkBorder rounded-xl bg-slate-50 outline-none text-sm focus:border-brand-primary focus:bg-brand-card dark:bg-slate-950 text-slate-600 dark:text-slate-400"
           >
             <option value="">All Roles</option>
             {roles.map((r) => (
@@ -310,8 +310,8 @@ const Users = () => {
               type="text"
               placeholder="e.g. John Doe"
               className={`w-full mt-1.5 px-4 py-2 border ${
-                errors.name ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                errors.name ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
               {...register('name', { required: 'Full name is required' })}
             />
             {errors.name && (
@@ -325,8 +325,8 @@ const Users = () => {
               type="email"
               placeholder="name@buildflow.com"
               className={`w-full mt-1.5 px-4 py-2 border ${
-                errors.email ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                errors.email ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
               {...register('email', { required: 'Valid email is required' })}
             />
             {errors.email && (
@@ -340,8 +340,8 @@ const Users = () => {
               type="password"
               placeholder="••••••"
               className={`w-full mt-1.5 px-4 py-2 border ${
-                errors.password ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                errors.password ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+              } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
               {...register('password', {
                 required: 'Password is required',
                 minLength: { value: 6, message: 'Password must be at least 6 characters' }
@@ -356,7 +356,7 @@ const Users = () => {
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase">Select Role</label>
               <select
-                className="w-full mt-1.5 px-4 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                className="w-full mt-1.5 px-4 py-2.5 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
                 {...register('role')}
               >
                 {roles.map((r) => (
@@ -370,7 +370,7 @@ const Users = () => {
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase">Status</label>
               <select
-                className="w-full mt-1.5 px-4 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                className="w-full mt-1.5 px-4 py-2.5 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
                 {...register('status')}
               >
                 <option value="Active">Active</option>
@@ -386,8 +386,8 @@ const Users = () => {
                 type="text"
                 placeholder="e.g. TRK-4820"
                 className={`w-full mt-1.5 px-4 py-2 border ${
-                  errors.vehiclePlateCode ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
-                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500`}
+                  errors.vehiclePlateCode ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
+                } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
                 {...register('vehiclePlateCode', {
                   required: watchRole === 'Delivery Staff' ? 'Vehicle Plate Code is required' : false
                 })}
@@ -400,7 +400,7 @@ const Users = () => {
 
           <button
             type="submit"
-            className="w-full mt-4 bg-teal-700 hover:bg-teal-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors flex items-center justify-center gap-1.5"
+            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors flex items-center justify-center gap-1.5"
           >
             <FiUserPlus /> Add User Account
           </button>
@@ -422,7 +422,7 @@ const Users = () => {
             <select
               value={updateRoleValue}
               onChange={(e) => setUpdateRoleValue(e.target.value)}
-              className="w-full mt-1.5 px-4 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500 focus:bg-white"
+              className="w-full mt-1.5 px-4 py-2.5 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card"
             >
               {roles.map((r) => (
                 <option key={r._id} value={r.name}>
@@ -440,14 +440,14 @@ const Users = () => {
                 value={updateVehiclePlate}
                 onChange={(e) => setUpdateVehiclePlate(e.target.value)}
                 placeholder="e.g. TRK-4820"
-                className="w-full mt-1.5 px-4 py-2 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-teal-500"
+                className="w-full mt-1.5 px-4 py-2 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
               />
             </div>
           )}
 
           <button
             onClick={handleSaveRole}
-            className="w-full mt-4 bg-teal-700 hover:bg-teal-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
           >
             Update User Role
           </button>

@@ -145,16 +145,16 @@ const Reports = () => {
     <div className="space-y-6">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">
+          <h1 className="bf-page-title">
             Export Reports
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="bf-page-subtitle">
           Monthly procurement, supplier payments, delivery schedule,
             outstanding balances, and material usage (PDF / Excel).
           </p>
         </div>
         <div className="flex flex-nowrap items-center gap-2 shrink-0">
-          <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm shrink-0">
+          <label className="inline-flex items-center gap-2 rounded-xl border border-brand-border dark:border-brand-darkBorder bg-brand-card dark:bg-brand-darkCard px-3 py-2 text-sm shrink-0">
             <FiCalendar className="text-slate-400" />
             <input
               type="month"
@@ -167,14 +167,14 @@ const Reports = () => {
             <button
               type="button"
               onClick={exportExcel}
-              className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-600 shadow-md whitespace-nowrap"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-primaryHover shadow-md whitespace-nowrap"
             >
               <FiDownload /> Excel
             </button>
             <button
               type="button"
               onClick={exportPdf}
-              className="inline-flex items-center gap-2 rounded-xl border border-teal-700 text-teal-700 dark:text-teal-400 dark:border-teal-600 px-4 py-2.5 text-sm font-semibold hover:bg-teal-50 dark:hover:bg-teal-950/30 whitespace-nowrap"
+              className="inline-flex items-center gap-2 rounded-xl border border-teal-700 text-brand-primary dark:text-brand-primaryHover dark:border-teal-600 px-4 py-2.5 text-sm font-semibold hover:bg-teal-50 dark:hover:bg-teal-950/30 whitespace-nowrap"
             >
               <FiDownload /> PDF
             </button>
@@ -204,15 +204,15 @@ const Reports = () => {
               onClick={() => setActiveTab(t.id)}
               className={`text-left rounded-2xl border p-5 transition-all ${
                 activeCard
-                  ? 'border-teal-500 bg-teal-50/80 dark:bg-teal-950/30 shadow-md'
-                  : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-teal-400/60'
+                  ? 'border-brand-primary bg-teal-50/80 dark:bg-brand-primary/10 shadow-md'
+                  : 'border-brand-border dark:border-brand-darkBorder bg-brand-card dark:bg-brand-darkCard hover:border-teal-400/60'
               }`}
             >
               <div className="flex items-center justify-between gap-3">
                 <span
                   className={`p-2.5 rounded-xl ${
                     activeCard
-                      ? 'bg-teal-600 text-white'
+                      ? 'bg-brand-primary text-white'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
                   }`}
                 >
@@ -233,7 +233,7 @@ const Reports = () => {
         })}
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-sm">
+      <div className="bg-brand-card dark:bg-brand-darkCard border border-brand-border dark:border-brand-darkBorder rounded-2xl p-4 sm:p-6 shadow-sm">
         {loading ? (
           <p className="py-16 text-center text-sm font-semibold text-slate-400">
             Loading reports…
@@ -254,7 +254,7 @@ const Reports = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm min-w-[900px]">
                   <thead>
-                    <tr className="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                    <tr className="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b border-brand-border dark:border-brand-darkBorder">
                       {active.headers.map((h) => (
                         <th key={h} className="py-3 px-3 font-bold whitespace-nowrap">
                           {h}
