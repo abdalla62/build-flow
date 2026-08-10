@@ -326,34 +326,33 @@ const MATERIALS_BY_CATEGORY = {
   ]
 };
 
+/** Only the two real supplier companies (linked to existing login users). */
 const SUPPLIERS = [
   {
-    name: 'Axmed Cabdi Xasan',
-    company: 'Hormuud Dhismo Supplies',
-    phone: '+252 61 700 1100',
-    email: 'hormuud.supplies@example.com',
-    address: 'Industrial Road, Muqdisho, Banadir',
+    name: 'Kowsar Axmed Cali',
+    company: 'Kowsar Building Materials',
+    phone: '+252 61 778 2200',
+    email: 'kowsar@gmail.com',
+    address: 'Suuqa Bakaaraha, Muqdisho, Banadir',
     paymentTerms: 'Net 15 maalmood (USD)',
     performanceRating: 5
   },
   {
-    name: 'Faadumo Cali Warsame',
-    company: 'Bakaarah Building Materials',
-    phone: '+252 61 555 2200',
-    email: 'bakaarah.materials@example.com',
-    address: 'Suuqa Bakaaraha, Muqdisho',
+    name: 'Axmed Cabdullahi Xasan',
+    company: 'Axmed Steel & Cement Co.',
+    phone: '+252 61 445 3300',
+    email: 'ahmed@gmail.com',
+    address: 'Industrial Road, Muqdisho, Banadir',
     paymentTerms: 'Lacag caddaan / Net 7',
-    performanceRating: 4
-  },
-  {
-    name: 'Maxamed Yuusuf Guuleed',
-    company: 'Banadir Steel & Cement',
-    phone: '+252 61 333 4400',
-    email: 'banadir.steel@example.com',
-    address: 'KM4 / Maka Al-Mukarama, Muqdisho',
-    paymentTerms: 'Net 30 maalmood (USD)',
     performanceRating: 5
   }
+];
+
+/** Remove old demo supplier companies if re-seeded. */
+const SUPPLIER_EMAILS_TO_REMOVE = [
+  'hormuud.supplies@example.com',
+  'bakaarah.materials@example.com',
+  'banadir.steel@example.com'
 ];
 
 /** Budgets in USD — 2 Mogadishu demo projects only. */
@@ -477,7 +476,7 @@ async function run() {
   let supCreated = 0;
   let supUpdated = 0;
 
-  console.log('\n--- Suppliers ---');
+  console.log('\n--- Suppliers (2 keliya) ---');
   for (const def of SUPPLIERS) {
     const { supplier, created } = await upsertSupplier(def, allCatIds);
     supplierIds.push(supplier._id);
@@ -487,6 +486,13 @@ async function run() {
     } else {
       supUpdated += 1;
       console.log(`  ~ ${supplier.company}`);
+    }
+  }
+
+  for (const email of SUPPLIER_EMAILS_TO_REMOVE) {
+    const res = await Supplier.deleteOne({ email });
+    if (res.deletedCount) {
+      console.log(`  - la tiray: ${email}`);
     }
   }
 
