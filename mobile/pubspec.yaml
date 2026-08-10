@@ -81,6 +81,7 @@ flutter:
     - assets/images/supplier-dashboard-bg.png
     - assets/images/procurement-dashboard-bg.png
     - assets/images/delivery-dashboard-bg.png
+    - assets/images/login-bg.png
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

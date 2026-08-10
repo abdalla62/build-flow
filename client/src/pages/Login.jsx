@@ -50,7 +50,7 @@ const Login = () => {
       <div className="pointer-events-none absolute inset-0">
         <motion.div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/images/dashboard-bg.png')" }}
+          style={{ backgroundImage: "url('/images/login-bg.png')" }}
           initial={{ scale: 1.06 }}
           animate={{ scale: 1.14 }}
           transition={{ duration: 30, ease: 'linear', repeat: Infinity, repeatType: 'reverse' }}

@@ -53,7 +53,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         fit: StackFit.expand,
         children: [
           Image.asset(
-            'assets/images/dashboard-bg.png',
+            'assets/images/login-bg.png',
             fit: BoxFit.cover,
             errorBuilder: (_, _, _) => Container(
               decoration: const BoxDecoration(
