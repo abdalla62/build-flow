@@ -77,7 +77,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 colors: [
                   Color(0xCC020617),
                   Color(0xB30F172A),
-                  Color(0x990F766E),
+                  Color(0x990F9D94),
                 ],
               ),
             ),

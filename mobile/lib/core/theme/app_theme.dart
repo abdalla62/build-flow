@@ -1,20 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// BUILD FLOW brand colors (match web + design prompt).
+/// BUILD FLOW brand colors — aligned with web `tailwind.config.js` / `index.css`.
 class AppColors {
-  static const Color primary = Color(0xFF0F766E);
+  static const Color primary = Color(0xFF0F9D94);
+  static const Color primaryHover = Color(0xFF14B8A6);
   static const Color secondary = Color(0xFF14B8A6);
   static const Color accent = Color(0xFFF59E0B);
-  static const Color success = Color(0xFF22C55E);
-  static const Color danger = Color(0xFFEF4444);
-  static const Color lightBg = Color(0xFFF8FAFC);
+  static const Color success = Color(0xFF10B981);
+  static const Color danger = Color(0xFFE11D48);
+  static const Color lightBg = Color(0xFFF1F5F9);
+  static const Color card = Color(0xFFF8FAFC);
   static const Color darkNavy = Color(0xFF0F172A);
-  static const Color darkCard = Color(0xFF1E293B);
+  static const Color darkSecondary = Color(0xFF111827);
+  static const Color darkCard = Color(0xFF111827);
+  static const Color darkBorder = Color(0xFF1E293B);
+  static const Color textPrimary = Color(0xFF0F172A);
   static const Color textSecondary = Color(0xFF64748B);
+  static const Color darkMuted = Color(0xFF94A3B8);
   static const Color border = Color(0xFFE2E8F0);
   static const Color slate400 = Color(0xFF94A3B8);
   static const Color slate700 = Color(0xFF334155);
+
+  // Metric accents (web parity)
+  static const Color users = Color(0xFF2563EB);
+  static const Color usersBg = Color(0xFFEFF6FF);
+  static const Color projects = Color(0xFF0F9D94);
+  static const Color projectsBg = Color(0xFFECFDF5);
+  static const Color materials = Color(0xFF6366F1);
+  static const Color materialsBg = Color(0xFFEEF2FF);
+  static const Color suppliers = Color(0xFFF59E0B);
+  static const Color suppliersBg = Color(0xFFFFF7ED);
+  static const Color orders = Color(0xFF475569);
+  static const Color ordersBg = Color(0xFFF1F5F9);
+  static const Color deliveries = Color(0xFF10B981);
+  static const Color deliveriesBg = Color(0xFFECFDF5);
+  static const Color payments = Color(0xFFE11D48);
+  static const Color paymentsBg = Color(0xFFFFF1F2);
 }
 
 class AppTheme {
@@ -32,7 +54,7 @@ class AppTheme {
         secondary: AppColors.secondary,
         tertiary: AppColors.accent,
         error: AppColors.danger,
-        surface: Colors.white,
+        surface: AppColors.card,
         brightness: Brightness.light,
       ),
       scaffoldBackgroundColor: AppColors.lightBg,
@@ -46,8 +68,8 @@ class AppTheme {
       brightness: Brightness.dark,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
-        primary: AppColors.secondary,
-        secondary: AppColors.accent,
+        primary: AppColors.primary,
+        secondary: AppColors.secondary,
         tertiary: AppColors.accent,
         error: AppColors.danger,
         surface: AppColors.darkCard,
@@ -60,26 +82,27 @@ class AppTheme {
 
   static ThemeData _apply(ThemeData base, {required bool dark}) {
     final text = GoogleFonts.interTextTheme(base.textTheme).apply(
-      bodyColor: dark ? Colors.white : AppColors.darkNavy,
-      displayColor: dark ? Colors.white : AppColors.darkNavy,
+      bodyColor: dark ? Colors.white : AppColors.textPrimary,
+      displayColor: dark ? Colors.white : AppColors.textPrimary,
     );
 
-    final fill = dark ? const Color(0xFF0B1220) : Colors.white;
-    final borderColor = dark ? AppColors.slate700 : AppColors.border;
+    final fill = dark ? AppColors.darkSecondary : AppColors.card;
+    final borderColor = dark ? AppColors.darkBorder : AppColors.border;
+    final surface = dark ? AppColors.darkCard : AppColors.card;
 
     return base.copyWith(
       textTheme: text,
       dividerColor: borderColor,
       appBarTheme: AppBarTheme(
-        backgroundColor: dark ? AppColors.darkCard.withValues(alpha: 0.92) : Colors.white,
-        foregroundColor: dark ? Colors.white : AppColors.darkNavy,
+        backgroundColor: surface.withValues(alpha: dark ? 0.94 : 0.92),
+        foregroundColor: dark ? Colors.white : AppColors.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0.5,
         centerTitle: false,
         surfaceTintColor: Colors.transparent,
         titleTextStyle: text.titleLarge?.copyWith(
           fontWeight: FontWeight.w800,
-          color: dark ? Colors.white : AppColors.darkNavy,
+          color: dark ? Colors.white : AppColors.textPrimary,
           fontSize: 18,
           letterSpacing: -0.2,
         ),
@@ -89,8 +112,8 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: dark ? AppColors.darkCard : Colors.white,
-        selectedItemColor: dark ? AppColors.secondary : AppColors.primary,
+        backgroundColor: surface,
+        selectedItemColor: AppColors.primary,
         unselectedItemColor: AppColors.slate400,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
@@ -104,7 +127,7 @@ class AppTheme {
         ),
       ),
       cardTheme: CardThemeData(
-        color: dark ? AppColors.darkCard : Colors.white,
+        color: surface,
         elevation: 0,
         margin: EdgeInsets.zero,
         surfaceTintColor: Colors.transparent,
@@ -115,14 +138,14 @@ class AppTheme {
         ),
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: dark ? AppColors.darkCard : Colors.white,
+        backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusLg),
         ),
         titleTextStyle: text.titleLarge?.copyWith(
           fontWeight: FontWeight.w800,
-          color: dark ? Colors.white : AppColors.darkNavy,
+          color: dark ? Colors.white : AppColors.textPrimary,
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -151,7 +174,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusSm),
-          borderSide: const BorderSide(color: AppColors.secondary, width: 1.6),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusSm),
@@ -175,7 +198,7 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: dark ? AppColors.secondary : AppColors.primary,
+          foregroundColor: AppColors.primary,
           minimumSize: const Size(48, 48),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           side: BorderSide(color: borderColor),
@@ -187,7 +210,7 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: dark ? AppColors.secondary : AppColors.primary,
+          foregroundColor: AppColors.primary,
           textStyle: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
@@ -209,7 +232,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusSm),
         ),
-        iconColor: dark ? AppColors.slate400 : AppColors.textSecondary,
+        iconColor: dark ? AppColors.darkMuted : AppColors.textSecondary,
       ),
     );
   }

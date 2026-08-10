@@ -99,41 +99,41 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     switch (role) {
       case 'Administrator':
         return [
-          _StatCard('Total Users', count('totalUsers'), Icons.people_alt_rounded, const Color(0xFF2563EB)),
-          _StatCard('Total Projects', count('totalProjects'), Icons.apartment_rounded, AppColors.primary),
-          _StatCard('Total Materials', count('totalMaterials'), Icons.inventory_2_rounded, const Color(0xFF6366F1)),
-          _StatCard('Total Suppliers', count('totalSuppliers'), Icons.local_shipping_rounded, AppColors.secondary),
-          _StatCard('Total Purchase Orders', count('totalPurchaseOrders'), Icons.description_rounded, const Color(0xFF475569)),
-          _StatCard('Total Deliveries', count('totalDeliveries'), Icons.check_circle_rounded, AppColors.success),
-          _StatCard('Total Payments', count('totalPayments'), Icons.payments_rounded, const Color(0xFFE11D48)),
+          _StatCard('Total Users', count('totalUsers'), Icons.people_alt_rounded, AppColors.users, AppColors.usersBg),
+          _StatCard('Total Projects', count('totalProjects'), Icons.apartment_rounded, AppColors.projects, AppColors.projectsBg),
+          _StatCard('Total Materials', count('totalMaterials'), Icons.inventory_2_rounded, AppColors.materials, AppColors.materialsBg),
+          _StatCard('Total Suppliers', count('totalSuppliers'), Icons.local_shipping_rounded, AppColors.suppliers, AppColors.suppliersBg),
+          _StatCard('Total Purchase Orders', count('totalPurchaseOrders'), Icons.description_rounded, AppColors.orders, AppColors.ordersBg),
+          _StatCard('Total Deliveries', count('totalDeliveries'), Icons.check_circle_rounded, AppColors.deliveries, AppColors.deliveriesBg),
+          _StatCard('Total Payments', count('totalPayments'), Icons.payments_rounded, AppColors.payments, AppColors.paymentsBg),
         ];
       case 'Site Engineer':
         return [
-          _StatCard('My Requests', count('myRequests'), Icons.assignment_rounded, const Color(0xFF2563EB)),
-          _StatCard('Pending Requests', count('pendingRequests'), Icons.hourglass_top_rounded, AppColors.accent),
-          _StatCard('Approved Requests', count('approvedRequests'), Icons.check_circle_rounded, AppColors.primary),
-          _StatCard('Delivered Materials', count('deliveredMaterials'), Icons.local_shipping_rounded, AppColors.success),
+          _StatCard('My Requests', count('myRequests'), Icons.assignment_rounded, AppColors.users, AppColors.usersBg),
+          _StatCard('Pending Requests', count('pendingRequests'), Icons.hourglass_top_rounded, AppColors.suppliers, AppColors.suppliersBg),
+          _StatCard('Approved Requests', count('approvedRequests'), Icons.check_circle_rounded, AppColors.projects, AppColors.projectsBg),
+          _StatCard('Delivered Materials', count('deliveredMaterials'), Icons.local_shipping_rounded, AppColors.deliveries, AppColors.deliveriesBg),
         ];
       case 'Project Manager':
         return [
-          _StatCard('Pending Requests', count('pendingRequests'), Icons.hourglass_top_rounded, AppColors.accent),
-          _StatCard('Approved Requests', count('approvedRequests'), Icons.check_circle_rounded, AppColors.primary),
-          _StatCard('Rejected Requests', count('rejectedRequests'), Icons.cancel_rounded, AppColors.danger),
-          _StatCard('Budget Requests', money('budgetRequests'), Icons.payments_rounded, AppColors.success),
+          _StatCard('Pending Requests', count('pendingRequests'), Icons.hourglass_top_rounded, AppColors.suppliers, AppColors.suppliersBg),
+          _StatCard('Approved Requests', count('approvedRequests'), Icons.check_circle_rounded, AppColors.projects, AppColors.projectsBg),
+          _StatCard('Rejected Requests', count('rejectedRequests'), Icons.cancel_rounded, AppColors.payments, AppColors.paymentsBg),
+          _StatCard('Budget Requests', money('budgetRequests'), Icons.payments_rounded, AppColors.deliveries, AppColors.deliveriesBg),
         ];
       case 'Procurement Officer':
         return [
-          _StatCard('Approved Requests', count('approvedRequests'), Icons.check_circle_rounded, AppColors.primary),
-          _StatCard('Active Quotations', count('activeQuotations'), Icons.description_rounded, const Color(0xFF2563EB)),
-          _StatCard('Draft POs', count('draftPOs'), Icons.schedule_rounded, AppColors.accent),
-          _StatCard('Deliveries Scheduled', count('deliveriesScheduled'), Icons.local_shipping_rounded, const Color(0xFF6366F1)),
+          _StatCard('Approved Requests', count('approvedRequests'), Icons.check_circle_rounded, AppColors.projects, AppColors.projectsBg),
+          _StatCard('Active Quotations', count('activeQuotations'), Icons.description_rounded, AppColors.users, AppColors.usersBg),
+          _StatCard('Draft POs', count('draftPOs'), Icons.schedule_rounded, AppColors.suppliers, AppColors.suppliersBg),
+          _StatCard('Deliveries Scheduled', count('deliveriesScheduled'), Icons.local_shipping_rounded, AppColors.materials, AppColors.materialsBg),
         ];
       case 'Supplier':
         return [
-          _StatCard('Open Unpaid POs', sumCount('unpaidCount'), Icons.description_rounded, AppColors.primary),
-          _StatCard('Payment Outstanding', sumMoney('outstandingTotal'), Icons.payments_rounded, const Color(0xFF6366F1)),
-          _StatCard('Paid This Month', sumMoney('paidThisMonth'), Icons.check_circle_rounded, AppColors.success),
-          _StatCard('Overdue', sumCount('overdueCount'), Icons.warning_amber_rounded, AppColors.danger),
+          _StatCard('Open Unpaid POs', sumCount('unpaidCount'), Icons.description_rounded, AppColors.projects, AppColors.projectsBg),
+          _StatCard('Payment Outstanding', sumMoney('outstandingTotal'), Icons.payments_rounded, AppColors.materials, AppColors.materialsBg),
+          _StatCard('Paid This Month', sumMoney('paidThisMonth'), Icons.check_circle_rounded, AppColors.deliveries, AppColors.deliveriesBg),
+          _StatCard('Overdue', sumCount('overdueCount'), Icons.warning_amber_rounded, AppColors.payments, AppColors.paymentsBg),
         ];
       case 'Accountant':
         return [
@@ -141,15 +141,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             'Unpaid Invoices',
             loaded ? '${sumCount('unpaidCount')} items' : '—',
             Icons.schedule_rounded,
-            AppColors.danger,
+            AppColors.payments,
+            AppColors.paymentsBg,
           ),
-          _StatCard('Total Outstanding', sumMoney('outstandingTotal'), Icons.payments_rounded, AppColors.accent),
-          _StatCard('Total Paid (Month)', sumMoney('paidThisMonth'), Icons.check_circle_rounded, AppColors.success),
+          _StatCard('Total Outstanding', sumMoney('outstandingTotal'), Icons.payments_rounded, AppColors.suppliers, AppColors.suppliersBg),
+          _StatCard('Total Paid (Month)', sumMoney('paidThisMonth'), Icons.check_circle_rounded, AppColors.deliveries, AppColors.deliveriesBg),
           _StatCard(
             'Overdue Payments',
             loaded ? '${sumCount('overdueCount')} invoices' : '—',
             Icons.warning_amber_rounded,
-            AppColors.danger,
+            AppColors.payments,
+            AppColors.paymentsBg,
           ),
         ];
       case 'Delivery Staff':
@@ -164,30 +166,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             'Assigned Shipments',
             loaded ? '$assigned Pending' : '—',
             Icons.local_shipping_rounded,
-            const Color(0xFF2563EB),
+            AppColors.users,
+            AppColors.usersBg,
           ),
           _StatCard(
             'Completed Deliveries',
             loaded ? '$completed successfully' : '—',
             Icons.check_circle_rounded,
-            AppColors.success,
+            AppColors.deliveries,
+            AppColors.deliveriesBg,
           ),
           _StatCard(
             'Delayed Shipments',
             loaded ? '$delayed alert${delayed == '1' ? '' : 's'}' : '—',
             Icons.warning_amber_rounded,
-            AppColors.accent,
+            AppColors.suppliers,
+            AppColors.suppliersBg,
           ),
           _StatCard(
             'Active Route',
             route,
             Icons.route_rounded,
-            AppColors.primary,
+            AppColors.projects,
+            AppColors.projectsBg,
           ),
         ];
       default:
         return [
-          _StatCard('Welcome', '—', Icons.dashboard_rounded, AppColors.primary),
+          _StatCard('Welcome', '—', Icons.dashboard_rounded, AppColors.projects, AppColors.projectsBg),
         ];
     }
   }
@@ -214,28 +220,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final stats = _statsForRole(role);
     final localTime = DateFormat.yMd().format(DateTime.now());
 
-    // Match web Dashboard.jsx light/dark overlays.
+    // Match web Dashboard.jsx: light soft wash / dark cinematic.
     final topOverlay = dark
         ? const [
-            Color(0xBF020617), // slate-950/75
-            Color(0xB3020617), // slate-950/70
-            Color(0xCC0F172A), // slate-900/80
+            Color(0xCC020617), // slate-950/80
+            Color(0x730F766E), // teal-ish
+            Color(0x8C0F172A),
           ]
         : const [
-            Color(0x8C020617), // slate-950/55
-            Color(0x730F172A), // slate-900/45
-            Color(0x6678310B), // amber-950/40
+            Color(0xCCF1F5F9), // slate-100 soft
+            Color(0x8CE2E8F0),
+            Color(0x73CCFBF1), // teal tint
           ];
     final bottomOverlay = dark
         ? const [
             Color(0x00020617),
-            Color(0x80020617), // slate-950/50
-            Color(0xE6020617), // slate-950/90
+            Color(0x4D0F172A),
+            Color(0xE60F172A),
           ]
         : const [
-            Color(0x000F172A),
-            Color(0x66F8FAFC), // slate-50/55
-            Color(0xE6F1F5F9), // slate-100/90
+            Color(0x00F1F5F9),
+            Color(0x66F1F5F9),
+            Color(0xE6F1F5F9),
           ];
 
     return Stack(
@@ -391,7 +397,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 }
 
-/// Matches web: "Dashboard" + role subtitle + Local Time pill (no glass greeting card).
+/// Matches web: "Dashboard" + role subtitle + Local Time pill.
 class _WebStyleHeader extends StatelessWidget {
   final String role;
   final String localTime;
@@ -400,32 +406,36 @@ class _WebStyleHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final titleColor = dark ? Colors.white : AppColors.textPrimary;
+    final bodyColor = dark ? const Color(0xFFCBD5E1) : AppColors.textSecondary;
+    final roleColor = dark ? const Color(0xFF5EEAD4) : AppColors.primary;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Dashboard',
           style: TextStyle(
-            color: Colors.white,
+            color: titleColor,
             fontSize: 30,
             fontWeight: FontWeight.w800,
             letterSpacing: -0.5,
             height: 1.1,
-            shadows: [
-              Shadow(color: Color(0x66000000), blurRadius: 12, offset: Offset(0, 2)),
-            ],
+            shadows: dark
+                ? const [
+                    Shadow(color: Color(0x66000000), blurRadius: 12, offset: Offset(0, 2)),
+                  ]
+                : null,
           ),
         ),
         const SizedBox(height: 6),
         Text.rich(
           TextSpan(
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.9),
+              color: bodyColor,
               fontSize: 13.5,
               height: 1.35,
-              shadows: const [
-                Shadow(color: Color(0x4D000000), blurRadius: 8),
-              ],
             ),
             children: [
               const TextSpan(
@@ -433,8 +443,8 @@ class _WebStyleHeader extends StatelessWidget {
               ),
               TextSpan(
                 text: role.isEmpty ? 'your role' : role,
-                style: const TextStyle(
-                  color: Color(0xFF5EEAD4),
+                style: TextStyle(
+                  color: roleColor,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -443,33 +453,40 @@ class _WebStyleHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.access_time_rounded, size: 14, color: Colors.white),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Local Time: $localTime',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: dark
+                ? AppColors.darkCard.withValues(alpha: 0.85)
+                : AppColors.card.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: dark
+                  ? AppColors.primary.withValues(alpha: 0.3)
+                  : AppColors.border,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.darkNavy.withValues(alpha: 0.06),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.access_time_rounded, size: 14, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                'Local Time: $localTime',
+                style: TextStyle(
+                  color: dark ? Colors.white : AppColors.textPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -506,8 +523,10 @@ class _StatCard {
   final String value;
   final IconData icon;
   final Color color;
+  final Color iconBg;
 
-  _StatCard(this.label, this.value, this.icon, this.color);
+  _StatCard(this.label, this.value, this.icon, this.color, [Color? iconBg])
+      : iconBg = iconBg ?? color.withValues(alpha: 0.12);
 }
 
 /// Press feedback matching web whileHover (lift) + whileTap (scale) + icon wiggle.
@@ -582,19 +601,11 @@ class _StatTileState extends State<_StatTile>
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final card = widget.card;
-    final cardBg = dark
-        ? AppColors.darkCard.withValues(alpha: 0.75)
-        : Colors.white.withValues(alpha: 0.86);
-    final cardBorder = dark
-        ? AppColors.slate700.withValues(alpha: 0.7)
-        : Colors.white.withValues(alpha: 0.95);
-    final labelColor = dark
-        ? const Color(0xFF94A3B8)
-        : AppColors.darkNavy.withValues(alpha: 0.42);
-    final valueColor = dark ? Colors.white : AppColors.darkNavy;
-    final iconBg = dark
-        ? card.color.withValues(alpha: 0.22)
-        : card.color.withValues(alpha: 0.12);
+    final cardBg = dark ? AppColors.darkCard : AppColors.card;
+    final cardBorder = dark ? AppColors.darkBorder : AppColors.border;
+    final labelColor = dark ? AppColors.darkMuted : AppColors.textSecondary;
+    final valueColor = dark ? Colors.white : AppColors.textPrimary;
+    final iconBg = dark ? card.color.withValues(alpha: 0.22) : card.iconBg;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -612,27 +623,23 @@ class _StatTileState extends State<_StatTile>
             ),
           );
         },
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: AnimatedBuilder(
+        child: AnimatedBuilder(
               animation: _press,
               builder: (context, child) {
                 final shadowAlpha = dark
-                    ? 0.35 + _shadow.value * 0.25
-                    : _shadow.value;
+                    ? 0.28 + _shadow.value * 0.2
+                    : 0.06 + _shadow.value * 0.08;
                 return Container(
                   padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(16),
                     color: cardBg,
                     border: Border.all(color: cardBorder),
                     boxShadow: [
                       BoxShadow(
                         color: AppColors.darkNavy.withValues(alpha: shadowAlpha),
-                        blurRadius: 18 + _press.value * 14,
-                        offset: Offset(0, 8 + _press.value * 4),
+                        blurRadius: 16 + _press.value * 10,
+                        offset: Offset(0, 6 + _press.value * 3),
                       ),
                     ],
                   ),
@@ -697,8 +704,6 @@ class _StatTileState extends State<_StatTile>
                   ),
                 ],
               ),
-            ),
-          ),
         ),
       ),
     );
@@ -754,12 +759,8 @@ class _GlassPanelState extends State<_GlassPanel>
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = dark
-        ? AppColors.darkCard.withValues(alpha: 0.75)
-        : Colors.white.withValues(alpha: 0.86);
-    final cardBorder = dark
-        ? AppColors.slate700.withValues(alpha: 0.7)
-        : Colors.white.withValues(alpha: 0.95);
+    final cardBg = dark ? AppColors.darkCard : AppColors.card;
+    final cardBorder = dark ? AppColors.darkBorder : AppColors.border;
 
     return Listener(
       behavior: HitTestBehavior.translucent,
@@ -777,30 +778,24 @@ class _GlassPanelState extends State<_GlassPanel>
             ),
           );
         },
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                color: cardBg,
-                border: Border.all(color: cardBorder),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.darkNavy.withValues(
-                      alpha: dark ? 0.35 : 0.08,
-                    ),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: cardBg,
+            border: Border.all(color: cardBorder),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.darkNavy.withValues(
+                  alpha: dark ? 0.28 : 0.08,
+                ),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
-              child: widget.child,
-            ),
+            ],
           ),
+          child: widget.child,
         ),
       ),
     );

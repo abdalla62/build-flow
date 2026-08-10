@@ -82,9 +82,14 @@ class AppShell extends ConsumerWidget {
                       height: 44,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
-                        gradient: const LinearGradient(
-                          colors: [AppColors.primary, AppColors.secondary],
-                        ),
+                        color: AppColors.primary,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.35),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: const Icon(
                         Icons.inventory_2_rounded,
@@ -103,8 +108,8 @@ class AppShell extends ConsumerWidget {
                         children: [
                           TextSpan(text: 'BUILD'),
                           TextSpan(
-                            text: ' FLOW',
-                            style: TextStyle(color: AppColors.secondary),
+                            text: 'FLOW',
+                            style: TextStyle(color: AppColors.primaryHover),
                           ),
                         ],
                       ),
@@ -112,7 +117,7 @@ class AppShell extends ConsumerWidget {
                   ],
                 ),
               ),
-              const Divider(height: 1, color: Color(0xFF1E293B)),
+              const Divider(height: 1, color: AppColors.darkBorder),
               Expanded(
                 child: ListView(
                   padding:
@@ -167,9 +172,9 @@ class AppShell extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1E293B),
+                          color: Colors.white.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFF334155)),
+                          border: Border.all(color: AppColors.darkBorder),
                         ),
                         child: Row(
                           children: [
