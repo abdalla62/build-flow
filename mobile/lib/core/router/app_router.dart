@@ -4,6 +4,7 @@ import 'package:construction_material_mobile_app/core/router/role_nav.dart';
 import 'package:construction_material_mobile_app/features/audit/audit_screen.dart';
 import 'package:construction_material_mobile_app/features/auth/forgot_password_screen.dart';
 import 'package:construction_material_mobile_app/features/auth/login_screen.dart';
+import 'package:construction_material_mobile_app/features/auth/reset_password_screen.dart';
 import 'package:construction_material_mobile_app/features/auth/splash_screen.dart';
 import 'package:construction_material_mobile_app/features/categories/categories_screen.dart';
 import 'package:construction_material_mobile_app/features/common/unauthorized_screen.dart';
@@ -25,7 +26,7 @@ import 'package:construction_material_mobile_app/features/users/users_screen.dar
 import 'package:construction_material_mobile_app/providers/app_providers.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  // read + refreshListenable: auth updates refresh redirects without recreating router
+  // Use read + refreshListenable so auth updates do not recreate the router.
   final auth = ref.read(authNotifierProvider);
 
   return GoRouter(
@@ -34,7 +35,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final status = auth.state.status;
       final path = state.uri.path;
-      final isAuthRoute = path == '/login' || path == '/forgot-password';
+      final isAuthRoute = path == '/login' ||
+          path == '/forgot-password' ||
+          path.startsWith('/reset-password');
       final isSplash = path == '/splash';
 
       if (status == AuthStatus.unknown) {
@@ -42,14 +45,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (status == AuthStatus.unauthenticated) {
-        // Leave splash → login after session check fails (401)
         if (isSplash) return '/login';
         if (isAuthRoute) return null;
         return '/login';
       }
 
       // authenticated
-      if (isSplash || path == '/login' || path == '/forgot-password') {
+      if (isSplash || isAuthRoute) {
         return roleHomePath(auth.state.user?.role);
       }
 
@@ -62,9 +64,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/forgot-password', builder: (_, __) => const ForgotPasswordScreen()),
+      GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
+      GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      GoRoute(path: '/forgot-password', builder: (_, _) => const ForgotPasswordScreen()),
+      GoRoute(
+        path: '/reset-password/:token',
+        builder: (_, state) => ResetPasswordScreen(
+          token: state.pathParameters['token'] ?? '',
+        ),
+      ),
       ShellRoute(
         builder: (context, state, child) {
           return AppShell(title: titleForPath(state.uri.path), child: child);
