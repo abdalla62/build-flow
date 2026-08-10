@@ -18,13 +18,12 @@ import {
   FiLogOut
 } from 'react-icons/fi';
 
-const Sidebar = ({ collapsed }) => {
+const Sidebar = ({ collapsed, mobileOpen = false, onNavigate }) => {
   const { user, logout } = useAuth();
 
   const getMenuLinks = () => {
     const role = user?.role;
-    
-    // Core routes present in dashboard
+
     const links = [{ path: '/', label: 'Dashboard', icon: FiGrid }];
 
     if (role === 'Administrator') {
@@ -77,20 +76,23 @@ const Sidebar = ({ collapsed }) => {
         { path: '/deliveries', label: 'My Deliveries', icon: FiTruck }
       );
     }
-    
-    // Global profile
+
     links.push({ path: '/profile', label: 'Profile Settings', icon: FiSettings });
 
     return links;
   };
 
   const menuItems = getMenuLinks();
+  // On mobile drawer always show labels; on desktop respect collapsed
+  const showLabels = mobileOpen || !collapsed;
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-20 h-screen bg-[#0F172A] text-slate-400 transition-all duration-300 ${
-        collapsed ? 'w-20' : 'w-64'
-      } flex flex-col border-r border-slate-800`}
+      className={`fixed left-0 top-0 z-40 h-screen bg-[#0F172A] text-slate-400 transition-transform duration-300 md:transition-all ${
+        showLabels ? 'w-64' : 'w-20'
+      } flex flex-col border-r border-slate-800 ${
+        mobileOpen ? 'translate-x-0' : '-translate-x-full'
+      } md:translate-x-0`}
     >
       {/* Brand Header */}
       <div className="flex h-16 items-center justify-center border-b border-slate-800 px-6">
@@ -98,7 +100,7 @@ const Sidebar = ({ collapsed }) => {
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-600 text-white">
             <FiBox className="h-6 w-6 animate-pulse" />
           </div>
-          {!collapsed && (
+          {showLabels && (
             <motion.h1
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -116,8 +118,10 @@ const Sidebar = ({ collapsed }) => {
           const Icon = item.icon;
           return (
             <NavLink
-              key={item.path}
+              key={`${item.path}-${item.label}`}
               to={item.path}
+              end={item.path === '/'}
+              onClick={() => onNavigate?.()}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
                   isActive
@@ -127,7 +131,7 @@ const Sidebar = ({ collapsed }) => {
               }
             >
               <Icon className="h-5 w-5 shrink-0" />
-              {!collapsed && (
+              {showLabels && (
                 <motion.span
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -143,7 +147,7 @@ const Sidebar = ({ collapsed }) => {
 
       {/* User Footer Profile */}
       <div className="border-t border-slate-800 p-4">
-        {!collapsed && (
+        {showLabels && (
           <div className="mb-4 rounded-lg bg-slate-800/40 p-3 flex items-center gap-3 overflow-hidden">
             {user?.avatar ? (
               <img
@@ -167,7 +171,7 @@ const Sidebar = ({ collapsed }) => {
           className="flex w-full items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors duration-200"
         >
           <FiLogOut className="h-5 w-5 shrink-0" />
-          {!collapsed && <span>Logout</span>}
+          {showLabels && <span>Logout</span>}
         </button>
       </div>
     </aside>

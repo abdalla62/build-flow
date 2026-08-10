@@ -81,13 +81,13 @@ const Navbar = ({ toggleSidebar, sidebarCollapsed }) => {
   };
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 w-full items-center justify-between border-b border-slate-200/80 bg-white/80 px-6 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/80 transition-colors duration-200">
+    <header className="sticky top-0 z-10 flex h-16 w-full items-center justify-between border-b border-slate-200/80 bg-white/80 px-3 sm:px-6 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/80 transition-colors duration-200">
       
       {/* Search & Collapse Trigger */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
         <button
           onClick={toggleSidebar}
-          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
+          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors shrink-0"
           aria-label="Toggle sidebar"
         >
           <FiMenu className="h-5 w-5" />
@@ -129,7 +129,7 @@ const Navbar = ({ toggleSidebar, sidebarCollapsed }) => {
           </button>
 
           {notificationsOpen && (
-            <div className="absolute right-0 mt-2 w-80 rounded-xl border border-slate-200 bg-white py-2 shadow-xl dark:border-slate-800 dark:bg-slate-950 animate-in fade-in slide-in-from-top-3 duration-150">
+            <div className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-1.25rem))] max-w-[calc(100vw-1.25rem)] rounded-xl border border-slate-200 bg-white py-2 shadow-xl dark:border-slate-800 dark:bg-slate-950 animate-in fade-in slide-in-from-top-3 duration-150">
               <div className="flex items-center justify-between border-b border-slate-100 px-4 pb-2 dark:border-slate-800">
                 <span className="font-semibold text-slate-700 dark:text-slate-200">Notifications</span>
                 {unreadCount > 0 && (
