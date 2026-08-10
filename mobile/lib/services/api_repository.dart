@@ -740,6 +740,17 @@ class ApiRepository {
     _ensureSuccess(data);
   }
 
+  // ── System (Administrator) ─────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> clearPracticeData() async {
+    final data = await _post(
+      '/api/system/clear-demo-data',
+      data: {'confirm': 'CLEAR'},
+    );
+    _ensureSuccess(data);
+    return data;
+  }
+
   // ── Dashboards ─────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getAdminDashboard() async {

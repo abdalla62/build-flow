@@ -102,6 +102,7 @@ app.use('/api/deliveries', require('./routes/delivery'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/audit', require('./routes/audit'));
 app.use('/api/reports', require('./routes/report'));
+app.use('/api/system', require('./routes/system'));
 
 // Centralized API error handling (before SPA fallback)
 app.use(errorHandler);
