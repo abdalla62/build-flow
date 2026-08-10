@@ -52,112 +52,20 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
       return;
     }
 
-    String? projectId = popId(projects.items.first);
-    String? materialId = popId(materials.items.first);
-    final qty = TextEditingController(text: '1');
-    final reason = TextEditingController();
-    String priority = 'Medium';
-    final requiredDate = TextEditingController(
-      text: DateFormat('yyyy-MM-dd').format(DateTime.now().add(const Duration(days: 7))),
-    );
-
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('New Material Request'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                initialValue: projectId,
-                items: projects.items
-                    .map(
-                      (p) => DropdownMenuItem(
-                        value: popId(p),
-                        child: Text(p['name']?.toString() ?? ''),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => projectId = v,
-                decoration: const InputDecoration(labelText: 'Project'),
-              ),
-              DropdownButtonFormField<String>(
-                initialValue: materialId,
-                items: materials.items
-                    .map(
-                      (m) => DropdownMenuItem(
-                        value: popId(m),
-                        child: Text(m['name']?.toString() ?? ''),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => materialId = v,
-                decoration: const InputDecoration(labelText: 'Material'),
-              ),
-              TextField(
-                controller: qty,
-                decoration: const InputDecoration(labelText: 'Quantity'),
-                keyboardType: TextInputType.number,
-              ),
-              DropdownButtonFormField<String>(
-                initialValue: priority,
-                items: ['Low', 'Medium', 'High', 'Urgent']
-                    .map((p) => DropdownMenuItem(value: p, child: Text(p)))
-                    .toList(),
-                onChanged: (v) => priority = v ?? priority,
-                decoration: const InputDecoration(labelText: 'Priority'),
-              ),
-              TextField(
-                controller: requiredDate,
-                decoration: const InputDecoration(
-                  labelText: 'Required Date (yyyy-MM-dd)',
-                ),
-              ),
-              TextField(
-                controller: reason,
-                decoration: const InputDecoration(labelText: 'Reason'),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Submit')),
-        ],
+      barrierDismissible: false,
+      builder: (ctx) => _CreateRequestDialog(
+        projects: projects.items,
+        materials: materials.items,
       ),
     );
-
-    final quantity = int.tryParse(qty.text) ?? 1;
-    final reasonText = reason.text;
-    final dateText = requiredDate.text;
-    qty.dispose();
-    reason.dispose();
-    requiredDate.dispose();
-
-    if (ok != true || projectId == null || materialId == null) return;
-
-    try {
-      await ref.read(apiRepositoryProvider).createRequest({
-        'project': projectId,
-        'material': materialId,
-        'quantity': quantity,
-        'priority': priority,
-        'reason': reasonText,
-        'requiredDate': dateText,
-      });
-      _load();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-        );
-      }
-    }
+    if (ok == true) _load();
   }
 
   Future<void> _openItem(Map<String, dynamic> item) async {
-    final role = ref.read(authNotifierProvider).state.user?.role;
+    final user = ref.read(authNotifierProvider).state.user;
+    final role = user?.role;
     final id = (item['_id'] ?? item['id']).toString();
     final status = item['status']?.toString() ?? '';
 
@@ -174,8 +82,19 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
     }
 
     final req = detail['request'] as Map<String, dynamic>;
+    final approvals = (detail['approvals'] as List?)
+            ?.map((e) => Map<String, dynamic>.from(e as Map))
+            .toList() ??
+        [];
     final canReview = (role == 'Project Manager' || role == 'Administrator') &&
         ['Pending', 'Returned', 'Rejected'].contains(status);
+
+    final requesterId = popId(req['requestedBy']);
+    // Server only allows the original Site Engineer requester to edit/resubmit
+    final canEdit = role == 'Site Engineer' &&
+        ['Pending', 'Returned'].contains(status) &&
+        user?.id != null &&
+        requesterId == user!.id;
 
     if (!mounted) return;
 
@@ -192,13 +111,14 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
         builder: (ctx) => _ReviewRequestDialog(
           request: req,
           suppliers: suppliers,
+          priorApprovals: approvals,
         ),
       );
       if (posted == true) _load();
       return;
     }
 
-    // Read-only detail (+ receive for Site Engineer)
+    // Detail (+ edit/resubmit for engineer, receive when delivered)
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -220,9 +140,57 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
             Text('Qty: ${req['quantity']} · Priority: ${req['priority']}'),
             Text('Status: ${req['status']}'),
             Text('Reason: ${req['reason'] ?? '—'}'),
+            if (approvals.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Review history',
+                style: Theme.of(ctx).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 6),
+              ...approvals.map((a) {
+                final action = a['action']?.toString() ?? '';
+                final comments = a['comments']?.toString() ?? '';
+                final who = popName(a['approver']);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    '$action by $who: ${comments.isEmpty ? '—' : comments}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: action == 'Return'
+                          ? Colors.orange.shade700
+                          : null,
+                    ),
+                  ),
+                );
+              }),
+            ],
             const SizedBox(height: 16),
+            if (canEdit)
+              ElevatedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  final materials =
+                      await ref.read(apiRepositoryProvider).getMaterials(limit: 100);
+                  if (!mounted) return;
+                  final saved = await showDialog<bool>(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => _EditRequestDialog(
+                      request: req,
+                      materials: materials.items,
+                    ),
+                  );
+                  if (saved == true) _load();
+                },
+                icon: const Icon(Icons.edit_outlined),
+                label: Text(
+                  status == 'Returned' ? 'Revise & Resubmit' : 'Edit Request',
+                ),
+              ),
             if ((role == 'Site Engineer' || role == 'Administrator') &&
                 status == 'Delivered') ...[
+              const SizedBox(height: 8),
               ElevatedButton(
                 onPressed: () async {
                   Navigator.pop(ctx);
@@ -277,14 +245,18 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
                 itemCount: _items.length,
                 itemBuilder: (_, i) {
                   final r = _items[i];
+                  final status = r['status']?.toString() ?? '';
                   final canReview =
                       (role == 'Project Manager' || role == 'Administrator') &&
-                          ['Pending', 'Returned', 'Rejected']
-                              .contains(r['status']?.toString());
+                          ['Pending', 'Returned', 'Rejected'].contains(status);
+                  final canResubmit = role == 'Site Engineer' &&
+                      status == 'Returned' &&
+                      popId(r['requestedBy']) ==
+                          (ref.watch(authNotifierProvider).state.user?.id ?? '');
                   return ModuleListTile(
                     title: popName(r['material']),
                     subtitle: '${popName(r['project'])} · Qty ${r['quantity']}',
-                    status: r['status']?.toString(),
+                    status: status,
                     icon: Icons.assignment_outlined,
                     onTap: () => _openItem(r),
                     trailing: canReview
@@ -292,7 +264,12 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
                             onPressed: () => _openItem(r),
                             child: const Text('Review'),
                           )
-                        : null,
+                        : canResubmit
+                            ? TextButton(
+                                onPressed: () => _openItem(r),
+                                child: const Text('Resubmit'),
+                              )
+                            : null,
                   );
                 },
               ),
@@ -310,10 +287,12 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
 class _ReviewRequestDialog extends ConsumerStatefulWidget {
   final Map<String, dynamic> request;
   final List<Map<String, dynamic>> suppliers;
+  final List<Map<String, dynamic>> priorApprovals;
 
   const _ReviewRequestDialog({
     required this.request,
     required this.suppliers,
+    this.priorApprovals = const [],
   });
 
   @override
@@ -491,6 +470,36 @@ class _ReviewRequestDialogState extends ConsumerState<_ReviewRequestDialog> {
                   ],
                 ),
               ),
+              if (widget.priorApprovals.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  'PRIOR REVIEW COMMENTS',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textSecondary,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ...widget.priorApprovals.map((a) {
+                  final action = a['action']?.toString() ?? '';
+                  final comments = a['comments']?.toString() ?? '—';
+                  final who = popName(a['approver']);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      '$action · $who: $comments',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: action == 'Return'
+                            ? Colors.orange.shade800
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                  );
+                }),
+              ],
               const SizedBox(height: 14),
 
               // Invite suppliers
@@ -713,6 +722,520 @@ class _BudgetCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Multi-line create (same as web): one shared project/priority/date/reason,
+/// then N POST /api/requests — one per material line.
+class _CreateRequestDialog extends ConsumerStatefulWidget {
+  final List<Map<String, dynamic>> projects;
+  final List<Map<String, dynamic>> materials;
+
+  const _CreateRequestDialog({
+    required this.projects,
+    required this.materials,
+  });
+
+  @override
+  ConsumerState<_CreateRequestDialog> createState() =>
+      _CreateRequestDialogState();
+}
+
+class _CreateRequestDialogState extends ConsumerState<_CreateRequestDialog> {
+  final _reasonCtrl = TextEditingController();
+  late final TextEditingController _dateCtrl;
+  String? _projectId;
+  String _priority = 'Medium';
+  final _lines = <({String materialId, int quantity})>[];
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _projectId = popId(widget.projects.first);
+    _dateCtrl = TextEditingController(
+      text: DateFormat('yyyy-MM-dd')
+          .format(DateTime.now().add(const Duration(days: 7))),
+    );
+  }
+
+  @override
+  void dispose() {
+    _reasonCtrl.dispose();
+    _dateCtrl.dispose();
+    super.dispose();
+  }
+
+  double _priceOf(String materialId) {
+    final m = widget.materials.firstWhere(
+      (e) => popId(e) == materialId,
+      orElse: () => <String, dynamic>{},
+    );
+    return (m['estimatedPrice'] as num?)?.toDouble() ?? 0;
+  }
+
+  String _nameOf(String materialId) {
+    final m = widget.materials.firstWhere(
+      (e) => popId(e) == materialId,
+      orElse: () => <String, dynamic>{},
+    );
+    return m['name']?.toString() ?? 'Material';
+  }
+
+  String _unitOf(String materialId) {
+    final m = widget.materials.firstWhere(
+      (e) => popId(e) == materialId,
+      orElse: () => <String, dynamic>{},
+    );
+    return m['unit']?.toString() ?? 'units';
+  }
+
+  double get _estTotal => _lines.fold<double>(
+        0,
+        (sum, l) => sum + l.quantity * _priceOf(l.materialId),
+      );
+
+  void _addMaterial(String? id) {
+    if (id == null || id.isEmpty) return;
+    if (_lines.any((l) => l.materialId == id)) return;
+    setState(() => _lines.add((materialId: id, quantity: 1)));
+  }
+
+  Future<void> _submit() async {
+    setState(() => _error = null);
+    if (_projectId == null || _projectId!.isEmpty) {
+      setState(() => _error = 'Select a project');
+      return;
+    }
+    if (_lines.isEmpty) {
+      setState(() => _error = 'Add at least one material line');
+      return;
+    }
+    if (_reasonCtrl.text.trim().isEmpty) {
+      setState(() => _error = 'Reason is required');
+      return;
+    }
+    if (_dateCtrl.text.trim().isEmpty) {
+      setState(() => _error = 'Required date is required');
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      final api = ref.read(apiRepositoryProvider);
+      await Future.wait(
+        _lines.map(
+          (line) => api.createRequest({
+            'project': _projectId,
+            'material': line.materialId,
+            'quantity': line.quantity,
+            'priority': _priority,
+            'reason': _reasonCtrl.text.trim(),
+            'requiredDate': _dateCtrl.text.trim(),
+          }),
+        ),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _lines.length == 1
+                ? 'Material request submitted'
+                : '${_lines.length} material requests submitted',
+          ),
+        ),
+      );
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final available = widget.materials
+        .where((m) => !_lines.any((l) => l.materialId == popId(m)))
+        .toList();
+
+    return AlertDialog(
+      title: const Text('New Material Request'),
+      content: SizedBox(
+        width: 440,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_error != null) ...[
+                Text(_error!, style: const TextStyle(color: AppColors.danger)),
+                const SizedBox(height: 8),
+              ],
+              DropdownButtonFormField<String>(
+                initialValue: _projectId,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Project'),
+                items: widget.projects
+                    .map(
+                      (p) => DropdownMenuItem(
+                        value: popId(p),
+                        child: Text(
+                          p['name']?.toString() ?? '',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: _submitting
+                    ? null
+                    : (v) => setState(() => _projectId = v),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                key: ValueKey(available.length),
+                initialValue: null,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Add material line',
+                  helperText: 'Select materials one by one (multi-line)',
+                ),
+                hint: const Text('Select Material'),
+                items: available
+                    .map(
+                      (m) => DropdownMenuItem(
+                        value: popId(m),
+                        child: Text(
+                          m['name']?.toString() ?? '',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: _submitting ? null : _addMaterial,
+              ),
+              if (_lines.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                ..._lines.map((line) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: AppColors.border),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _nameOf(line.materialId),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Text(
+                                  '${_unitOf(line.materialId)} · \$${_priceOf(line.materialId).toStringAsFixed(0)}/unit',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: _submitting || line.quantity <= 1
+                                ? null
+                                : () => setState(() {
+                                      final i = _lines.indexOf(line);
+                                      _lines[i] = (
+                                        materialId: line.materialId,
+                                        quantity: line.quantity - 1,
+                                      );
+                                    }),
+                            icon: const Icon(Icons.remove_circle_outline),
+                          ),
+                          Text(
+                            '${line.quantity}',
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          IconButton(
+                            onPressed: _submitting
+                                ? null
+                                : () => setState(() {
+                                      final i = _lines.indexOf(line);
+                                      _lines[i] = (
+                                        materialId: line.materialId,
+                                        quantity: line.quantity + 1,
+                                      );
+                                    }),
+                            icon: const Icon(Icons.add_circle_outline),
+                          ),
+                          IconButton(
+                            onPressed: _submitting
+                                ? null
+                                : () => setState(() => _lines.remove(line)),
+                            icon: const Icon(Icons.close, color: AppColors.danger),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+                if (_estTotal > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      '${_lines.length} item${_lines.length > 1 ? 's' : ''} · Est. Total: \$${_estTotal.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+              ],
+              DropdownButtonFormField<String>(
+                initialValue: _priority,
+                decoration: const InputDecoration(labelText: 'Priority'),
+                items: ['Low', 'Medium', 'High', 'Urgent']
+                    .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                    .toList(),
+                onChanged: _submitting
+                    ? null
+                    : (v) => setState(() => _priority = v ?? _priority),
+              ),
+              TextField(
+                controller: _dateCtrl,
+                enabled: !_submitting,
+                decoration: const InputDecoration(
+                  labelText: 'Required Date (yyyy-MM-dd)',
+                ),
+              ),
+              TextField(
+                controller: _reasonCtrl,
+                enabled: !_submitting,
+                maxLines: 2,
+                decoration: const InputDecoration(labelText: 'Reason'),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _submitting ? null : _submit,
+          child: _submitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Submit'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Single-line revise & resubmit for Returned / Pending requests.
+class _EditRequestDialog extends ConsumerStatefulWidget {
+  final Map<String, dynamic> request;
+  final List<Map<String, dynamic>> materials;
+
+  const _EditRequestDialog({
+    required this.request,
+    required this.materials,
+  });
+
+  @override
+  ConsumerState<_EditRequestDialog> createState() => _EditRequestDialogState();
+}
+
+class _EditRequestDialogState extends ConsumerState<_EditRequestDialog> {
+  late String _materialId;
+  late final TextEditingController _qtyCtrl;
+  late final TextEditingController _reasonCtrl;
+  late final TextEditingController _dateCtrl;
+  late String _priority;
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _materialId = popId(widget.request['material']);
+    if (_materialId.isEmpty && widget.materials.isNotEmpty) {
+      _materialId = popId(widget.materials.first);
+    }
+    _qtyCtrl = TextEditingController(
+      text: '${widget.request['quantity'] ?? 1}',
+    );
+    _reasonCtrl = TextEditingController(
+      text: widget.request['reason']?.toString() ?? '',
+    );
+    _priority = widget.request['priority']?.toString() ?? 'Medium';
+    final rawDate = widget.request['requiredDate']?.toString() ?? '';
+    final ymd = rawDate.contains('T') ? rawDate.split('T').first : rawDate;
+    _dateCtrl = TextEditingController(
+      text: ymd.isNotEmpty
+          ? ymd
+          : DateFormat('yyyy-MM-dd')
+              .format(DateTime.now().add(const Duration(days: 7))),
+    );
+  }
+
+  @override
+  void dispose() {
+    _qtyCtrl.dispose();
+    _reasonCtrl.dispose();
+    _dateCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() => _error = null);
+    final qty = int.tryParse(_qtyCtrl.text.trim()) ?? 0;
+    if (qty < 1) {
+      setState(() => _error = 'Quantity must be at least 1');
+      return;
+    }
+    if (_reasonCtrl.text.trim().isEmpty) {
+      setState(() => _error = 'Reason is required');
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      final id =
+          (widget.request['_id'] ?? widget.request['id']).toString();
+      await ref.read(apiRepositoryProvider).updateRequest(id, {
+        'project': popId(widget.request['project']),
+        'material': _materialId,
+        'quantity': qty,
+        'priority': _priority,
+        'reason': _reasonCtrl.text.trim(),
+        'requiredDate': _dateCtrl.text.trim(),
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Request revised and resubmitted')),
+      );
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isReturned = widget.request['status']?.toString() == 'Returned';
+    return AlertDialog(
+      title: Text(isReturned ? 'Revise & Resubmit' : 'Edit Request'),
+      content: SizedBox(
+        width: 400,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_error != null) ...[
+                Text(_error!, style: const TextStyle(color: AppColors.danger)),
+                const SizedBox(height: 8),
+              ],
+              if (isReturned)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    'Update the request after PM Return comments, then resubmit (status → Pending).',
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                ),
+              DropdownButtonFormField<String>(
+                initialValue: _materialId.isEmpty ? null : _materialId,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Material'),
+                items: widget.materials
+                    .map(
+                      (m) => DropdownMenuItem(
+                        value: popId(m),
+                        child: Text(
+                          m['name']?.toString() ?? '',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: _submitting
+                    ? null
+                    : (v) => setState(() => _materialId = v ?? _materialId),
+              ),
+              TextField(
+                controller: _qtyCtrl,
+                enabled: !_submitting,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Quantity'),
+              ),
+              DropdownButtonFormField<String>(
+                initialValue: _priority,
+                decoration: const InputDecoration(labelText: 'Priority'),
+                items: ['Low', 'Medium', 'High', 'Urgent']
+                    .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                    .toList(),
+                onChanged: _submitting
+                    ? null
+                    : (v) => setState(() => _priority = v ?? _priority),
+              ),
+              TextField(
+                controller: _dateCtrl,
+                enabled: !_submitting,
+                decoration: const InputDecoration(
+                  labelText: 'Required Date (yyyy-MM-dd)',
+                ),
+              ),
+              TextField(
+                controller: _reasonCtrl,
+                enabled: !_submitting,
+                maxLines: 2,
+                decoration: const InputDecoration(labelText: 'Reason'),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _submitting ? null : _submit,
+          child: _submitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(isReturned ? 'Resubmit' : 'Save'),
+        ),
+      ],
     );
   }
 }

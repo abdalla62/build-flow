@@ -380,6 +380,16 @@ class ApiRepository {
     return Map<String, dynamic>.from(data['request'] as Map);
   }
 
+  /// Site Engineer revises Pending/Returned request (resets to Pending).
+  Future<Map<String, dynamic>> updateRequest(
+    String id,
+    Map<String, dynamic> body,
+  ) async {
+    final data = await _put('/api/requests/$id', data: body);
+    _ensureSuccess(data);
+    return Map<String, dynamic>.from(data['request'] as Map);
+  }
+
   Future<Map<String, dynamic>> reviewRequest(
     String id, {
     required String action,
