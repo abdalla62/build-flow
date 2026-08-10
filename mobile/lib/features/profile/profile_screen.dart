@@ -204,20 +204,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  ImageProvider? _avatarImage(String? networkAvatar) {
-    if (_avatarPath != null) return FileImage(File(_avatarPath!));
-    if (!_removeAvatar) return mediaImageProvider(networkAvatar);
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authNotifierProvider).state.user;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final img = _avatarImage(user?.avatar);
+    final localImg =
+        _avatarPath != null ? FileImage(File(_avatarPath!)) : null;
     final initial =
         (user?.name.isNotEmpty == true ? user!.name[0] : 'U').toUpperCase();
-    final hasPhoto = img != null;
+    final hasPhoto = localImg != null ||
+        (!_removeAvatar &&
+            user?.avatar != null &&
+            user!.avatar!.trim().isNotEmpty);
 
     return ListView(
       physics: kAppScrollPhysics,
@@ -262,23 +260,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  CircleAvatar(
+                  UserAvatar(
+                    avatarPath: _removeAvatar ? null : user?.avatar,
+                    initial: initial,
                     radius: 32,
+                    localImage: localImg,
                     backgroundColor:
                         AppColors.primary.withValues(alpha: dark ? 0.25 : 0.12),
-                    backgroundImage: img,
-                    child: img == null
-                        ? Text(
-                            initial,
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: dark
-                                  ? AppColors.secondary
-                                  : AppColors.primary,
-                            ),
-                          )
-                        : null,
+                    initialStyle: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: dark ? AppColors.secondary : AppColors.primary,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(

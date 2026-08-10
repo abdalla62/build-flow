@@ -20,7 +20,6 @@ class AppShell extends ConsumerWidget {
     final bottomItems =
         user != null ? bottomNavForRole(user.role) : <MenuItem>[];
     final location = GoRouterState.of(context).uri.path;
-    final avatarImage = mediaImageProvider(user?.avatar);
     final initial =
         (user?.name.isNotEmpty == true ? user!.name[0] : 'U').toUpperCase();
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -55,19 +54,15 @@ class AppShell extends ConsumerWidget {
                     width: 1.5,
                   ),
                 ),
-                child: CircleAvatar(
+                child: UserAvatar(
+                  avatarPath: user?.avatar,
+                  initial: initial,
                   radius: 15,
                   backgroundColor: AppColors.secondary.withValues(alpha: 0.2),
-                  backgroundImage: avatarImage,
-                  child: avatarImage == null
-                      ? Text(
-                          initial,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        )
-                      : null,
+                  initialStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               onPressed: () => context.push('/profile'),
@@ -180,18 +175,15 @@ class AppShell extends ConsumerWidget {
                         ),
                         child: Row(
                           children: [
-                            CircleAvatar(
+                            UserAvatar(
+                              avatarPath: user?.avatar,
+                              initial: initial,
+                              radius: 20,
                               backgroundColor:
                                   AppColors.primary.withValues(alpha: 0.35),
-                              backgroundImage: avatarImage,
-                              child: avatarImage == null
-                                  ? Text(
-                                      initial,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    )
-                                  : null,
+                              initialStyle: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(

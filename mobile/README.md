@@ -16,37 +16,49 @@ System ProjectConstruction Materia/
 ## Requirements
 
 - Flutter SDK 3.10+
-- Running backend: `cd ../server && npm run dev` (port **5000**)
-- MongoDB as configured in `server/.env`
+- Backend: **Render production** (default) **or** local `server` on port 5000
 
 ## Install & run
 
 ```bash
-cd construction_material_mobile_app
+cd C:\construction_material_mobile_app
 flutter pub get
-flutter run
 ```
 
-### API base URL
+### API modes (Step 1)
 
-Default (Android emulator → host machine):
+| Mode | When to use | Command |
+|------|-------------|---------|
+| **Production (Render)** | Same data as web; phone on mobile data / network that reaches Render | `flutter run` |
+| **Local (emulator)** | Your PC WiFi cannot reach Render; practice on emulator | see below |
+
+**Production default URL:**
 
 ```text
-http://10.0.2.2:5000
+https://build-flow-inzo.onrender.com
 ```
 
-Physical phone / tablet (replace with your PC LAN IP):
+**Local emulator (recommended on this PC if Render times out):**
+
+```bash
+# 1) Start API:  cd ..\server  →  npm run dev
+# 2) Run app:
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5000
+```
+
+Physical phone → local PC API (replace IP):
 
 ```bash
 flutter run --dart-define=API_BASE_URL=http://192.168.1.20:5000
 ```
 
-Windows desktop / Chrome:
+Windows desktop / Chrome → local:
 
 ```bash
 flutter run -d windows --dart-define=API_BASE_URL=http://127.0.0.1:5000
-flutter run -d chrome --dart-define=API_BASE_URL=http://127.0.0.1:5000
 ```
+
+> Note: `API_BASE_URL` is compile-time. After changing it, use full `flutter run` (not hot reload).
 
 ## Authentication
 
