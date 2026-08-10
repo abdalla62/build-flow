@@ -285,13 +285,17 @@ const Dashboard = () => {
   };
 
   const stats = getRoleStats();
+  const dashboardBg =
+    user?.role === 'Project Manager'
+      ? '/images/pm-dashboard-bg.png'
+      : '/images/dashboard-bg.png';
 
   return (
     <div className="relative -m-4 min-h-[calc(100vh-4rem)] overflow-hidden sm:-m-6 md:-m-8">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <motion.div
           className="absolute inset-0 bg-cover bg-center brightness-[1.02] contrast-[1.04] saturate-[1.08] dark:brightness-[0.92] dark:contrast-[1.1] dark:saturate-[1.15]"
-          style={{ backgroundImage: "url('/images/dashboard-bg.png')" }}
+          style={{ backgroundImage: `url('${dashboardBg}')` }}
           initial={{ scale: 1.03 }}
           animate={{ scale: 1.08 }}
           transition={{ duration: 36, ease: 'linear', repeat: Infinity, repeatType: 'reverse' }}
