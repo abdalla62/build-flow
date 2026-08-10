@@ -362,13 +362,15 @@ const PROJECTS = [
     name: 'Dhismaha Xarunta Caafimaadka Wadajir',
     location: 'Wadajir, Muqdisho, Banadir',
     budget: 185000,
-    status: 'Active'
+    status: 'Active',
+    managerEmail: 'aisha@gmail.com' // Aisha Abdi
   },
   {
     name: 'Dayactirka Dugsiyada Hodan Phase-1',
     location: 'Hodan, Muqdisho, Banadir',
     budget: 92000,
-    status: 'Active'
+    status: 'Active',
+    managerEmail: 'ali@gmail.com' // Ali Nuur Abdi
   }
 ];
 
@@ -422,7 +424,8 @@ async function upsertMaterial(def, categoryId, supplierId) {
 
 async function upsertProject(def, managerId) {
   let project = await Project.findOne({ name: def.name });
-  const payload = { ...def, manager: managerId };
+  const { managerEmail, ...rest } = def;
+  const payload = { ...rest, manager: managerId };
   if (project) {
     Object.assign(project, payload);
     await project.save();
@@ -442,26 +445,15 @@ async function run() {
   await mongoose.connect(process.env.MONGODB_URI);
   console.log('Connected.\n');
 
-  // Prefer Ali Nuur Abdi as PM for Mogadishu demo projects.
-  const manager =
-    (await User.findOne({
-      role: 'Project Manager',
-      status: 'Active',
-      email: 'ali@gmail.com'
-    })) ||
-    (await User.findOne({
-      role: 'Project Manager',
-      status: 'Active',
-      name: /ali\s*nuur/i
-    })) ||
+  const fallbackManager =
     (await User.findOne({ role: 'Project Manager', status: 'Active' })) ||
     (await User.findOne({ role: 'Administrator', status: 'Active' }));
 
-  if (!manager) {
+  if (!fallbackManager) {
     console.error('No Project Manager / Administrator user found. Create users first.');
     process.exit(1);
   }
-  console.log(`Project manager link: ${manager.name} (${manager.role})\n`);
+  console.log(`Fallback PM: ${fallbackManager.name} (${fallbackManager.role})\n`);
 
   const categoryMap = {};
   let catCreated = 0;
@@ -527,13 +519,23 @@ async function run() {
 
   console.log('\n--- Mashruucyada (Projects) — 2 keliya ---');
   for (const def of PROJECTS) {
-    const { created } = await upsertProject(def, manager._id);
+    const pm =
+      (def.managerEmail
+        ? await User.findOne({
+            email: def.managerEmail,
+            role: 'Project Manager',
+            status: 'Active'
+          })
+        : null) || fallbackManager;
+    const { created } = await upsertProject(def, pm._id);
     if (created) {
       projCreated += 1;
-      console.log(`  + ${def.name} — miisaaniyad $${def.budget.toLocaleString()} — ${def.location}`);
+      console.log(
+        `  + ${def.name} — PM: ${pm.name} — $${def.budget.toLocaleString()} — ${def.location}`
+      );
     } else {
       projUpdated += 1;
-      console.log(`  ~ ${def.name} — miisaaniyad $${def.budget.toLocaleString()}`);
+      console.log(`  ~ ${def.name} — PM: ${pm.name} — $${def.budget.toLocaleString()}`);
     }
   }
 
