@@ -442,7 +442,18 @@ async function run() {
   await mongoose.connect(process.env.MONGODB_URI);
   console.log('Connected.\n');
 
+  // Prefer Ali Nuur Abdi as PM for Mogadishu demo projects.
   const manager =
+    (await User.findOne({
+      role: 'Project Manager',
+      status: 'Active',
+      email: 'ali@gmail.com'
+    })) ||
+    (await User.findOne({
+      role: 'Project Manager',
+      status: 'Active',
+      name: /ali\s*nuur/i
+    })) ||
     (await User.findOne({ role: 'Project Manager', status: 'Active' })) ||
     (await User.findOne({ role: 'Administrator', status: 'Active' }));
 
