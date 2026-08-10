@@ -165,8 +165,9 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
                 );
               }),
             ],
+            _damageMissingSummary(req),
             const SizedBox(height: 16),
-            if (canEdit)
+            if (canEdit) ...[
               ElevatedButton.icon(
                 onPressed: () async {
                   Navigator.pop(ctx);
@@ -188,15 +189,38 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
                   status == 'Returned' ? 'Revise & Resubmit' : 'Edit Request',
                 ),
               ),
-            if ((role == 'Site Engineer' || role == 'Administrator') &&
-                status == 'Delivered') ...[
               const SizedBox(height: 8),
-              ElevatedButton(
+              OutlinedButton.icon(
                 onPressed: () async {
                   Navigator.pop(ctx);
-                  await _receive(id);
+                  await _cancel(id);
                 },
-                child: const Text('Mark Received'),
+                icon: const Icon(Icons.cancel_outlined, color: AppColors.danger),
+                label: const Text(
+                  'Cancel Request',
+                  style: TextStyle(color: AppColors.danger),
+                ),
+              ),
+            ],
+            // Web: Confirm when Ordered + delivery marked Delivered (canConfirmReceipt)
+            if ((role == 'Site Engineer' || role == 'Administrator') &&
+                item['canConfirmReceipt'] == true) ...[
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade700,
+                ),
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  final ok = await showDialog<bool>(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => _ConfirmReceiptDialog(request: req),
+                  );
+                  if (ok == true) _load();
+                },
+                icon: const Icon(Icons.inventory_outlined),
+                label: const Text('Confirm Receipt'),
               ),
             ],
           ],
@@ -205,9 +229,65 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
     );
   }
 
-  Future<void> _receive(String id) async {
+  Widget _damageMissingSummary(Map<String, dynamic> req) {
+    final damaged = req['damagedReported'];
+    final missing = req['missingReported'];
+    final dQty = damaged is Map ? (damaged['quantity'] as num?)?.toInt() ?? 0 : 0;
+    final mQty = missing is Map ? (missing['quantity'] as num?)?.toInt() ?? 0 : 0;
+    if (dQty <= 0 && mQty <= 0) return const SizedBox.shrink();
+    final unit = () {
+      final m = req['material'];
+      if (m is Map) return m['unit']?.toString() ?? 'units';
+      return 'units';
+    }();
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (dQty > 0)
+            Text(
+              'Damaged: $dQty $unit — ${damaged is Map ? (damaged['comments'] ?? '') : ''}',
+              style: TextStyle(color: Colors.orange.shade800, fontSize: 13),
+            ),
+          if (mQty > 0)
+            Text(
+              'Missing: $mQty $unit — ${missing is Map ? (missing['comments'] ?? '') : ''}',
+              style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _cancel(String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel request?'),
+        content: const Text(
+          'Are you sure you want to cancel this request? This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yes, cancel'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
     try {
-      await ref.read(apiRepositoryProvider).receiveRequest(id);
+      await ref.read(apiRepositoryProvider).cancelRequest(id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Request cancelled')),
+        );
+      }
       _load();
     } catch (e) {
       if (mounted) {
@@ -249,10 +329,14 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
                   final canReview =
                       (role == 'Project Manager' || role == 'Administrator') &&
                           ['Pending', 'Returned', 'Rejected'].contains(status);
+                  final uid =
+                      ref.watch(authNotifierProvider).state.user?.id ?? '';
                   final canResubmit = role == 'Site Engineer' &&
                       status == 'Returned' &&
-                      popId(r['requestedBy']) ==
-                          (ref.watch(authNotifierProvider).state.user?.id ?? '');
+                      popId(r['requestedBy']) == uid;
+                  final canConfirm = (role == 'Site Engineer' ||
+                          role == 'Administrator') &&
+                      r['canConfirmReceipt'] == true;
                   return ModuleListTile(
                     title: popName(r['material']),
                     subtitle: '${popName(r['project'])} · Qty ${r['quantity']}',
@@ -264,12 +348,17 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
                             onPressed: () => _openItem(r),
                             child: const Text('Review'),
                           )
-                        : canResubmit
+                        : canConfirm
                             ? TextButton(
                                 onPressed: () => _openItem(r),
-                                child: const Text('Resubmit'),
+                                child: const Text('Receive'),
                               )
-                            : null,
+                            : canResubmit
+                                ? TextButton(
+                                    onPressed: () => _openItem(r),
+                                    child: const Text('Resubmit'),
+                                  )
+                                : null,
                   );
                 },
               ),
@@ -1234,6 +1323,177 @@ class _EditRequestDialogState extends ConsumerState<_EditRequestDialog> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : Text(isReturned ? 'Resubmit' : 'Save'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Confirm on-site receipt — report damaged / missing (matches web).
+class _ConfirmReceiptDialog extends ConsumerStatefulWidget {
+  final Map<String, dynamic> request;
+
+  const _ConfirmReceiptDialog({required this.request});
+
+  @override
+  ConsumerState<_ConfirmReceiptDialog> createState() =>
+      _ConfirmReceiptDialogState();
+}
+
+class _ConfirmReceiptDialogState extends ConsumerState<_ConfirmReceiptDialog> {
+  final _damagedCtrl = TextEditingController(text: '0');
+  final _missingCtrl = TextEditingController(text: '0');
+  final _damagedCommentsCtrl = TextEditingController();
+  final _missingCommentsCtrl = TextEditingController();
+  bool _submitting = false;
+  String? _error;
+
+  int get _totalQty =>
+      (widget.request['quantity'] as num?)?.toInt() ?? 0;
+
+  String get _unit {
+    final m = widget.request['material'];
+    if (m is Map) return m['unit']?.toString() ?? 'units';
+    return 'units';
+  }
+
+  @override
+  void dispose() {
+    _damagedCtrl.dispose();
+    _missingCtrl.dispose();
+    _damagedCommentsCtrl.dispose();
+    _missingCommentsCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() => _error = null);
+    final damaged = int.tryParse(_damagedCtrl.text.trim()) ?? 0;
+    final missing = int.tryParse(_missingCtrl.text.trim()) ?? 0;
+    if (damaged < 0 || missing < 0) {
+      setState(() => _error = 'Quantities cannot be negative');
+      return;
+    }
+    if (damaged + missing > _totalQty) {
+      setState(
+        () => _error = 'Damaged + missing cannot exceed $_totalQty $_unit',
+      );
+      return;
+    }
+    if (damaged > 0 && _damagedCommentsCtrl.text.trim().isEmpty) {
+      setState(() => _error = 'Describe the damaged stock');
+      return;
+    }
+    if (missing > 0 && _missingCommentsCtrl.text.trim().isEmpty) {
+      setState(() => _error = 'Describe what is missing');
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      final id =
+          (widget.request['_id'] ?? widget.request['id']).toString();
+      await ref.read(apiRepositoryProvider).receiveRequest(
+            id,
+            damagedQuantity: damaged,
+            missingQuantity: missing,
+            damagedComments: _damagedCommentsCtrl.text.trim(),
+            missingComments: _missingCommentsCtrl.text.trim(),
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Receipt confirmed')),
+      );
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Confirm Receipt'),
+      content: SizedBox(
+        width: 400,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Confirm quantities received on site after delivery. Report damaged or missing items if any.\n\n'
+                'Ordered: $_totalQty $_unit of ${popName(widget.request['material'])}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 10),
+                Text(_error!, style: const TextStyle(color: AppColors.danger)),
+              ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: _damagedCtrl,
+                enabled: !_submitting,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Damaged quantity ($_unit)',
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              TextField(
+                controller: _missingCtrl,
+                enabled: !_submitting,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Missing quantity ($_unit)',
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              if ((int.tryParse(_damagedCtrl.text) ?? 0) > 0)
+                TextField(
+                  controller: _damagedCommentsCtrl,
+                  enabled: !_submitting,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Damaged comments',
+                    hintText: 'Describe the nature of the damaged stock...',
+                  ),
+                ),
+              if ((int.tryParse(_missingCtrl.text) ?? 0) > 0)
+                TextField(
+                  controller: _missingCommentsCtrl,
+                  enabled: !_submitting,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Missing comments',
+                    hintText: 'Describe what is missing from the delivery...',
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _submitting ? null : _submit,
+          child: _submitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Confirm Receipt'),
         ),
       ],
     );

@@ -411,19 +411,32 @@ class ApiRepository {
   Future<Map<String, dynamic>> receiveRequest(
     String id, {
     int damagedQuantity = 0,
+    int missingQuantity = 0,
+    String damagedComments = '',
+    String missingComments = '',
   }) async {
     final data = await _put(
       '/api/requests/$id/receive',
-      data: {'damagedQuantity': damagedQuantity},
+      data: {
+        'damagedQuantity': damagedQuantity,
+        'missingQuantity': missingQuantity,
+        'damagedComments': damagedComments,
+        'missingComments': missingComments,
+        'comments': damagedComments,
+      },
     );
     _ensureSuccess(data);
     return Map<String, dynamic>.from(data['request'] as Map);
   }
 
-  Future<void> deleteRequest(String id) async {
+  /// Cancel Pending/Returned request (DELETE → status Cancelled on server).
+  Future<void> cancelRequest(String id) async {
     final data = await _delete('/api/requests/$id');
     _ensureSuccess(data);
   }
+
+  @Deprecated('Use cancelRequest')
+  Future<void> deleteRequest(String id) => cancelRequest(id);
 
   // ── Quotations ─────────────────────────────────────────────────────────
 

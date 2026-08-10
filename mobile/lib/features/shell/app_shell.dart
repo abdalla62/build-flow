@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -30,11 +32,7 @@ class AppShell extends ConsumerWidget {
       appBar: AppBar(
         title: Text(title),
         actions: [
-          IconButton(
-            tooltip: 'Notifications',
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () => context.push('/notifications'),
-          ),
+          const _NotificationBellButton(),
           IconButton(
             tooltip: dark ? 'Light Mode' : 'Dark Mode',
             icon: Icon(
@@ -287,6 +285,68 @@ class AppShell extends ConsumerWidget {
                 ),
               ),
             ),
+    );
+  }
+}
+
+/// In-app notification bell with unread badge (polls every 30s — same idea as web).
+class _NotificationBellButton extends ConsumerStatefulWidget {
+  const _NotificationBellButton();
+
+  @override
+  ConsumerState<_NotificationBellButton> createState() =>
+      _NotificationBellButtonState();
+}
+
+class _NotificationBellButtonState
+    extends ConsumerState<_NotificationBellButton> {
+  Timer? _timer;
+  int _unread = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _refresh());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refresh() async {
+    final auth = ref.read(authNotifierProvider).state;
+    if (auth.user == null) {
+      if (mounted) setState(() => _unread = 0);
+      return;
+    }
+    try {
+      final items = await ref.read(apiRepositoryProvider).getNotifications();
+      final count = items.where((n) => n['read'] != true).length;
+      if (mounted) setState(() => _unread = count);
+    } catch (_) {
+      // Silent — bell stays at last known count
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: 'Notifications',
+      onPressed: () async {
+        await context.push('/notifications');
+        _refresh();
+      },
+      icon: Badge(
+        isLabelVisible: _unread > 0,
+        label: Text(
+          _unread > 99 ? '99+' : '$_unread',
+          style: const TextStyle(fontSize: 10),
+        ),
+        child: const Icon(Icons.notifications_outlined),
+      ),
     );
   }
 }
