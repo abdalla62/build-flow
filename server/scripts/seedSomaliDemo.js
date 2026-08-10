@@ -356,7 +356,7 @@ const SUPPLIERS = [
   }
 ];
 
-/** Budgets in USD — typical mid-size Mogadishu builds. */
+/** Budgets in USD — keep only 2 clear demo projects. */
 const PROJECTS = [
   {
     name: 'Dhismaha Xarunta Caafimaadka Wadajir',
@@ -369,25 +369,14 @@ const PROJECTS = [
     location: 'Hargeisa, Maroodi Jeex',
     budget: 92000,
     status: 'Active'
-  },
-  {
-    name: 'Guryaha Shaqaalaha Garowe (12 Unug)',
-    location: 'Garowe, Nugaal',
-    budget: 240000,
-    status: 'Pending'
-  },
-  {
-    name: 'Ballaarinta Suuqa Xamar Weyne',
-    location: 'Xamar Weyne, Muqdisho',
-    budget: 150000,
-    status: 'Active'
-  },
-  {
-    name: 'Mashruuca Biyaha Beledweyne',
-    location: 'Beledweyne, Hiiraan',
-    budget: 78000,
-    status: 'On Hold'
   }
+];
+
+/** Extra demo names previously seeded — remove so only the 2 above remain. */
+const PROJECTS_TO_REMOVE = [
+  'Guryaha Shaqaalaha Garowe (12 Unug)',
+  'Ballaarinta Suuqa Xamar Weyne',
+  'Mashruuca Biyaha Beledweyne'
 ];
 
 async function upsertCategory(def) {
@@ -522,8 +511,9 @@ async function run() {
 
   let projCreated = 0;
   let projUpdated = 0;
+  let projRemoved = 0;
 
-  console.log('\n--- Mashruucyada (Projects) ---');
+  console.log('\n--- Mashruucyada (Projects) — 2 keliya ---');
   for (const def of PROJECTS) {
     const { created } = await upsertProject(def, manager._id);
     if (created) {
@@ -535,11 +525,21 @@ async function run() {
     }
   }
 
+  for (const name of PROJECTS_TO_REMOVE) {
+    const res = await Project.deleteOne({ name });
+    if (res.deletedCount) {
+      projRemoved += 1;
+      console.log(`  - la tiray: ${name}`);
+    }
+  }
+
   console.log('\n========== Dhammaatay ==========');
   console.log(`Categories: ${catCreated} cusub, ${catUpdated} la cusboonaysiiyay`);
   console.log(`Suppliers:  ${supCreated} cusub, ${supUpdated} la cusboonaysiiyay`);
   console.log(`Materials:  ${matCreated} cusub, ${matUpdated} la cusboonaysiiyay`);
-  console.log(`Projects:   ${projCreated} cusub, ${projUpdated} la cusboonaysiiyay`);
+  console.log(
+    `Projects:   ${projCreated} cusub, ${projUpdated} la cusboonaysiiyay, ${projRemoved} la tiray (hadda 2 keliya)`
+  );
   console.log('\nQiimaha waa USD (suuqa Muqdisho). Requests / PO / Payments adiga ayaa geli doonta.');
   console.log('Users lama taaban.\n');
 
