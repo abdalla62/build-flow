@@ -286,11 +286,9 @@ const Dashboard = () => {
 
   const stats = getRoleStats();
   const dashboardBg =
-    user?.role === 'Administrator'
-      ? '/images/admin-dashboard-bg.png'
-      : user?.role === 'Project Manager'
-        ? '/images/pm-dashboard-bg.png'
-        : '/images/dashboard-bg.png';
+    user?.role === 'Project Manager'
+      ? '/images/pm-dashboard-bg.png'
+      : '/images/dashboard-bg.png';
 
   return (
     <div className="relative -m-4 min-h-[calc(100vh-4rem)] overflow-hidden sm:-m-6 md:-m-8">
