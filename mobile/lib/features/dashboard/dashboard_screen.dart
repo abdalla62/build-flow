@@ -331,7 +331,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           child: Image.asset(
             role == 'Project Manager'
                 ? 'assets/images/pm-dashboard-bg.png'
-                : 'assets/images/dashboard-bg.png',
+                : role == 'Accountant'
+                    ? 'assets/images/accountant-dashboard-bg.png'
+                    : 'assets/images/dashboard-bg.png',
             fit: BoxFit.cover,
             alignment: Alignment.center,
             errorBuilder: (_, _, _) => Container(
