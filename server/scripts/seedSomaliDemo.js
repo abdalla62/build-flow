@@ -356,7 +356,7 @@ const SUPPLIERS = [
   }
 ];
 
-/** Budgets in USD — keep only 2 clear demo projects. */
+/** Budgets in USD — 2 Mogadishu demo projects only. */
 const PROJECTS = [
   {
     name: 'Dhismaha Xarunta Caafimaadka Wadajir',
@@ -365,15 +365,16 @@ const PROJECTS = [
     status: 'Active'
   },
   {
-    name: 'Dayactirka Dugsiyada Hargeisa Phase-1',
-    location: 'Hargeisa, Maroodi Jeex',
+    name: 'Dayactirka Dugsiyada Hodan Phase-1',
+    location: 'Hodan, Muqdisho, Banadir',
     budget: 92000,
     status: 'Active'
   }
 ];
 
-/** Extra demo names previously seeded — remove so only the 2 above remain. */
+/** Extra / renamed demo names — remove so only the 2 Mogadishu projects remain. */
 const PROJECTS_TO_REMOVE = [
+  'Dayactirka Dugsiyada Hargeisa Phase-1',
   'Guryaha Shaqaalaha Garowe (12 Unug)',
   'Ballaarinta Suuqa Xamar Weyne',
   'Mashruuca Biyaha Beledweyne'
