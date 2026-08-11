@@ -326,7 +326,11 @@ const MATERIALS_BY_CATEGORY = {
   ]
 };
 
-/** Only the two real supplier companies (linked to existing login users). */
+/**
+ * Two real supplier companies — each owns clear category + material groups.
+ * Kowsar = general building store (Bakaarah).
+ * Axmed  = steel, cement, MEP (Industrial Road).
+ */
 const SUPPLIERS = [
   {
     name: 'Kowsar Axmed Cali',
@@ -335,7 +339,15 @@ const SUPPLIERS = [
     email: 'kowsar@gmail.com',
     address: 'Suuqa Bakaaraha, Muqdisho, Banadir',
     paymentTerms: 'Net 15 maalmood (USD)',
-    performanceRating: 5
+    performanceRating: 5,
+    categories: [
+      'Ciid, Roobad iyo Dhagax',
+      'Block-yo iyo Derbi',
+      'Qoryo iyo Formwork',
+      'Saqaf iyo Dabool',
+      'Rinji iyo Dhammaystir',
+      'Albaabo, Daaqado iyo Qalab'
+    ]
   },
   {
     name: 'Axmed Cabdullahi Xasan',
@@ -344,7 +356,13 @@ const SUPPLIERS = [
     email: 'ahmed@gmail.com',
     address: 'Industrial Road, Muqdisho, Banadir',
     paymentTerms: 'Lacag caddaan / Net 7',
-    performanceRating: 5
+    performanceRating: 5,
+    categories: [
+      'Sibidh iyo Xirmooyin',
+      'Birta Dhismo',
+      'Biyo iyo Tuubooyin',
+      'Koronto iyo Solar'
+    ]
   }
 ];
 
@@ -355,26 +373,28 @@ const SUPPLIER_EMAILS_TO_REMOVE = [
   'banadir.steel@example.com'
 ];
 
-/** Budgets in USD — 2 Mogadishu demo projects only. */
+/** 2 clear building projects — Mogadishu only. */
 const PROJECTS = [
   {
-    name: 'Dhismaha Xarunta Caafimaadka Wadajir',
-    location: 'Wadajir, Muqdisho, Banadir',
-    budget: 185000,
-    status: 'Active',
-    managerEmail: 'aisha@gmail.com' // Aisha Abdi
-  },
-  {
-    name: 'Dayactirka Dugsiyada Hodan Phase-1',
+    name: 'Dhismaha Guri Labo-dabaq – Hodan',
     location: 'Hodan, Muqdisho, Banadir',
-    budget: 92000,
+    budget: 120000,
     status: 'Active',
     managerEmail: 'ali@gmail.com' // Ali Nuur Abdi
+  },
+  {
+    name: 'Dhismaha Xafiis Yar – Wadajir',
+    location: 'Wadajir, Muqdisho, Banadir',
+    budget: 95000,
+    status: 'Active',
+    managerEmail: 'aisha@gmail.com' // Aisha Abdi
   }
 ];
 
-/** Extra / renamed demo names — remove so only the 2 Mogadishu projects remain. */
+/** Extra / renamed demo names — remove so only the 2 building projects remain. */
 const PROJECTS_TO_REMOVE = [
+  'Dhismaha Xarunta Caafimaadka Wadajir',
+  'Dayactirka Dugsiyada Hodan Phase-1',
   'Dayactirka Dugsiyada Hargeisa Phase-1',
   'Guryaha Shaqaalaha Garowe (12 Unug)',
   'Ballaarinta Suuqa Xamar Weyne',
@@ -393,8 +413,13 @@ async function upsertCategory(def) {
 }
 
 async function upsertSupplier(def, categoryIds) {
+  const { categories: _cats, ...rest } = def;
   let supplier = await Supplier.findOne({ email: def.email.toLowerCase() });
-  const payload = { ...def, email: def.email.toLowerCase(), suppliedCategories: categoryIds };
+  const payload = {
+    ...rest,
+    email: def.email.toLowerCase(),
+    suppliedCategories: categoryIds
+  };
   if (supplier) {
     Object.assign(supplier, payload);
     await supplier.save();
@@ -471,21 +496,29 @@ async function run() {
     }
   }
 
-  const allCatIds = Object.values(categoryMap);
-  const supplierIds = [];
+  /** categoryName -> supplierId */
+  const categoryOwner = {};
   let supCreated = 0;
   let supUpdated = 0;
 
-  console.log('\n--- Suppliers (2 keliya) ---');
+  console.log('\n--- Suppliers (2 keliya) + categories kooda ---');
   for (const def of SUPPLIERS) {
-    const { supplier, created } = await upsertSupplier(def, allCatIds);
-    supplierIds.push(supplier._id);
+    const catIds = (def.categories || [])
+      .map((name) => categoryMap[name])
+      .filter(Boolean);
+    const { supplier, created } = await upsertSupplier(def, catIds);
+    for (const name of def.categories || []) {
+      categoryOwner[name] = supplier._id;
+    }
     if (created) {
       supCreated += 1;
       console.log(`  + ${supplier.company}`);
     } else {
       supUpdated += 1;
       console.log(`  ~ ${supplier.company}`);
+    }
+    for (const name of def.categories || []) {
+      console.log(`      · ${name}`);
     }
   }
 
@@ -498,15 +531,16 @@ async function run() {
 
   let matCreated = 0;
   let matUpdated = 0;
-  let supplierIdx = 0;
 
-  console.log('\n--- Alaabta (Materials) + qiimo USD ---');
+  console.log('\n--- Alaabta (Materials) — mid kasta supplierkiisa ---');
   for (const [catName, mats] of Object.entries(MATERIALS_BY_CATEGORY)) {
     const categoryId = categoryMap[catName];
-    if (!categoryId) continue;
+    const supplierId = categoryOwner[catName];
+    if (!categoryId || !supplierId) {
+      console.warn(`  ! skip ${catName}: category/supplier ma jiro`);
+      continue;
+    }
     for (const def of mats) {
-      const supplierId = supplierIds[supplierIdx % supplierIds.length];
-      supplierIdx += 1;
       const { created } = await upsertMaterial(def, categoryId, supplierId);
       const line = `$${def.estimatedPrice} / ${def.unit}`;
       if (created) {
