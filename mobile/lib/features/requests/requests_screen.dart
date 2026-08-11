@@ -16,6 +16,7 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
   List<Map<String, dynamic>> _items = [];
   bool _loading = true;
   String? _error;
+  final Set<String> _selectedIds = {};
 
   @override
   void initState() {
@@ -298,10 +299,50 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
     }
   }
 
+  Future<void> _openBulkReview() async {
+    final selected = _items
+        .where((r) {
+          final id = (r['_id'] ?? r['id']).toString();
+          final status = r['status']?.toString() ?? '';
+          return _selectedIds.contains(id) && status == 'Pending';
+        })
+        .toList();
+    if (selected.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Select at least one pending request')),
+        );
+      }
+      return;
+    }
+
+    List<Map<String, dynamic>> suppliers = [];
+    try {
+      final res = await ref.read(apiRepositoryProvider).getSuppliers(limit: 100);
+      suppliers = res.items;
+    } catch (_) {}
+
+    if (!mounted) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _BulkReviewRequestDialog(
+        requests: selected,
+        suppliers: suppliers,
+      ),
+    );
+    if (ok == true) {
+      _selectedIds.clear();
+      _load();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final role = ref.watch(authNotifierProvider).state.user?.role;
     final canCreate = role == 'Site Engineer' || role == 'Administrator';
+    final canBulkReview =
+        role == 'Project Manager' || role == 'Administrator';
 
     if (_loading) return const LoadingView();
     if (_error != null) return ErrorView(message: _error!, onRetry: _load);
@@ -325,6 +366,7 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
                 itemCount: _items.length,
                 itemBuilder: (_, i) {
                   final r = _items[i];
+                  final id = (r['_id'] ?? r['id']).toString();
                   final status = r['status']?.toString() ?? '';
                   final canReview =
                       (role == 'Project Manager' || role == 'Administrator') &&
@@ -337,7 +379,8 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
                   final canConfirm = (role == 'Site Engineer' ||
                           role == 'Administrator') &&
                       r['canConfirmReceipt'] == true;
-                  return ModuleListTile(
+                  final showSelect = canBulkReview && status == 'Pending';
+                  final tile = ModuleListTile(
                     title: popName(r['material']),
                     subtitle: '${popName(r['project'])} · Qty ${r['quantity']}',
                     status: status,
@@ -360,15 +403,43 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
                                   )
                                 : null,
                   );
+                  if (!showSelect) return tile;
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: Checkbox(
+                          value: _selectedIds.contains(id),
+                          onChanged: (v) {
+                            setState(() {
+                              if (v == true) {
+                                _selectedIds.add(id);
+                              } else {
+                                _selectedIds.remove(id);
+                              }
+                            });
+                          },
+                        ),
+                      ),
+                      Expanded(child: tile),
+                    ],
+                  );
                 },
               ),
       ),
-      floatingActionButton: canCreate
-          ? FloatingActionButton(
-              onPressed: _create,
-              child: const Icon(Icons.add),
+      floatingActionButton: canBulkReview && _selectedIds.isNotEmpty
+          ? FloatingActionButton.extended(
+              onPressed: _openBulkReview,
+              icon: const Icon(Icons.done_all),
+              label: Text('Review ${_selectedIds.length}'),
             )
-          : null,
+          : canCreate
+              ? FloatingActionButton(
+                  onPressed: _create,
+                  child: const Icon(Icons.add),
+                )
+              : null,
     );
   }
 }
@@ -772,6 +843,211 @@ class _ReviewRequestDialogState extends ConsumerState<_ReviewRequestDialog> {
                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                 )
               : const Text('Post Review Decision'),
+        ),
+      ],
+    );
+  }
+}
+
+class _BulkReviewRequestDialog extends ConsumerStatefulWidget {
+  final List<Map<String, dynamic>> requests;
+  final List<Map<String, dynamic>> suppliers;
+
+  const _BulkReviewRequestDialog({
+    required this.requests,
+    required this.suppliers,
+  });
+
+  @override
+  ConsumerState<_BulkReviewRequestDialog> createState() =>
+      _BulkReviewRequestDialogState();
+}
+
+class _BulkReviewRequestDialogState
+    extends ConsumerState<_BulkReviewRequestDialog> {
+  final _commentsCtrl = TextEditingController();
+  final _selectedSuppliers = <String>{};
+  String _action = 'Approve';
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    for (final r in widget.requests) {
+      final material = r['material'];
+      if (material is Map) {
+        final sid = popId(material['supplier']);
+        if (sid.isNotEmpty) _selectedSuppliers.add(sid);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _commentsCtrl.dispose();
+    super.dispose();
+  }
+
+  double get _estimatedCost {
+    double sum = 0;
+    for (final r in widget.requests) {
+      final qty = (r['quantity'] as num?)?.toDouble() ?? 0;
+      final material = r['material'];
+      final price = material is Map
+          ? (material['estimatedPrice'] as num?)?.toDouble() ?? 0
+          : 0;
+      sum += qty * price;
+    }
+    return sum;
+  }
+
+  Future<void> _submit() async {
+    setState(() => _error = null);
+    final comments = _commentsCtrl.text.trim();
+    if (comments.isEmpty) {
+      setState(() => _error = 'Review comments/remarks are required');
+      return;
+    }
+    if (_action == 'Approve' && _selectedSuppliers.isEmpty) {
+      setState(
+        () => _error =
+            'Select at least one supplier for quotations before approving',
+      );
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      final ids = widget.requests
+          .map((r) => (r['_id'] ?? r['id']).toString())
+          .toList();
+      final res = await ref.read(apiRepositoryProvider).bulkReviewRequests(
+            requestIds: ids,
+            action: _action,
+            comments: comments,
+            suppliers: _selectedSuppliers.toList(),
+          );
+      if (!mounted) return;
+      final count = res['reviewedCount'] ?? ids.length;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$count request(s) ${_action.toLowerCase()}d'),
+        ),
+      );
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Review ${widget.requests.length} Requests'),
+      content: SizedBox(
+        width: 440,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_error != null) ...[
+                Text(_error!, style: const TextStyle(color: AppColors.danger)),
+                const SizedBox(height: 10),
+              ],
+              ...widget.requests.map((r) {
+                final material = r['material'];
+                final unit =
+                    material is Map ? material['unit']?.toString() ?? '' : '';
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    '${r['quantity']} $unit — ${popName(r['material'])}',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                );
+              }),
+              const SizedBox(height: 8),
+              Text(
+                'Est. total: \$${_estimatedCost.toStringAsFixed(0)}',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Invite suppliers (required for Approve)',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              ),
+              ...widget.suppliers.map((s) {
+                final id = (s['_id'] ?? s['id']).toString();
+                final label = (s['company'] ?? s['name'] ?? id).toString();
+                return CheckboxListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(label),
+                  value: _selectedSuppliers.contains(id),
+                  onChanged: _submitting
+                      ? null
+                      : (v) {
+                          setState(() {
+                            if (v == true) {
+                              _selectedSuppliers.add(id);
+                            } else {
+                              _selectedSuppliers.remove(id);
+                            }
+                          });
+                        },
+                );
+              }),
+              DropdownButtonFormField<String>(
+                value: _action,
+                items: const [
+                  DropdownMenuItem(value: 'Approve', child: Text('Approve')),
+                  DropdownMenuItem(value: 'Return', child: Text('Return')),
+                  DropdownMenuItem(value: 'Reject', child: Text('Reject')),
+                ],
+                onChanged: _submitting
+                    ? null
+                    : (v) {
+                        if (v != null) setState(() => _action = v);
+                      },
+                decoration: const InputDecoration(labelText: 'Review Action'),
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _commentsCtrl,
+                enabled: !_submitting,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Remarks',
+                  hintText: 'Tusaale: Aasaas Phase-1 waa la oggolaaday',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _submitting ? null : _submit,
+          child: _submitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text('Post for ${widget.requests.length}'),
         ),
       ],
     );

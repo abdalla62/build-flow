@@ -6,6 +6,7 @@ const {
   createRequest,
   updateRequest,
   reviewRequest,
+  bulkReviewRequests,
   receiveMaterials,
   cancelRequest
 } = require('../controllers/request');
@@ -34,6 +35,16 @@ const reviewValidation = [
   validate
 ];
 
+const bulkReviewValidation = [
+  body('requestIds', 'requestIds must be a non-empty array').isArray({ min: 1 }),
+  body('requestIds.*').isMongoId().withMessage('Invalid request ID'),
+  body('action', 'Action must be Approve, Reject, or Return').isIn(['Approve', 'Reject', 'Return']),
+  body('comments', 'Remarks are required').notEmpty().trim(),
+  body('suppliers').optional({ nullable: true }).isArray(),
+  body('suppliers.*').optional().isMongoId().withMessage('Invalid supplier ID'),
+  validate
+];
+
 const receiveValidation = [
   body('damagedQuantity', 'Damaged quantity must be a non-negative integer').optional().isInt({ min: 0 }),
   body('missingQuantity', 'Missing quantity must be a non-negative integer').optional().isInt({ min: 0 }),
@@ -46,6 +57,13 @@ const receiveValidation = [
 router.route('/')
   .get(getRequests)
   .post(authorize('Administrator', 'Site Engineer'), requestValidation, createRequest);
+
+router.put(
+  '/bulk-review',
+  authorize('Administrator', 'Project Manager'),
+  bulkReviewValidation,
+  bulkReviewRequests
+);
 
 router.route('/:id')
   .get(getRequest)

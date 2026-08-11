@@ -408,6 +408,25 @@ class ApiRepository {
     return Map<String, dynamic>.from(data['request'] as Map);
   }
 
+  Future<Map<String, dynamic>> bulkReviewRequests({
+    required List<String> requestIds,
+    required String action,
+    required String comments,
+    List<String>? suppliers,
+  }) async {
+    final data = await _put(
+      '/api/requests/bulk-review',
+      data: {
+        'requestIds': requestIds,
+        'action': action,
+        'comments': comments,
+        if (suppliers != null) 'suppliers': suppliers,
+      },
+    );
+    _ensureSuccess(data);
+    return Map<String, dynamic>.from(data);
+  }
+
   Future<Map<String, dynamic>> receiveRequest(
     String id, {
     int damagedQuantity = 0,

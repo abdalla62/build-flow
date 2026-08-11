@@ -219,26 +219,89 @@ exports.updateRequest = async (req, res, next) => {
   }
 };
 
+async function applyReviewToRequest(request, { action, comments, suppliers, user, req }) {
+  let status = 'Pending';
+  if (action === 'Approve') status = 'Approved';
+  if (action === 'Reject') status = 'Rejected';
+  if (action === 'Return') status = 'Returned';
+
+  request.status = status;
+  if (Array.isArray(suppliers) && suppliers.length > 0) {
+    request.suppliers = suppliers;
+  }
+  await request.save();
+
+  await Approval.create({
+    request: request._id,
+    approver: user.id,
+    action,
+    comments
+  });
+
+  await Notification.create({
+    user: request.requestedBy,
+    title: `Request ${action}d`,
+    message: `Your material request for ${request.quantity} ${request.material.unit} of ${request.material.name} was ${action.toLowerCase()}d by ${user.name}. Remarks: "${comments}"`,
+    type: 'Approval'
+  });
+
+  if (action === 'Approve' && Array.isArray(suppliers) && suppliers.length > 0) {
+    const Supplier = require('../models/Supplier');
+    const User = require('../models/User');
+    const invitedProfiles = await Supplier.find({ _id: { $in: suppliers } });
+    for (const profile of invitedProfiles) {
+      const supplierUser = await User.findOne({
+        email: {
+          $regex: new RegExp(
+            `^${String(profile.email).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
+            'i'
+          )
+        },
+        role: 'Supplier'
+      });
+      if (supplierUser) {
+        await Notification.create({
+          user: supplierUser._id,
+          title: 'New Quotation Opportunity',
+          message: `A material request for ${request.quantity} ${request.material.unit} of ${request.material.name} is approved and open for bidding.`,
+          type: 'Request'
+        });
+      }
+    }
+  }
+
+  await logActivity(
+    req,
+    user,
+    `Review Request - ${action}`,
+    `Reviewed request ID: ${request._id}. Status: ${status}`
+  );
+
+  return request;
+}
+
+function validateReviewPayload({ action, comments, suppliers }) {
+  if (!['Approve', 'Reject', 'Return'].includes(action)) {
+    return 'Invalid review action';
+  }
+  if (!comments) {
+    return 'Review comments/remarks are required';
+  }
+  if (action === 'Approve' && (!Array.isArray(suppliers) || suppliers.length === 0)) {
+    return 'Select at least one supplier for quotations before approving';
+  }
+  return null;
+}
+
 // @desc    Review / Approve / Reject / Return material request
 // @route   PUT /api/requests/:id/review
 // @access  Private/Project Manager
 exports.reviewRequest = async (req, res, next) => {
   try {
     const { action, comments, suppliers } = req.body;
-
-    if (!['Approve', 'Reject', 'Return'].includes(action)) {
-      return res.status(400).json({ success: false, error: 'Invalid review action' });
-    }
-
-    if (!comments) {
-      return res.status(400).json({ success: false, error: 'Review comments/remarks are required' });
-    }
-
-    if (action === 'Approve' && (!Array.isArray(suppliers) || suppliers.length === 0)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Select at least one supplier for quotations before approving'
-      });
+    const payloadError = validateReviewPayload({ action, comments, suppliers });
+    if (payloadError) {
+      return res.status(400).json({ success: false, error: payloadError });
     }
 
     const request = await MaterialRequest.findById(req.params.id).populate('project material');
@@ -246,7 +309,6 @@ exports.reviewRequest = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Request not found' });
     }
 
-    // Verify Project Manager matches the project manager
     if (request.project.manager.toString() !== req.user.id && req.user.role !== 'Administrator') {
       return res.status(403).json({ success: false, error: 'You are not authorized to review requests for this project' });
     }
@@ -258,57 +320,96 @@ exports.reviewRequest = async (req, res, next) => {
       });
     }
 
-    let status = 'Pending';
-    if (action === 'Approve') status = 'Approved';
-    if (action === 'Reject') status = 'Rejected';
-    if (action === 'Return') status = 'Returned';
-
-    request.status = status;
-    if (Array.isArray(suppliers) && suppliers.length > 0) {
-      request.suppliers = suppliers;
-    }
-    await request.save();
-
-    // Log the approval comment
-    await Approval.create({
-      request: request._id,
-      approver: req.user.id,
+    await applyReviewToRequest(request, {
       action,
-      comments
+      comments,
+      suppliers,
+      user: req.user,
+      req
     });
-
-    // Notify Requester
-    await Notification.create({
-      user: request.requestedBy,
-      title: `Request ${action}d`,
-      message: `Your material request for ${request.quantity} ${request.material.unit} of ${request.material.name} was ${action.toLowerCase()}d by ${req.user.name}. Remarks: "${comments}"`,
-      type: 'Approval'
-    });
-
-    // Notify invited supplier user accounts so Quotes & Bids is actionable
-    if (action === 'Approve' && Array.isArray(suppliers) && suppliers.length > 0) {
-      const Supplier = require('../models/Supplier');
-      const User = require('../models/User');
-      const invitedProfiles = await Supplier.find({ _id: { $in: suppliers } });
-      for (const profile of invitedProfiles) {
-        const supplierUser = await User.findOne({
-          email: { $regex: new RegExp(`^${String(profile.email).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
-          role: 'Supplier'
-        });
-        if (supplierUser) {
-          await Notification.create({
-            user: supplierUser._id,
-            title: 'New Quotation Opportunity',
-            message: `A material request for ${request.quantity} ${request.material.unit} of ${request.material.name} is approved and open for bidding.`,
-            type: 'Request'
-          });
-        }
-      }
-    }
-
-    await logActivity(req, req.user, `Review Request - ${action}`, `Reviewed request ID: ${request._id}. Status: ${status}`);
 
     res.status(200).json({ success: true, request });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Bulk review multiple material requests (one decision)
+// @route   PUT /api/requests/bulk-review
+// @access  Private/Project Manager
+exports.bulkReviewRequests = async (req, res, next) => {
+  try {
+    const { requestIds, action, comments, suppliers } = req.body;
+    const payloadError = validateReviewPayload({ action, comments, suppliers });
+    if (payloadError) {
+      return res.status(400).json({ success: false, error: payloadError });
+    }
+
+    if (!Array.isArray(requestIds) || requestIds.length === 0) {
+      return res.status(400).json({ success: false, error: 'Select at least one request' });
+    }
+
+    const uniqueIds = [...new Set(requestIds.map(String))];
+    const requests = await MaterialRequest.find({ _id: { $in: uniqueIds } }).populate(
+      'project material'
+    );
+
+    if (requests.length === 0) {
+      return res.status(404).json({ success: false, error: 'No matching requests found' });
+    }
+
+    const reviewed = [];
+    const skipped = [];
+
+    for (const request of requests) {
+      if (!request.project) {
+        skipped.push({ id: request._id, reason: 'Project missing' });
+        continue;
+      }
+      if (
+        request.project.manager.toString() !== req.user.id &&
+        req.user.role !== 'Administrator'
+      ) {
+        skipped.push({ id: request._id, reason: 'Not authorized' });
+        continue;
+      }
+      if (!['Pending', 'Returned', 'Rejected'].includes(request.status)) {
+        skipped.push({ id: request._id, reason: `Status is ${request.status}` });
+        continue;
+      }
+
+      await applyReviewToRequest(request, {
+        action,
+        comments,
+        suppliers,
+        user: req.user,
+        req
+      });
+      reviewed.push(request._id);
+    }
+
+    if (reviewed.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No requests could be reviewed',
+        skipped
+      });
+    }
+
+    await logActivity(
+      req,
+      req.user,
+      `Bulk Review Requests - ${action}`,
+      `Reviewed ${reviewed.length} request(s). Skipped: ${skipped.length}`
+    );
+
+    res.status(200).json({
+      success: true,
+      reviewedCount: reviewed.length,
+      skippedCount: skipped.length,
+      reviewed,
+      skipped
+    });
   } catch (error) {
     next(error);
   }

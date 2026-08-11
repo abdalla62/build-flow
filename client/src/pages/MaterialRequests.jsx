@@ -56,11 +56,14 @@ const MaterialRequests = () => {
 
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [reviewingRequest, setReviewingRequest] = useState(null);
+  const [reviewingBatch, setReviewingBatch] = useState([]);
+  const [selectedRequestIds, setSelectedRequestIds] = useState([]);
   const [reviewAction, setReviewAction] = useState('Approve');
   const [reviewComments, setReviewComments] = useState('');
   const [suppliers, setSuppliers] = useState([]);
   const [selectedSuppliers, setSelectedSuppliers] = useState([]);
   const [suppliersError, setSuppliersError] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const [receivingRequest, setReceivingRequest] = useState(null);
@@ -222,13 +225,67 @@ const MaterialRequests = () => {
     setSuppliersError('');
   };
 
+  const reviewableStatuses = ['Pending', 'Returned', 'Rejected'];
+
+  const toggleRequestSelect = (id) => {
+    setSelectedRequestIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const pendingOnPage = requests.filter((r) => r.status === 'Pending');
+  const allPendingSelected =
+    pendingOnPage.length > 0 &&
+    pendingOnPage.every((r) => selectedRequestIds.includes(r._id));
+
+  const toggleSelectAllPending = () => {
+    if (allPendingSelected) {
+      setSelectedRequestIds((prev) =>
+        prev.filter((id) => !pendingOnPage.some((r) => r._id === id))
+      );
+    } else {
+      setSelectedRequestIds((prev) => [
+        ...new Set([...prev, ...pendingOnPage.map((r) => r._id)])
+      ]);
+    }
+  };
+
+  const preferredSuppliersFromRequests = (list) => {
+    const ids = list
+      .map((r) => r.material?.supplier?._id || r.material?.supplier)
+      .filter(Boolean)
+      .map(String);
+    return [...new Set(ids)];
+  };
+
   const handleOpenReview = (request) => {
     setReviewingRequest(request);
+    setReviewingBatch([]);
     setReviewComments('');
     setReviewAction('Approve');
+    const preferred = preferredSuppliersFromRequests([request]);
     setSelectedSuppliers(
-      (request.suppliers || []).map((s) => s._id || s).filter(Boolean)
+      preferred.length > 0
+        ? preferred
+        : (request.suppliers || []).map((s) => s._id || s).filter(Boolean)
     );
+    setSuppliersError('');
+    setIsReviewOpen(true);
+  };
+
+  const handleOpenBulkReview = () => {
+    const batch = requests.filter(
+      (r) => selectedRequestIds.includes(r._id) && reviewableStatuses.includes(r.status)
+    );
+    if (batch.length === 0) {
+      toast.error('Select at least one pending request');
+      return;
+    }
+    setReviewingRequest(null);
+    setReviewingBatch(batch);
+    setReviewComments('');
+    setReviewAction('Approve');
+    setSelectedSuppliers(preferredSuppliersFromRequests(batch));
     setSuppliersError('');
     setIsReviewOpen(true);
   };
@@ -306,6 +363,10 @@ const MaterialRequests = () => {
 
   const postReview = async () => {
     try {
+      if (!reviewComments.trim()) {
+        toast.error('Remarks / comments are required');
+        return;
+      }
       if (reviewAction === 'Approve' && selectedSuppliers.length === 0) {
         setSuppliersError('Select at least one supplier for quotations');
         return;
@@ -313,19 +374,40 @@ const MaterialRequests = () => {
       setSuppliersError('');
       const payload = {
         action: reviewAction,
-        comments: reviewComments
+        comments: reviewComments.trim()
       };
       if (selectedSuppliers.length > 0) {
         payload.suppliers = selectedSuppliers;
       }
-      const res = await axios.put(`/api/requests/${reviewingRequest._id}/review`, payload);
-      if (res.data.success) {
-        toast.success(`Request successfully ${reviewAction.toLowerCase()}d`);
-        setIsReviewOpen(false);
-        fetchRequests();
+
+      setReviewSubmitting(true);
+      if (reviewingBatch.length > 0) {
+        const res = await axios.put('/api/requests/bulk-review', {
+          ...payload,
+          requestIds: reviewingBatch.map((r) => r._id)
+        });
+        if (res.data.success) {
+          toast.success(
+            `${res.data.reviewedCount} request(s) ${reviewAction.toLowerCase()}d`
+          );
+          setIsReviewOpen(false);
+          setSelectedRequestIds([]);
+          setReviewingBatch([]);
+          fetchRequests();
+        }
+      } else if (reviewingRequest) {
+        const res = await axios.put(`/api/requests/${reviewingRequest._id}/review`, payload);
+        if (res.data.success) {
+          toast.success(`Request successfully ${reviewAction.toLowerCase()}d`);
+          setIsReviewOpen(false);
+          setSelectedRequestIds((prev) => prev.filter((id) => id !== reviewingRequest._id));
+          fetchRequests();
+        }
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to review request');
+    } finally {
+      setReviewSubmitting(false);
     }
   };
 
@@ -355,23 +437,66 @@ const MaterialRequests = () => {
     }
   };
 
-  // PM budget warning calculation
+  // PM budget warning calculation (single or bulk)
   const getBudgetReviewDetails = () => {
-    if (!reviewingRequest) return null;
-    const reqCost = reviewingRequest.quantity * (reviewingRequest.material?.estimatedPrice || 0);
-    const budget = reviewingRequest.project?.budget || 0;
+    const list =
+      reviewingBatch.length > 0
+        ? reviewingBatch
+        : reviewingRequest
+          ? [reviewingRequest]
+          : [];
+    if (list.length === 0) return null;
+    const reqCost = list.reduce(
+      (sum, r) => sum + r.quantity * (r.material?.estimatedPrice || 0),
+      0
+    );
+    const budget = list[0]?.project?.budget || 0;
     const limitWarning = reqCost > budget * 0.20;
 
     return {
       cost: reqCost,
       budget,
-      limitWarning
+      limitWarning,
+      itemCount: list.length
     };
   };
 
   const budgetDetails = getBudgetReviewDetails();
+  const reviewItems =
+    reviewingBatch.length > 0
+      ? reviewingBatch
+      : reviewingRequest
+        ? [reviewingRequest]
+        : [];
 
   const headers = [
+    ...(isPM
+      ? [
+          {
+            key: 'select',
+            label: (
+              <input
+                type="checkbox"
+                checked={allPendingSelected}
+                onChange={toggleSelectAllPending}
+                title="Select all pending on this page"
+                className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
+              />
+            ),
+            render: (r) =>
+              r.status === 'Pending' ? (
+                <input
+                  type="checkbox"
+                  checked={selectedRequestIds.includes(r._id)}
+                  onChange={() => toggleRequestSelect(r._id)}
+                  className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
+                />
+              ) : (
+                <span className="inline-block w-4" />
+              )
+          }
+        ]
+      : []),
     { key: 'project', label: 'Project details', render: (r) => (
       <div>
         <p className="font-bold text-slate-800 dark:text-slate-200">{r.project?.name || 'Unlinked'}</p>
@@ -493,15 +618,26 @@ const MaterialRequests = () => {
             Submit material orders, review remaining budgets, and complete approvals workflow.
           </p>
         </div>
-        {isSiteEng && (
-          <button
-            onClick={handleOpenSubmit}
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-primaryHover shadow-md transition-all self-start sm:self-auto"
-          >
-            <FiPlus className="h-5 w-5" />
-            Request Material
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          {isPM && selectedRequestIds.length > 0 && (
+            <button
+              onClick={handleOpenBulkReview}
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-primaryHover shadow-md transition-all"
+            >
+              <FiCheckCircle className="h-5 w-5" />
+              Review Selected ({selectedRequestIds.length})
+            </button>
+          )}
+          {isSiteEng && (
+            <button
+              onClick={handleOpenSubmit}
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-primaryHover shadow-md transition-all"
+            >
+              <FiPlus className="h-5 w-5" />
+              Request Material
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filter panel */}
@@ -803,24 +939,52 @@ const MaterialRequests = () => {
         </form>
       </Modal>
 
-      {/* Review Request Modal (for PM) */}
+      {/* Review Request Modal (for PM) — single or bulk */}
       <Modal
         isOpen={isReviewOpen}
-        onClose={() => setIsReviewOpen(false)}
-        title="Review Material Request"
+        onClose={() => {
+          setIsReviewOpen(false);
+          setReviewingBatch([]);
+        }}
+        title={
+          reviewItems.length > 1
+            ? `Review ${reviewItems.length} Material Requests`
+            : 'Review Material Request'
+        }
       >
-        {reviewingRequest && budgetDetails && (
+        {reviewItems.length > 0 && budgetDetails && (
           <div className="space-y-4 py-2">
             
             {/* Request Summary */}
             <div className="bg-slate-50 dark:bg-slate-950/30 border border-slate-100 dark:border-slate-850 p-4 rounded-xl space-y-2">
-              <p className="text-xs text-slate-400 font-bold uppercase">Requested details</p>
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                {reviewingRequest.quantity} {reviewingRequest.material?.unit} of {reviewingRequest.material?.name}
+              <p className="text-xs text-slate-400 font-bold uppercase">
+                {reviewItems.length > 1 ? 'Selected items' : 'Requested details'}
               </p>
-              <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                Project: {reviewingRequest.project?.name} | Reason: "{reviewingRequest.reason}"
-              </p>
+              {reviewItems.length === 1 ? (
+                <>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                    {reviewItems[0].quantity} {reviewItems[0].material?.unit} of{' '}
+                    {reviewItems[0].material?.name}
+                  </p>
+                  <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                    Project: {reviewItems[0].project?.name} | Reason: "{reviewItems[0].reason}"
+                  </p>
+                </>
+              ) : (
+                <ul className="space-y-1.5 max-h-36 overflow-y-auto">
+                  {reviewItems.map((r) => (
+                    <li
+                      key={r._id}
+                      className="text-sm font-semibold text-slate-800 dark:text-slate-100"
+                    >
+                      {r.quantity} {r.material?.unit} — {r.material?.name}
+                      <span className="block text-[11px] font-medium text-slate-500">
+                        {r.project?.name}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {/* PM multi-supplier invite for quotations */}
@@ -918,9 +1082,14 @@ const MaterialRequests = () => {
 
             <button
               onClick={postReview}
-              className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+              disabled={reviewSubmitting}
+              className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover disabled:opacity-60 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
             >
-              Post Review Decision
+              {reviewSubmitting
+                ? 'Saving…'
+                : reviewItems.length > 1
+                  ? `Post Decision for ${reviewItems.length} Items`
+                  : 'Post Review Decision'}
             </button>
           </div>
         )}
