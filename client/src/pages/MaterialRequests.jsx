@@ -11,7 +11,6 @@ import {
   FiSearch,
   FiEdit,
   FiTrash2,
-  FiCheckCircle,
   FiXCircle,
   FiCornerUpLeft,
   FiAlertTriangle,
@@ -56,8 +55,6 @@ const MaterialRequests = () => {
 
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [reviewingRequest, setReviewingRequest] = useState(null);
-  const [reviewingBatch, setReviewingBatch] = useState([]);
-  const [selectedRequestIds, setSelectedRequestIds] = useState([]);
   const [reviewAction, setReviewAction] = useState('Approve');
   const [reviewComments, setReviewComments] = useState('');
   const [suppliers, setSuppliers] = useState([]);
@@ -225,31 +222,6 @@ const MaterialRequests = () => {
     setSuppliersError('');
   };
 
-  const reviewableStatuses = ['Pending', 'Returned', 'Rejected'];
-
-  const toggleRequestSelect = (id) => {
-    setSelectedRequestIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  };
-
-  const pendingOnPage = requests.filter((r) => r.status === 'Pending');
-  const allPendingSelected =
-    pendingOnPage.length > 0 &&
-    pendingOnPage.every((r) => selectedRequestIds.includes(r._id));
-
-  const toggleSelectAllPending = () => {
-    if (allPendingSelected) {
-      setSelectedRequestIds((prev) =>
-        prev.filter((id) => !pendingOnPage.some((r) => r._id === id))
-      );
-    } else {
-      setSelectedRequestIds((prev) => [
-        ...new Set([...prev, ...pendingOnPage.map((r) => r._id)])
-      ]);
-    }
-  };
-
   const preferredSuppliersFromRequests = (list) => {
     const ids = list
       .map((r) => r.material?.supplier?._id || r.material?.supplier)
@@ -260,7 +232,6 @@ const MaterialRequests = () => {
 
   const handleOpenReview = (request) => {
     setReviewingRequest(request);
-    setReviewingBatch([]);
     setReviewComments('');
     setReviewAction('Approve');
     const preferred = preferredSuppliersFromRequests([request]);
@@ -269,23 +240,6 @@ const MaterialRequests = () => {
         ? preferred
         : (request.suppliers || []).map((s) => s._id || s).filter(Boolean)
     );
-    setSuppliersError('');
-    setIsReviewOpen(true);
-  };
-
-  const handleOpenBulkReview = () => {
-    const batch = requests.filter(
-      (r) => selectedRequestIds.includes(r._id) && reviewableStatuses.includes(r.status)
-    );
-    if (batch.length === 0) {
-      toast.error('Select at least one pending request');
-      return;
-    }
-    setReviewingRequest(null);
-    setReviewingBatch(batch);
-    setReviewComments('');
-    setReviewAction('Approve');
-    setSelectedSuppliers(preferredSuppliersFromRequests(batch));
     setSuppliersError('');
     setIsReviewOpen(true);
   };
@@ -381,26 +335,11 @@ const MaterialRequests = () => {
       }
 
       setReviewSubmitting(true);
-      if (reviewingBatch.length > 0) {
-        const res = await axios.put('/api/requests/bulk-review', {
-          ...payload,
-          requestIds: reviewingBatch.map((r) => r._id)
-        });
-        if (res.data.success) {
-          toast.success(
-            `${res.data.reviewedCount} request(s) ${reviewAction.toLowerCase()}d`
-          );
-          setIsReviewOpen(false);
-          setSelectedRequestIds([]);
-          setReviewingBatch([]);
-          fetchRequests();
-        }
-      } else if (reviewingRequest) {
+      if (reviewingRequest) {
         const res = await axios.put(`/api/requests/${reviewingRequest._id}/review`, payload);
         if (res.data.success) {
           toast.success(`Request successfully ${reviewAction.toLowerCase()}d`);
           setIsReviewOpen(false);
-          setSelectedRequestIds((prev) => prev.filter((id) => id !== reviewingRequest._id));
           fetchRequests();
         }
       }
@@ -437,66 +376,26 @@ const MaterialRequests = () => {
     }
   };
 
-  // PM budget warning calculation (single or bulk)
+  // PM budget warning calculation
   const getBudgetReviewDetails = () => {
-    const list =
-      reviewingBatch.length > 0
-        ? reviewingBatch
-        : reviewingRequest
-          ? [reviewingRequest]
-          : [];
-    if (list.length === 0) return null;
-    const reqCost = list.reduce(
-      (sum, r) => sum + r.quantity * (r.material?.estimatedPrice || 0),
-      0
-    );
-    const budget = list[0]?.project?.budget || 0;
+    if (!reviewingRequest) return null;
+    const reqCost =
+      reviewingRequest.quantity * (reviewingRequest.material?.estimatedPrice || 0);
+    const budget = reviewingRequest.project?.budget || 0;
     const limitWarning = reqCost > budget * 0.20;
 
     return {
       cost: reqCost,
       budget,
       limitWarning,
-      itemCount: list.length
+      itemCount: 1
     };
   };
 
   const budgetDetails = getBudgetReviewDetails();
-  const reviewItems =
-    reviewingBatch.length > 0
-      ? reviewingBatch
-      : reviewingRequest
-        ? [reviewingRequest]
-        : [];
+  const reviewItems = reviewingRequest ? [reviewingRequest] : [];
 
   const headers = [
-    ...(isPM
-      ? [
-          {
-            key: 'select',
-            label: (
-              <input
-                type="checkbox"
-                checked={allPendingSelected}
-                onChange={toggleSelectAllPending}
-                title="Select all pending on this page"
-                className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
-              />
-            ),
-            render: (r) =>
-              r.status === 'Pending' ? (
-                <input
-                  type="checkbox"
-                  checked={selectedRequestIds.includes(r._id)}
-                  onChange={() => toggleRequestSelect(r._id)}
-                  className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
-                />
-              ) : (
-                <span className="inline-block w-4" />
-              )
-          }
-        ]
-      : []),
     { key: 'project', label: 'Project details', render: (r) => (
       <div>
         <p className="font-bold text-slate-800 dark:text-slate-200">{r.project?.name || 'Unlinked'}</p>
@@ -619,15 +518,6 @@ const MaterialRequests = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-          {isPM && selectedRequestIds.length > 0 && (
-            <button
-              onClick={handleOpenBulkReview}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-primaryHover shadow-md transition-all"
-            >
-              <FiCheckCircle className="h-5 w-5" />
-              Review Selected ({selectedRequestIds.length})
-            </button>
-          )}
           {isSiteEng && (
             <button
               onClick={handleOpenSubmit}
@@ -939,7 +829,7 @@ const MaterialRequests = () => {
         </form>
       </Modal>
 
-      {/* Review Request Modal (for PM) — single or bulk */}
+      {/* Review Request Modal (for PM) */}
       <Modal
         isOpen={isReviewOpen}
         onClose={() => {

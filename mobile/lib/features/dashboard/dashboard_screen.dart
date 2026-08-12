@@ -85,78 +85,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return NumberFormat.currency(symbol: '\$', decimalDigits: 0).format(n);
   }
 
-  Future<void> _confirmClearPracticeData(BuildContext context) async {
-    final controller = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Clear practice data'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Deletes projects, materials, suppliers, requests, quotes, orders, deliveries, payments, and logs from the shared database (web + mobile).',
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'Users and roles will not be deleted.',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: controller,
-                decoration: const InputDecoration(
-                  labelText: 'Type CLEAR to confirm',
-                  hintText: 'CLEAR',
-                ),
-                textCapitalization: TextCapitalization.characters,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
-              onPressed: () {
-                if (controller.text.trim().toUpperCase() != 'CLEAR') {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Type CLEAR to confirm')),
-                  );
-                  return;
-                }
-                Navigator.pop(ctx, true);
-              },
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
-    );
-    controller.dispose();
-    if (ok != true || !mounted) return;
-
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final res = await ref.read(apiRepositoryProvider).clearPracticeData();
-      if (!mounted) return;
-      final msg = res['message']?.toString() ?? 'Practice data cleared';
-      messenger.showSnackBar(SnackBar(content: Text(msg)));
-      await _load();
-    } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
-        ),
-      );
-    }
-  }
-
   /// Field keys match web Dashboard.jsx + /api/dashboard/* responses.
   List<_StatCard> _statsForRole(String? role) {
     final stats = _data?['stats'] as Map<String, dynamic>? ?? {};
@@ -421,9 +349,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   child: _WebStyleHeader(
                     role: role,
                     localTime: localTime,
-                    onClearPracticeData: role == 'Administrator'
-                        ? () => _confirmClearPracticeData(context)
-                        : null,
                   ),
                 ),
               ),
@@ -493,12 +418,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 class _WebStyleHeader extends StatelessWidget {
   final String role;
   final String localTime;
-  final VoidCallback? onClearPracticeData;
 
   const _WebStyleHeader({
     required this.role,
     required this.localTime,
-    this.onClearPracticeData,
   });
 
   @override
@@ -550,81 +473,41 @@ class _WebStyleHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            if (onClearPracticeData != null)
-              Material(
-                color: dark
-                    ? AppColors.danger.withValues(alpha: 0.18)
-                    : AppColors.paymentsBg,
-                borderRadius: BorderRadius.circular(12),
-                child: InkWell(
-                  onTap: onClearPracticeData,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.delete_outline_rounded,
-                          size: 15,
-                          color: dark ? const Color(0xFFFDA4AF) : AppColors.danger,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Clear practice data',
-                          style: TextStyle(
-                            color: dark ? const Color(0xFFFDA4AF) : AppColors.danger,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: dark
-                    ? AppColors.darkCard.withValues(alpha: 0.85)
-                    : AppColors.card.withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: dark
-                      ? AppColors.primary.withValues(alpha: 0.3)
-                      : AppColors.border,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.darkNavy.withValues(alpha: 0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.access_time_rounded, size: 14, color: AppColors.primary),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Local Time: $localTime',
-                    style: TextStyle(
-                      color: dark ? Colors.white : AppColors.textPrimary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: dark
+                ? AppColors.darkCard.withValues(alpha: 0.85)
+                : AppColors.card.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: dark
+                  ? AppColors.primary.withValues(alpha: 0.3)
+                  : AppColors.border,
             ),
-          ],
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.darkNavy.withValues(alpha: 0.06),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.access_time_rounded, size: 14, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                'Local Time: $localTime',
+                style: TextStyle(
+                  color: dark ? Colors.white : AppColors.textPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

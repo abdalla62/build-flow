@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
-import Modal from '../components/UI/Modal';
 import {
   FiFileText,
   FiActivity,
@@ -14,8 +12,7 @@ import {
   FiAlertTriangle,
   FiClock,
   FiUsers,
-  FiBriefcase,
-  FiTrash2
+  FiBriefcase
 } from 'react-icons/fi';
 import {
   ResponsiveContainer,
@@ -75,9 +72,6 @@ const Dashboard = () => {
   const [procLoading, setProcLoading] = useState(false);
   const [deliveryStats, setDeliveryStats] = useState(null);
   const [deliveryLoading, setDeliveryLoading] = useState(false);
-  const [clearOpen, setClearOpen] = useState(false);
-  const [clearConfirm, setClearConfirm] = useState('');
-  const [clearBusy, setClearBusy] = useState(false);
 
   const reloadAdminDashboard = () => {
     setAdminLoading(true);
@@ -98,27 +92,6 @@ const Dashboard = () => {
         setAdminCharts({ spendTrends: [], categoryData: [], totalCategorySpend: 0 });
       })
       .finally(() => setAdminLoading(false));
-  };
-
-  const handleClearPracticeData = async () => {
-    if (clearConfirm.trim().toUpperCase() !== 'CLEAR') {
-      toast.error('Type CLEAR to confirm');
-      return;
-    }
-    setClearBusy(true);
-    try {
-      const res = await axios.post('/api/system/clear-demo-data', { confirm: 'CLEAR' });
-      if (res.data.success) {
-        toast.success(res.data.message || 'Practice data cleared');
-        setClearOpen(false);
-        setClearConfirm('');
-        reloadAdminDashboard();
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to clear practice data');
-    } finally {
-      setClearBusy(false);
-    }
   };
 
   useEffect(() => {
@@ -362,21 +335,6 @@ const Dashboard = () => {
             </motion.p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {isAdmin && (
-              <motion.button
-                type="button"
-                onClick={() => {
-                  setClearConfirm('');
-                  setClearOpen(true);
-                }}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-brand-danger shadow-bf-sm transition-colors hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300 dark:hover:bg-rose-950/50"
-                whileHover={{ scale: 1.03, y: -1 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <FiTrash2 />
-                Clear practice data
-              </motion.button>
-            )}
             <motion.span
               className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-brand-card/90 px-3 py-1.5 text-xs font-semibold text-brand-text shadow-bf-sm dark:border-brand-primary/30 dark:bg-brand-darkCard/80 dark:text-slate-100"
               whileHover={{ scale: 1.03, y: -1 }}
@@ -563,63 +521,6 @@ const Dashboard = () => {
           </motion.div>
         )}
       </motion.div>
-
-      {isAdmin && (
-        <Modal
-          isOpen={clearOpen}
-          onClose={() => {
-            if (!clearBusy) {
-              setClearOpen(false);
-              setClearConfirm('');
-            }
-          }}
-          title="Clear practice data"
-        >
-          <div className="space-y-4">
-            <p className="text-sm text-brand-muted dark:text-brand-darkMuted">
-              This deletes projects, materials, suppliers, requests, quotes, orders,
-              deliveries, payments, inventory logs, notifications, and audit logs
-              from the shared database (web + mobile).
-            </p>
-            <p className="text-sm font-semibold text-brand-text dark:text-slate-100">
-              Users and roles will not be deleted.
-            </p>
-            <div>
-              <label className="bf-label mb-1.5">Type CLEAR to confirm</label>
-              <input
-                type="text"
-                value={clearConfirm}
-                onChange={(e) => setClearConfirm(e.target.value)}
-                className="bf-input"
-                placeholder="CLEAR"
-                disabled={clearBusy}
-                autoComplete="off"
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <button
-                type="button"
-                disabled={clearBusy}
-                onClick={() => {
-                  setClearOpen(false);
-                  setClearConfirm('');
-                }}
-                className="rounded-xl border border-brand-border px-4 py-2.5 text-sm font-semibold text-brand-text hover:bg-brand-bg dark:border-brand-darkBorder dark:text-slate-200 dark:hover:bg-white/5"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={clearBusy || clearConfirm.trim().toUpperCase() !== 'CLEAR'}
-                onClick={handleClearPracticeData}
-                className="bf-btn-danger disabled:opacity-50"
-              >
-                {clearBusy ? 'Clearing…' : 'Delete practice data'}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 };
