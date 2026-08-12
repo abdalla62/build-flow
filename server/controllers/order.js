@@ -1,4 +1,4 @@
-const PurchaseOrder = require('../models/PurchaseOrder');
+﻿const PurchaseOrder = require('../models/PurchaseOrder');
 const Supplier = require('../models/Supplier');
 const Notification = require('../models/Notification');
 const logActivity = require('../utils/audit');
@@ -102,7 +102,7 @@ exports.updateOrder = async (req, res, next) => {
         return res.status(400).json({ success: false, error: 'Invalid PO status' });
       }
       order.status = status;
-      // paymentStatus is ledger-driven — only auto-cancel with PO cancel/reject
+      // paymentStatus is ledger-driven â€” only auto-cancel with PO cancel/reject
       if (status === 'Rejected' || status === 'Cancelled') {
         order.paymentStatus = 'Cancelled';
       }
@@ -286,80 +286,194 @@ exports.generatePOInvoice = async (req, res, next) => {
     const company = order.supplier?.company || order.supplier?.name || 'Supplier';
 
     await new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ margin: 50, size: 'A4' });
+      const doc = new PDFDocument({ margin: 0, size: 'A4' });
       const stream = fs.createWriteStream(fullPath);
       doc.pipe(stream);
 
+      const pageW = doc.page.width;
+      const pageH = doc.page.height;
+      const left = 48;
+      const right = pageW - 48;
+      const contentW = right - left;
+      const teal = '#0F766E';
+      const tealDark = '#115E59';
+      const slate = '#0F172A';
+      const muted = '#64748B';
+      const border = '#E2E8F0';
+      const soft = '#F0FDFA';
+
       const project = order.materialRequest?.project?.name || '—';
+      const projectLoc = order.materialRequest?.project?.location || '';
       const today = new Date().toLocaleDateString();
+      const invoiceNo = `INV-${order.purchaseOrderNumber || safePo}`;
+      const tax = Number(order.tax || 0);
+      const discount = Number(order.discount || 0);
+      const grand = Number(order.grandTotal || 0);
+      const items = order.items || [];
+      const subtotal = items.reduce((sum, item) => {
+        return sum + Number(item.quantity || 0) * Number(item.unitPrice || 0);
+      }, 0);
+      const money = (n) => `$${Number(n || 0).toFixed(2)}`;
 
-      doc.fillColor('#0F766E').fontSize(20).text('INVOICE', { align: 'left' });
-      doc.moveDown(0.3);
-      doc.fillColor('#0F172A').fontSize(10).text('BUILD FLOW — Construction Material Procurement');
-      doc.moveDown(1);
-
-      doc.fontSize(11).fillColor('#334155');
-      doc.text(`Invoice No: INV-${safePo}`);
-      doc.text(`Date: ${today}`);
-      doc.text(`PO Number: ${order.purchaseOrderNumber}`);
-      doc.text(`Project: ${project}`);
-      doc.moveDown(0.8);
-
-      doc.fillColor('#0F172A').fontSize(12).text('From (Supplier)', { underline: true });
-      doc.fontSize(10).fillColor('#334155');
-      doc.text(company);
-      if (order.supplier?.email) doc.text(order.supplier.email);
-      if (order.supplier?.phone) doc.text(String(order.supplier.phone));
-      if (order.supplier?.address) doc.text(String(order.supplier.address));
-      doc.moveDown(1);
-
-      doc.fillColor('#0F172A').fontSize(12).text('Line Items', { underline: true });
-      doc.moveDown(0.5);
-
-      const startY = doc.y;
-      doc.fontSize(9).fillColor('#FFFFFF').rect(50, startY, 495, 20).fill('#0F766E');
-      doc.text('Material', 55, startY + 6);
-      doc.text('Qty', 280, startY + 6);
-      doc.text('Unit', 330, startY + 6);
-      doc.text('Unit Price', 380, startY + 6);
-      doc.text('Line Total', 470, startY + 6);
-      doc.moveDown(1.2);
-
-      let y = doc.y;
-      (order.items || []).forEach((item, idx) => {
-        const name = item.material?.name || 'Material';
-        const unit = item.material?.unit || '';
-        const qty = Number(item.quantity || 0);
-        const price = Number(item.unitPrice || 0);
-        const line = Number((qty * price).toFixed(2));
-        if (idx % 2 === 1) {
-          doc.fillColor('#F8FAFC').rect(50, y - 2, 495, 18).fill();
-        }
-        doc.fillColor('#0F172A').fontSize(9);
-        doc.text(name, 55, y, { width: 210 });
-        doc.text(String(qty), 280, y);
-        doc.text(unit, 330, y);
-        doc.text(`$${price.toFixed(2)}`, 380, y);
-        doc.text(`$${line.toFixed(2)}`, 470, y);
-        y += 18;
+      // Brand header
+      doc.rect(0, 0, pageW, 96).fill(teal);
+      doc.rect(0, 96, pageW, 6).fill(tealDark);
+      doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(26);
+      doc.text('INVOICE', left, 28, { width: contentW * 0.55 });
+      doc.font('Helvetica').fontSize(10).fillColor('#CCFBF1');
+      doc.text('BUILD FLOW', left, 58);
+      doc.text('Construction Material Procurement', left, 72);
+      doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(10);
+      doc.text(invoiceNo, left + contentW * 0.55, 34, { width: contentW * 0.45, align: 'right' });
+      doc.font('Helvetica').fontSize(9).fillColor('#CCFBF1');
+      doc.text(`Date: ${today}`, left + contentW * 0.55, 52, { width: contentW * 0.45, align: 'right' });
+      doc.text(`PO: ${order.purchaseOrderNumber || '—'}`, left + contentW * 0.55, 66, {
+        width: contentW * 0.45,
+        align: 'right'
       });
 
-      doc.y = y + 10;
-      doc.moveDown(0.5);
-      doc.fontSize(10).fillColor('#334155');
-      doc.text(`Tax: $${Number(order.tax || 0).toFixed(2)}`, { align: 'right' });
-      doc.text(`Discount: $${Number(order.discount || 0).toFixed(2)}`, { align: 'right' });
-      doc.moveDown(0.3);
-      doc.fontSize(13).fillColor('#0F766E').text(
-        `Grand Total: $${Number(order.grandTotal || 0).toFixed(2)}`,
-        { align: 'right' }
-      );
+      // Project meta card
+      let y = 124;
+      doc.roundedRect(left, y, contentW, 54, 8).fill(soft);
+      doc.roundedRect(left, y, contentW, 54, 8).lineWidth(1).strokeColor('#99F6E4').stroke();
+      doc.fillColor(muted).font('Helvetica').fontSize(8);
+      doc.text('PROJECT', left + 16, y + 12);
+      doc.text('PO STATUS', left + contentW * 0.55, y + 12);
+      doc.fillColor(slate).font('Helvetica-Bold').fontSize(11);
+      doc.text(project, left + 16, y + 26, { width: contentW * 0.5 });
+      if (projectLoc) {
+        doc.font('Helvetica').fontSize(8).fillColor(muted).text(projectLoc, left + 16, y + 40, {
+          width: contentW * 0.5
+        });
+      }
+      doc.font('Helvetica-Bold').fontSize(11).fillColor(teal);
+      doc.text(order.status || 'Issued', left + contentW * 0.55, y + 26);
 
-      doc.moveDown(2);
-      doc.fontSize(9).fillColor('#64748B').text(
+      // Supplier / Bill-to cards
+      y = 196;
+      const cardW = (contentW - 16) / 2;
+      const drawInfoCard = (x, title, lines) => {
+        doc.roundedRect(x, y, cardW, 108, 8).fill('#FFFFFF');
+        doc.roundedRect(x, y, cardW, 108, 8).lineWidth(1).strokeColor(border).stroke();
+        doc.rect(x, y, 4, 108).fill(teal);
+        doc.fillColor(muted).font('Helvetica-Bold').fontSize(8);
+        doc.text(title, x + 16, y + 14);
+        doc.fillColor(slate).font('Helvetica-Bold').fontSize(11);
+        doc.text(lines[0] || '—', x + 16, y + 32, { width: cardW - 28 });
+        doc.font('Helvetica').fontSize(9).fillColor('#334155');
+        let ly = y + 50;
+        lines.slice(1).forEach((t) => {
+          if (!t) return;
+          doc.text(String(t), x + 16, ly, { width: cardW - 28 });
+          ly += 14;
+        });
+      };
+
+      drawInfoCard(left, 'FROM (SUPPLIER)', [
+        company,
+        order.supplier?.email,
+        order.supplier?.phone ? String(order.supplier.phone) : '',
+        order.supplier?.address ? String(order.supplier.address) : ''
+      ]);
+      drawInfoCard(left + cardW + 16, 'BILL TO', [
+        'BUILD FLOW — Project Client',
+        project,
+        projectLoc || 'Project site',
+        `Linked PO ${order.purchaseOrderNumber || '—'}`
+      ]);
+
+      // Line items
+      y = 328;
+      doc.fillColor(slate).font('Helvetica-Bold').fontSize(12);
+      doc.text('Line Items', left, y);
+      y += 22;
+
+      const cols = [
+        { key: 'n', label: '#', x: left, w: 28 },
+        { key: 'm', label: 'Material', x: left + 28, w: 210 },
+        { key: 'q', label: 'Qty', x: left + 238, w: 50 },
+        { key: 'u', label: 'Unit', x: left + 288, w: 58 },
+        { key: 'p', label: 'Unit Price', x: left + 346, w: 80 },
+        { key: 't', label: 'Amount', x: left + 426, w: contentW - 426 }
+      ];
+
+      const headerH = 26;
+      doc.roundedRect(left, y, contentW, headerH, 6).fill(teal);
+      doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(8);
+      cols.forEach((c) => {
+        const align = c.key === 'p' || c.key === 't' || c.key === 'q' ? 'right' : 'left';
+        doc.text(c.label, c.x + 6, y + 9, { width: c.w - 10, align });
+      });
+      y += headerH;
+
+      const rowH = 24;
+      items.forEach((item, idx) => {
+        const name = item.material?.name || 'Material';
+        const unit = item.material?.unit || '—';
+        const qty = Number(item.quantity || 0);
+        const price = Number(item.unitPrice || 0);
+        const amount = Number((qty * price).toFixed(2));
+
+        if (y + rowH > pageH - 180) {
+          doc.addPage();
+          y = 48;
+        }
+
+        if (idx % 2 === 1) {
+          doc.rect(left, y, contentW, rowH).fill('#F8FAFC');
+        }
+        doc.moveTo(left, y + rowH).lineTo(right, y + rowH).strokeColor(border).lineWidth(0.5).stroke();
+
+        const vals = [String(idx + 1), name, String(qty), unit, money(price), money(amount)];
+        cols.forEach((c, i) => {
+          const align = c.key === 'p' || c.key === 't' || c.key === 'q' ? 'right' : 'left';
+          const font = c.key === 'm' || c.key === 't' ? 'Helvetica-Bold' : 'Helvetica';
+          doc.fillColor(slate).font(font).fontSize(9);
+          doc.text(vals[i], c.x + 6, y + 7, { width: c.w - 10, align });
+        });
+        y += rowH;
+      });
+
+      if (items.length === 0) {
+        doc.rect(left, y, contentW, rowH).fill('#F8FAFC');
+        doc.fillColor(muted).font('Helvetica').fontSize(9);
+        doc.text('No line items on this purchase order.', left + 12, y + 7);
+        y += rowH;
+      }
+
+      // Totals
+      y += 18;
+      const boxW = 220;
+      const boxX = right - boxW;
+      doc.roundedRect(boxX, y, boxW, 108, 8).fill('#FFFFFF');
+      doc.roundedRect(boxX, y, boxW, 108, 8).lineWidth(1).strokeColor(border).stroke();
+
+      const totalRow = (label, value, yy) => {
+        doc.font('Helvetica').fontSize(9).fillColor(muted);
+        doc.text(label, boxX + 14, yy, { width: 90 });
+        doc.fillColor(slate).text(value, boxX + 100, yy, { width: boxW - 114, align: 'right' });
+      };
+      totalRow('Subtotal', money(subtotal), y + 14);
+      totalRow('Tax', money(tax), y + 34);
+      totalRow('Discount', money(discount), y + 54);
+      doc.moveTo(boxX + 12, y + 72).lineTo(boxX + boxW - 12, y + 72).strokeColor(border).stroke();
+      doc.rect(boxX, y + 78, boxW, 30).fill(teal);
+      doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(10);
+      doc.text('GRAND TOTAL', boxX + 14, y + 88);
+      doc.fontSize(12).text(money(grand), boxX + 100, y + 86, { width: boxW - 114, align: 'right' });
+
+      // Footer
+      const footY = pageH - 56;
+      doc.moveTo(left, footY).lineTo(right, footY).strokeColor(border).lineWidth(1).stroke();
+      doc.fillColor(muted).font('Helvetica').fontSize(8);
+      doc.text(
         'Auto-generated from Purchase Order data in BUILD FLOW. Supplier may replace with a custom uploaded invoice if needed.',
-        { align: 'left', width: 495 }
+        left,
+        footY + 12,
+        { width: contentW * 0.72 }
       );
+      doc.fillColor(teal).font('Helvetica-Bold').fontSize(8);
+      doc.text('BUILD FLOW', right - 90, footY + 12, { width: 90, align: 'right' });
 
       doc.end();
       stream.on('finish', resolve);
