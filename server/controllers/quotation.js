@@ -137,10 +137,11 @@ exports.selectQuotation = async (req, res, next) => {
     materialRequest.status = 'Ordered';
     await materialRequest.save();
 
-    // Auto-calculate Grand Total (Quantity * Unit Price) + Delivery Cost
+    // Auto-calculate Grand Total (Quantity * Unit Price) + Tax + Delivery/Shipping
     const subtotal = materialRequest.quantity * quotation.unitPrice;
     const tax = subtotal * 0.05; // 5% flat tax estimation
-    const grandTotal = subtotal + tax + quotation.deliveryCost;
+    const deliveryCost = Number(quotation.deliveryCost || 0);
+    const grandTotal = subtotal + tax + deliveryCost;
 
     // Generate Purchase Order
     const po = await PurchaseOrder.create({
@@ -152,6 +153,7 @@ exports.selectQuotation = async (req, res, next) => {
         unitPrice: quotation.unitPrice
       }],
       tax,
+      deliveryCost,
       grandTotal,
       status: 'Pending',
       paymentStatus: 'Unpaid'

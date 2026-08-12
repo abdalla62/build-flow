@@ -86,7 +86,7 @@ exports.updateOrder = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Purchase order not found' });
     }
 
-    const { quantity, unitPrice, tax, discount, status } = req.body;
+    const { quantity, unitPrice, tax, discount, deliveryCost, status } = req.body;
 
     if (order.items?.length > 0) {
       if (quantity !== undefined) order.items[0].quantity = Number(quantity);
@@ -95,6 +95,7 @@ exports.updateOrder = async (req, res, next) => {
 
     if (tax !== undefined) order.tax = Number(tax);
     if (discount !== undefined) order.discount = Number(discount);
+    if (deliveryCost !== undefined) order.deliveryCost = Number(deliveryCost);
 
     if (status) {
       const allowed = ['Pending', 'Accepted', 'Rejected', 'Preparing', 'Dispatched', 'Delivered', 'Cancelled'];
@@ -111,8 +112,9 @@ exports.updateOrder = async (req, res, next) => {
     const qty = order.items?.[0]?.quantity || 0;
     const price = order.items?.[0]?.unitPrice || 0;
     const taxAmt = Number(order.tax) || 0;
+    const deliveryAmt = Number(order.deliveryCost) || 0;
     const discAmt = Number(order.discount) || 0;
-    order.grandTotal = Math.max(0, qty * price + taxAmt - discAmt);
+    order.grandTotal = Math.max(0, qty * price + taxAmt + deliveryAmt - discAmt);
 
     await order.save();
 
@@ -285,6 +287,19 @@ exports.generatePOInvoice = async (req, res, next) => {
     const publicPath = `/uploads/invoices/${filename}`;
     const company = order.supplier?.company || order.supplier?.name || 'Supplier';
 
+    const tax = Number(order.tax || 0);
+    const discount = Number(order.discount || 0);
+    const grand = Number(order.grandTotal || 0);
+    const items = order.items || [];
+    const subtotal = items.reduce((sum, item) => {
+      return sum + Number(item.quantity || 0) * Number(item.unitPrice || 0);
+    }, 0);
+    // Prefer stored deliveryCost; for older POs derive from grand total
+    let deliveryCost = Number(order.deliveryCost);
+    if (!Number.isFinite(deliveryCost) || order.deliveryCost == null || order.deliveryCost === undefined) {
+      deliveryCost = Math.max(0, Number((grand - subtotal - tax + discount).toFixed(2)));
+    }
+
     await new Promise((resolve, reject) => {
       const doc = new PDFDocument({ margin: 0, size: 'A4' });
       const stream = fs.createWriteStream(fullPath);
@@ -306,14 +321,7 @@ exports.generatePOInvoice = async (req, res, next) => {
       const projectLoc = order.materialRequest?.project?.location || '';
       const today = new Date().toLocaleDateString();
       const invoiceNo = `INV-${order.purchaseOrderNumber || safePo}`;
-      const tax = Number(order.tax || 0);
-      const discount = Number(order.discount || 0);
-      const grand = Number(order.grandTotal || 0);
-      const items = order.items || [];
-      const subtotal = items.reduce((sum, item) => {
-        return sum + Number(item.quantity || 0) * Number(item.unitPrice || 0);
-      }, 0);
-      const money = (n) => `$${Number(n || 0).toFixed(2)}`;
+      const money = (n) => ('$' + Number(n || 0).toFixed(2));
 
       // Brand header
       doc.rect(0, 0, pageW, 96).fill(teal);
@@ -441,26 +449,28 @@ exports.generatePOInvoice = async (req, res, next) => {
         y += rowH;
       }
 
-      // Totals
+      // Totals (includes delivery/shipping from supplier quote)
       y += 18;
-      const boxW = 220;
+      const boxW = 240;
       const boxX = right - boxW;
-      doc.roundedRect(boxX, y, boxW, 108, 8).fill('#FFFFFF');
-      doc.roundedRect(boxX, y, boxW, 108, 8).lineWidth(1).strokeColor(border).stroke();
+      const boxH = 128;
+      doc.roundedRect(boxX, y, boxW, boxH, 8).fill('#FFFFFF');
+      doc.roundedRect(boxX, y, boxW, boxH, 8).lineWidth(1).strokeColor(border).stroke();
 
       const totalRow = (label, value, yy) => {
         doc.font('Helvetica').fontSize(9).fillColor(muted);
-        doc.text(label, boxX + 14, yy, { width: 90 });
-        doc.fillColor(slate).text(value, boxX + 100, yy, { width: boxW - 114, align: 'right' });
+        doc.text(label, boxX + 14, yy, { width: 110 });
+        doc.fillColor(slate).text(value, boxX + 120, yy, { width: boxW - 134, align: 'right' });
       };
-      totalRow('Subtotal', money(subtotal), y + 14);
-      totalRow('Tax', money(tax), y + 34);
-      totalRow('Discount', money(discount), y + 54);
-      doc.moveTo(boxX + 12, y + 72).lineTo(boxX + boxW - 12, y + 72).strokeColor(border).stroke();
-      doc.rect(boxX, y + 78, boxW, 30).fill(teal);
+      totalRow('Subtotal', money(subtotal), y + 12);
+      totalRow('Delivery / Shipping', money(deliveryCost), y + 30);
+      totalRow('Tax', money(tax), y + 48);
+      totalRow('Discount', money(discount), y + 66);
+      doc.moveTo(boxX + 12, y + 84).lineTo(boxX + boxW - 12, y + 84).strokeColor(border).stroke();
+      doc.rect(boxX, y + 90, boxW, 38).fill(teal);
       doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(10);
-      doc.text('GRAND TOTAL', boxX + 14, y + 88);
-      doc.fontSize(12).text(money(grand), boxX + 100, y + 86, { width: boxW - 114, align: 'right' });
+      doc.text('GRAND TOTAL', boxX + 14, y + 102);
+      doc.fontSize(12).text(money(grand), boxX + 120, y + 100, { width: boxW - 134, align: 'right' });
 
       // Footer
       const footY = pageH - 56;
@@ -480,6 +490,10 @@ exports.generatePOInvoice = async (req, res, next) => {
       stream.on('error', reject);
     });
 
+    // Persist deliveryCost on older POs so later edits stay correct
+    if (order.deliveryCost == null || order.deliveryCost === undefined) {
+      order.deliveryCost = deliveryCost;
+    }
     order.invoiceFile = publicPath;
     await order.save();
 
