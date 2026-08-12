@@ -120,7 +120,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Pay delivered & invoiced POs via WaafiPay mobile wallet, or record offline payments.',
+                      'Pay delivered & invoiced POs via WaafiPay mobile wallet.',
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
@@ -363,10 +363,6 @@ class _RecordPaymentDialogState extends ConsumerState<_RecordPaymentDialog> {
 
   static const _methods = [
     ('Mobile Wallet', 'Mobile Wallet (WaafiPay)'),
-    ('Bank Transfer', 'Bank Transfer'),
-    ('Cash', 'Cash'),
-    ('Cheque', 'Cheque'),
-    ('Credit Card', 'Credit Card'),
   ];
 
   @override

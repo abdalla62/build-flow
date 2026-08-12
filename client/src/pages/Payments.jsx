@@ -310,7 +310,7 @@ const Payments = () => {
         <div>
           <h1 className="bf-page-title">Payment Management</h1>
           <p className="bf-page-subtitle">
-            Pay delivered &amp; invoiced POs via WaafiPay mobile wallet, or record offline payments.
+            Pay delivered &amp; invoiced POs via WaafiPay mobile wallet.
           </p>
         </div>
         {isAccountant && (
@@ -402,10 +402,6 @@ const Payments = () => {
                 {...register('paymentMethod')}
               >
                 <option value="Mobile Wallet">Mobile Wallet (WaafiPay)</option>
-                <option value="Bank Transfer">Bank Transfer</option>
-                <option value="Cash">Cash</option>
-                <option value="Cheque">Cheque</option>
-                <option value="Credit Card">Credit Card</option>
               </select>
             </div>
 

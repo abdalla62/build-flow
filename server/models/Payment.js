@@ -24,7 +24,7 @@ const PaymentSchema = new mongoose.Schema({
   paymentMethod: {
     type: String,
     enum: ['Cash', 'Bank Transfer', 'Cheque', 'Credit Card', 'Mobile Wallet'],
-    default: 'Bank Transfer'
+    default: 'Mobile Wallet'
   },
   referenceNumber: {
     type: String,
