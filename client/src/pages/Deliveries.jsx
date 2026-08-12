@@ -131,7 +131,7 @@ const Deliveries = () => {
     }
   }, [watchDriver, drivers, setValue]);
 
-  // Clear manually entered date when PO changes (user must re-enter matching required date)
+  // Clear manually entered date when PO changes (user must re-enter a valid date)
   useEffect(() => {
     setValue('deliveryDate', '');
   }, [watchPurchaseOrder, setValue]);
@@ -660,6 +660,7 @@ const Deliveries = () => {
               <input
                 type="date"
                 min={todayMin}
+                max={getRequiredDateYmd(watchPurchaseOrder) || undefined}
                 className={`w-full mt-1.5 px-4 py-2 border ${
                   errors.deliveryDate ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
                 } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
@@ -672,8 +673,8 @@ const Deliveries = () => {
                     if (!requiredYmd) {
                       return 'Selected PO has no required date from Site Engineer';
                     }
-                    if (value !== requiredYmd) {
-                      return `Taariikhda ma saxna. Site Engineer-ku wuxuu soo codsaday in alaabta la geeyo ${formatDisplayDate(requiredYmd)}. Fadlan geli taariikhda saxda ah.`;
+                    if (value > requiredYmd) {
+                      return `Taariikhda waa in ay ahaato ${formatDisplayDate(requiredYmd)} ama ka hor. Lama dooran karo taariikh ka dambeeya.`;
                     }
                     return true;
                   }
@@ -684,7 +685,7 @@ const Deliveries = () => {
               )}
               {watchPurchaseOrder && getRequiredDateYmd(watchPurchaseOrder) && !errors.deliveryDate && (
                 <p className="mt-1 text-[11px] text-slate-400">
-                  Must match Site Engineer required date: {formatDisplayDate(getRequiredDateYmd(watchPurchaseOrder))}
+                  Allowed on or before Site Engineer required date: {formatDisplayDate(getRequiredDateYmd(watchPurchaseOrder))}
                 </p>
               )}
             </div>

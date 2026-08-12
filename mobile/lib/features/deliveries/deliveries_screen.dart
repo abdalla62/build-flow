@@ -894,11 +894,19 @@ class _ScheduleDispatchDialogState
   Future<void> _pickDate() async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final required = _requiredDateForPo(_poId);
+    final lastDate = required != null && !required.isBefore(today)
+        ? required
+        : today.add(const Duration(days: 365));
+    final initial = _date ??
+        (required != null && !required.isBefore(today) && !required.isAfter(lastDate)
+            ? required
+            : today);
     final picked = await showDatePicker(
       context: context,
-      initialDate: _date ?? today,
+      initialDate: initial.isAfter(lastDate) ? lastDate : initial,
       firstDate: today,
-      lastDate: today.add(const Duration(days: 365)),
+      lastDate: lastDate,
     );
     if (picked != null) setState(() => _date = picked);
   }
@@ -919,14 +927,14 @@ class _ScheduleDispatchDialogState
     }
 
     final dateStr = _toYmd(_date!);
-    if (dateStr != requiredYmd) {
+    if (dateStr.compareTo(requiredYmd) > 0) {
       final requiredDate = _requiredDateForPo(_poId);
       final display = requiredDate != null
           ? DateFormat.yMd().format(requiredDate)
           : requiredYmd;
       setState(() {
         _error =
-            'Taariikhda ma saxna. Site Engineer-ku wuxuu soo codsaday in alaabta la geeyo $display. Fadlan geli taariikhda saxda ah.';
+            'Taariikhda waa in ay ahaato $display ama ka hor. Lama dooran karo taariikh ka dambeeya.';
       });
       return;
     }
@@ -962,7 +970,7 @@ class _ScheduleDispatchDialogState
     final requiredHintDate = _requiredDateForPo(_poId);
     final requiredHint = requiredHintDate == null
         ? null
-        : 'Must match Site Engineer required date: ${DateFormat.yMd().format(requiredHintDate)}';
+        : 'Allowed on or before Site Engineer required date: ${DateFormat.yMd().format(requiredHintDate)}';
 
     return AlertDialog(
       title: const Text('Schedule Shipment Dispatch'),

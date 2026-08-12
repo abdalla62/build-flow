@@ -66,18 +66,18 @@ exports.scheduleDelivery = async (req, res, next) => {
       });
     }
 
-    // Delivery date is entered manually, but must match the Site Engineer required date
+    // Delivery may be on or before the Site Engineer required date — not after
     const requiredYmd = toDateOnlyYMD(po.materialRequest.requiredDate);
     const submittedYmd = toDateOnlyYMD(deliveryDate);
-    if (!submittedYmd || submittedYmd !== requiredYmd) {
+    if (!submittedYmd || submittedYmd > requiredYmd) {
       const requiredDisplay = new Date(`${requiredYmd}T00:00:00`).toLocaleDateString();
       return res.status(400).json({
         success: false,
-        error: `Taariikhda ma saxna. Site Engineer-ku wuxuu soo codsaday in alaabta la geeyo ${requiredDisplay}. Fadlan geli taariikhda saxda ah.`
+        error: `Taariikhda waa in ay ahaato ${requiredDisplay} ama ka hor. Lama dooran karo taariikh ka dambeeya taariikhda Site Engineer-ku soo codsaday.`
       });
     }
 
-    const lockedDeliveryDate = requiredYmd;
+    const lockedDeliveryDate = submittedYmd;
 
     const delivery = await Delivery.create({
       purchaseOrder,
