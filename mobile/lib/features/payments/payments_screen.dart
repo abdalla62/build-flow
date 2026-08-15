@@ -425,6 +425,7 @@ class _RecordPaymentDialogState extends ConsumerState<_RecordPaymentDialog> {
   }
 
   Future<void> _submit() async {
+    if (_submitting) return;
     setState(() => _error = null);
     if (!_formKey.currentState!.validate()) return;
 

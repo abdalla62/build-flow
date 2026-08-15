@@ -19,6 +19,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   final _searchCtrl = TextEditingController();
   List<Map<String, dynamic>> _items = [];
   bool _loading = true;
+  bool _busy = false;
   String? _error;
   String _statusFilter = '';
   String _paymentFilter = '';
@@ -94,6 +95,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   }
 
   Future<void> _openEditOrder(Map<String, dynamic> order) async {
+    if (_busy) return;
     final items = order['items'];
     final first = (items is List && items.isNotEmpty)
         ? Map<String, dynamic>.from(items.first as Map)
@@ -197,6 +199,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
       return;
     }
 
+    setState(() => _busy = true);
     try {
       await ref.read(apiRepositoryProvider).updateOrder(popId(order), {
         'quantity': num.tryParse(qtyCtrl.text) ?? 1,
@@ -222,6 +225,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
       priceCtrl.dispose();
       taxCtrl.dispose();
       discountCtrl.dispose();
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -237,6 +241,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   }
 
   Future<void> _openUpdateStatus(Map<String, dynamic> order) async {
+    if (_busy) return;
     String selected = order['status']?.toString() == 'Pending'
         ? 'Accepted'
         : (order['status']?.toString() ?? 'Accepted');
@@ -299,6 +304,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     );
     if (ok != true) return;
 
+    setState(() => _busy = true);
     try {
       await ref.read(apiRepositoryProvider).updateOrderStatus(
             popId(order),
@@ -314,6 +320,8 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -336,6 +344,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   }
 
   Future<void> _openInvoice(Map<String, dynamic> order) async {
+    if (_busy) return;
     final pathCtrl = TextEditingController();
     String? pickedPath;
 
@@ -451,6 +460,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     pathCtrl.dispose();
     if (submitted == null) return;
 
+    setState(() => _busy = true);
     try {
       if (submitted == 'generate') {
         await ref.read(apiRepositoryProvider).generateInvoice(popId(order));
@@ -460,6 +470,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
             content: Text('Invoice generated from PO — ready for payment!'),
           ),
         );
+        _load();
       } else if (submitted == 'upload') {
         if (pickedPath == null || pickedPath!.isEmpty) {
           if (!mounted) return;
@@ -468,27 +479,29 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
               content: Text('Please choose a file (PDF, JPG, PNG, or DOCX)'),
             ),
           );
-          return;
-        }
-        await ref.read(apiRepositoryProvider).uploadInvoice(
-              popId(order),
-              invoicePath: pickedPath,
-            );
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Invoice uploaded successfully. Notification sent to Accountant.',
+        } else {
+          await ref.read(apiRepositoryProvider).uploadInvoice(
+                popId(order),
+                invoicePath: pickedPath,
+              );
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Invoice uploaded successfully. Notification sent to Accountant.',
+              ),
             ),
-          ),
-        );
+          );
+          _load();
+        }
       }
-      _load();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 

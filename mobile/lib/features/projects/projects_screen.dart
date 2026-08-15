@@ -13,6 +13,7 @@ class ProjectsScreen extends ConsumerStatefulWidget {
 class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
   List<Map<String, dynamic>> _items = [];
   bool _loading = true;
+  bool _saving = false;
   String? _error;
 
   @override
@@ -39,6 +40,7 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
   }
 
   Future<void> _save({Map<String, dynamic>? existing}) async {
+    if (_saving) return;
     final nameCtrl = TextEditingController(text: existing?['name']?.toString() ?? '');
     final locationCtrl = TextEditingController(text: existing?['location']?.toString() ?? '');
     final budgetCtrl = TextEditingController(text: existing?['budget']?.toString() ?? '0');
@@ -133,11 +135,13 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
                       initialValue: status,
-                      items: const [
-                        DropdownMenuItem(value: 'Pending', child: Text('Pending')),
-                        DropdownMenuItem(value: 'Active', child: Text('Active')),
-                        DropdownMenuItem(value: 'Completed', child: Text('Completed')),
-                        DropdownMenuItem(value: 'On Hold', child: Text('On Hold')),
+                      items: [
+                        const DropdownMenuItem(value: 'Pending', child: Text('Pending')),
+                        const DropdownMenuItem(value: 'Active', child: Text('Active')),
+                        if (existing != null) ...const [
+                          DropdownMenuItem(value: 'Completed', child: Text('Completed')),
+                          DropdownMenuItem(value: 'On Hold', child: Text('On Hold')),
+                        ],
                       ],
                       onChanged: (v) {
                         if (v == null) return;
@@ -188,6 +192,7 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
       return;
     }
 
+    setState(() => _saving = true);
     try {
       await ref.read(apiRepositoryProvider).saveProject(
         {
@@ -211,6 +216,8 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -252,8 +259,14 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
       ),
       floatingActionButton: ref.watch(authNotifierProvider).state.user?.isAdmin == true
           ? FloatingActionButton(
-              onPressed: () => _save(),
-              child: const Icon(Icons.add),
+              onPressed: _saving ? null : () => _save(),
+              child: _saving
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.add),
             )
           : null,
     );

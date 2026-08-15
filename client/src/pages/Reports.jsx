@@ -8,12 +8,15 @@ import {
   FiTruck,
   FiAlertCircle,
   FiPackage,
-  FiCalendar
+  FiCalendar,
+  FiLayers,
+  FiClipboard
 } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
 import { downloadExcel } from '../utils/exportExcel';
 import { downloadPdf } from '../utils/exportPdf';
 
-const REPORT_META = [
+const ADMIN_REPORT_META = [
   {
     id: 'monthlyProcurement',
     label: 'Monthly Procurement',
@@ -51,6 +54,37 @@ const REPORT_META = [
   }
 ];
 
+const SUPPLIER_REPORT_META = [
+  {
+    id: 'myBids',
+    label: 'My Bids',
+    icon: FiLayers,
+    hintKey: 'pending',
+    hintPrefix: 'Pending: '
+  },
+  {
+    id: 'myOrders',
+    label: 'My Purchase Orders',
+    icon: FiClipboard,
+    hintKey: 'orderValue',
+    hintPrefix: 'Value: $'
+  },
+  {
+    id: 'myPayments',
+    label: 'Payments Received',
+    icon: FiDollarSign,
+    hintKey: 'totalPaid',
+    hintPrefix: 'Paid: $'
+  },
+  {
+    id: 'outstandingBalance',
+    label: 'Outstanding Balance',
+    icon: FiAlertCircle,
+    hintKey: 'totalOutstanding',
+    hintPrefix: 'Outstanding: $'
+  }
+];
+
 function formatCell(v) {
   if (v == null || v === '') return '—';
   if (typeof v === 'number') {
@@ -70,17 +104,30 @@ function currentMonthValue() {
 }
 
 const Reports = () => {
+  const { user } = useAuth();
+  const isSupplierView = user?.role === 'Supplier';
+  const reportMeta = isSupplierView ? SUPPLIER_REPORT_META : ADMIN_REPORT_META;
+
   const [reports, setReports] = useState({});
+  const [company, setCompany] = useState('');
   const [month, setMonth] = useState(currentMonthValue);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('monthlyProcurement');
+  const [activeTab, setActiveTab] = useState(
+    isSupplierView ? 'myBids' : 'monthlyProcurement'
+  );
+
+  useEffect(() => {
+    setActiveTab(isSupplierView ? 'myBids' : 'monthlyProcurement');
+  }, [isSupplierView]);
 
   const fetchReports = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('/api/reports', { params: { month } });
+      const url = isSupplierView ? '/api/reports/supplier' : '/api/reports';
+      const res = await axios.get(url, { params: { month } });
       if (res.data.success) {
         setReports(res.data.reports || {});
+        setCompany(res.data.company || '');
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to load reports');
@@ -91,7 +138,7 @@ const Reports = () => {
 
   useEffect(() => {
     fetchReports();
-  }, [month]);
+  }, [month, isSupplierView]);
 
   const active = reports[activeTab];
   const day = useMemo(() => new Date().toISOString().slice(0, 10), []);
@@ -146,11 +193,12 @@ const Reports = () => {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="bf-page-title">
-            Export Reports
+            {isSupplierView ? 'My Activity Report' : 'Export Reports'}
           </h1>
           <p className="bf-page-subtitle">
-          Monthly procurement, supplier payments, delivery schedule,
-            outstanding balances, and material usage (PDF / Excel).
+            {isSupplierView
+              ? `Review bids, purchase orders, and payments${company ? ` for ${company}` : ''} (PDF / Excel).`
+              : 'Monthly procurement, supplier payments, delivery schedule, outstanding balances, and material usage (PDF / Excel).'}
           </p>
         </div>
         <div className="flex flex-nowrap items-center gap-2 shrink-0">
@@ -182,8 +230,12 @@ const Reports = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
-        {REPORT_META.map((t) => {
+      <div
+        className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
+          isSupplierView ? 'xl:grid-cols-4' : 'xl:grid-cols-5'
+        }`}
+      >
+        {reportMeta.map((t) => {
           const Icon = t.icon;
           const report = reports[t.id];
           const activeCard = activeTab === t.id;

@@ -16,6 +16,7 @@ class MaterialsScreen extends ConsumerStatefulWidget {
 class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
   List<Map<String, dynamic>> _items = [];
   bool _loading = true;
+  bool _saving = false;
   String? _error;
 
   @override
@@ -42,6 +43,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
   }
 
   Future<void> _openForm({Map<String, dynamic>? existing}) async {
+    if (_saving) return;
     List<Map<String, dynamic>> categories = [];
     List<Map<String, dynamic>> suppliers = [];
     try {
@@ -77,6 +79,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
 
     if (result == null || !mounted) return;
 
+    setState(() => _saving = true);
     try {
       await ref.read(apiRepositoryProvider).saveMaterial(
         result,
@@ -95,6 +98,8 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -158,7 +163,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
               ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _openForm(),
+        onPressed: _saving ? null : () => _openForm(),
         child: const Icon(Icons.add),
       ),
     );

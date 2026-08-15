@@ -4,6 +4,11 @@ const PurchaseOrder = require('../models/PurchaseOrder');
 const Notification = require('../models/Notification');
 const logActivity = require('../utils/audit');
 
+async function siblingRequests(request) {
+  if (!request?.batchId) return request ? [request] : [];
+  return MaterialRequest.find({ batchId: request.batchId }).sort({ createdAt: 1 });
+}
+
 // @desc    Submit a quotation bid
 // @route   POST /api/quotations
 // @access  Private/Supplier
@@ -70,6 +75,210 @@ exports.submitQuotation = async (req, res, next) => {
   }
 };
 
+// @desc    Submit one bid covering every line in a material request
+// @route   POST /api/quotations/batch
+// @access  Private/Supplier
+exports.submitQuotationBatch = async (req, res, next) => {
+  try {
+    const {
+      materialRequest,
+      items,
+      deliveryCost,
+      deliveryTimeDays,
+      warrantyMonths,
+      paymentTerms
+    } = req.body;
+
+    const primaryId = materialRequest || items?.[0]?.materialRequest;
+    const request = await MaterialRequest.findById(primaryId);
+    if (!request) {
+      return res.status(404).json({ success: false, error: 'Material request not found' });
+    }
+
+    const siblings = await siblingRequests(request);
+    const approved = siblings.filter((r) => r.status === 'Approved');
+    if (approved.length === 0) {
+      return res.status(400).json({ success: false, error: 'Cannot bid on requests that are not approved' });
+    }
+
+    const { resolveSupplierProfile, isSupplierInvited } = require('../utils/supplierLink');
+    const supplierProfile = await resolveSupplierProfile(req.user);
+    if (!supplierProfile) {
+      return res.status(400).json({
+        success: false,
+        error: 'Logged-in user is not linked to a registered Supplier profile'
+      });
+    }
+
+    if (!(await isSupplierInvited(approved[0], supplierProfile, req.user))) {
+      return res.status(403).json({
+        success: false,
+        error: 'You were not invited to quote on this material request'
+      });
+    }
+
+    const priceById = new Map(
+      (Array.isArray(items) ? items : []).map((it) => [
+        String(it.materialRequest),
+        Number(it.unitPrice)
+      ])
+    );
+
+    for (const line of approved) {
+      if (!priceById.has(line._id.toString()) || Number.isNaN(priceById.get(line._id.toString()))) {
+        return res.status(400).json({
+          success: false,
+          error: 'Enter a unit price for every material in this request'
+        });
+      }
+    }
+
+    const existing = await Quotation.findOne({
+      materialRequest: { $in: approved.map((r) => r._id) },
+      supplier: supplierProfile._id
+    });
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        error: 'You have already submitted a bid for this material request'
+      });
+    }
+
+    const created = await Quotation.insertMany(
+      approved.map((line, idx) => ({
+        materialRequest: line._id,
+        supplier: supplierProfile._id,
+        unitPrice: priceById.get(line._id.toString()),
+        deliveryCost: idx === 0 ? Number(deliveryCost) || 0 : 0,
+        deliveryTimeDays,
+        warrantyMonths,
+        paymentTerms
+      }))
+    );
+
+    await logActivity(
+      req,
+      req.user,
+      'Submit Quotation',
+      `Quotation submitted for ${created.length} item(s) on request ${primaryId}`
+    );
+
+    await Notification.create({
+      targetRole: 'Procurement Officer',
+      title: 'New Bid Received',
+      message: `Supplier ${supplierProfile.company} submitted a quotation bid for ${created.length} item${
+        created.length > 1 ? 's' : ''
+      }.`,
+      type: 'Request'
+    });
+
+    res.status(201).json({ success: true, quotations: created, count: created.length });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update pending bid (before award)
+// @route   PUT /api/quotations/batch
+// @access  Private/Supplier
+exports.updateQuotationBatch = async (req, res, next) => {
+  try {
+    const {
+      materialRequest,
+      items,
+      deliveryCost,
+      deliveryTimeDays,
+      warrantyMonths,
+      paymentTerms
+    } = req.body;
+
+    const primaryId = materialRequest || items?.[0]?.materialRequest;
+    const request = await MaterialRequest.findById(primaryId);
+    if (!request) {
+      return res.status(404).json({ success: false, error: 'Material request not found' });
+    }
+
+    const siblings = await siblingRequests(request);
+    const approved = siblings.filter((r) => r.status === 'Approved');
+    if (approved.length === 0) {
+      return res.status(400).json({ success: false, error: 'Cannot edit bid — request is not approved' });
+    }
+
+    const { resolveSupplierProfile, isSupplierInvited } = require('../utils/supplierLink');
+    const supplierProfile = await resolveSupplierProfile(req.user);
+    if (!supplierProfile) {
+      return res.status(400).json({
+        success: false,
+        error: 'Logged-in user is not linked to a registered Supplier profile'
+      });
+    }
+
+    if (!(await isSupplierInvited(approved[0], supplierProfile, req.user))) {
+      return res.status(403).json({
+        success: false,
+        error: 'You were not invited to quote on this material request'
+      });
+    }
+
+    const existingQuotes = await Quotation.find({
+      materialRequest: { $in: approved.map((r) => r._id) },
+      supplier: supplierProfile._id
+    });
+    if (existingQuotes.length === 0) {
+      return res.status(404).json({ success: false, error: 'No bid found to edit' });
+    }
+    if (existingQuotes.some((q) => q.status !== 'Pending')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Only pending bids can be edited (already awarded or rejected)'
+      });
+    }
+
+    const priceById = new Map(
+      (Array.isArray(items) ? items : []).map((it) => [
+        String(it.materialRequest),
+        Number(it.unitPrice)
+      ])
+    );
+
+    for (const line of approved) {
+      if (!priceById.has(line._id.toString()) || Number.isNaN(priceById.get(line._id.toString()))) {
+        return res.status(400).json({
+          success: false,
+          error: 'Enter a unit price for every material in this request'
+        });
+      }
+    }
+
+    const updated = [];
+    for (let i = 0; i < approved.length; i += 1) {
+      const line = approved[i];
+      const quote = existingQuotes.find(
+        (q) => String(q.materialRequest) === String(line._id)
+      );
+      if (!quote) continue;
+      quote.unitPrice = priceById.get(line._id.toString());
+      quote.deliveryCost = i === 0 ? Number(deliveryCost) || 0 : 0;
+      quote.deliveryTimeDays = deliveryTimeDays;
+      quote.warrantyMonths = warrantyMonths;
+      quote.paymentTerms = paymentTerms;
+      await quote.save();
+      updated.push(quote);
+    }
+
+    await logActivity(
+      req,
+      req.user,
+      'Update Quotation',
+      `Quotation bid updated for ${updated.length} item(s) on request ${primaryId}`
+    );
+
+    res.status(200).json({ success: true, quotations: updated, count: updated.length });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Get quotations for comparison
 // @route   GET /api/quotations
 // @access  Private
@@ -79,7 +288,13 @@ exports.getQuotations = async (req, res, next) => {
     const query = {};
 
     if (requestId) {
-      query.materialRequest = requestId;
+      const seed = await MaterialRequest.findById(requestId).select('_id batchId');
+      if (seed?.batchId) {
+        const ids = await MaterialRequest.find({ batchId: seed.batchId }).distinct('_id');
+        query.materialRequest = { $in: ids };
+      } else {
+        query.materialRequest = requestId;
+      }
     }
 
     // Suppliers only see their own quotes
@@ -122,36 +337,50 @@ exports.selectQuotation = async (req, res, next) => {
     }
 
     const materialRequest = quotation.materialRequest;
+    const siblings = await siblingRequests(materialRequest);
+    const siblingIdList = siblings.map((r) => r._id);
 
-    // Award contract
-    quotation.status = 'Selected';
-    await quotation.save();
+    const supplierQuotes = await Quotation.find({
+      materialRequest: { $in: siblingIdList },
+      supplier: quotation.supplier._id,
+      status: 'Pending'
+    }).populate('materialRequest');
 
-    // Reject other bids for this request
+    const toAward = supplierQuotes.length > 0 ? supplierQuotes : [quotation];
+    const awardIds = toAward.map((q) => q._id);
+
+    await Quotation.updateMany({ _id: { $in: awardIds } }, { $set: { status: 'Selected' } });
     await Quotation.updateMany(
-      { materialRequest: materialRequest._id, _id: { $ne: quotation._id } },
-      { status: 'Rejected' }
+      { materialRequest: { $in: siblingIdList }, _id: { $nin: awardIds } },
+      { $set: { status: 'Rejected' } }
     );
 
-    // Update MaterialRequest status
-    materialRequest.status = 'Ordered';
-    await materialRequest.save();
+    const awardedRequestIds = toAward
+      .map((q) => q.materialRequest?._id || q.materialRequest)
+      .filter(Boolean);
+    await MaterialRequest.updateMany(
+      { _id: { $in: awardedRequestIds } },
+      { $set: { status: 'Ordered' } }
+    );
 
-    // Auto-calculate Grand Total (Quantity * Unit Price) + Tax + Delivery/Shipping
-    const subtotal = materialRequest.quantity * quotation.unitPrice;
-    const tax = subtotal * 0.05; // 5% flat tax estimation
-    const deliveryCost = Number(quotation.deliveryCost || 0);
+    const items = toAward.map((q) => {
+      const reqDoc = q.materialRequest;
+      return {
+        material: reqDoc.material,
+        quantity: reqDoc.quantity,
+        unitPrice: q.unitPrice
+      };
+    });
+
+    const subtotal = items.reduce((sum, it) => sum + Number(it.quantity) * Number(it.unitPrice), 0);
+    const tax = subtotal * 0.05;
+    const deliveryCost = toAward.reduce((sum, q) => sum + Number(q.deliveryCost || 0), 0);
     const grandTotal = subtotal + tax + deliveryCost;
 
-    // Generate Purchase Order
     const po = await PurchaseOrder.create({
       supplier: quotation.supplier._id,
       materialRequest: materialRequest._id,
-      items: [{
-        material: materialRequest.material,
-        quantity: materialRequest.quantity,
-        unitPrice: quotation.unitPrice
-      }],
+      items,
       tax,
       deliveryCost,
       grandTotal,

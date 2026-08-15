@@ -18,6 +18,7 @@ const Register = () => {
   } = useForm();
 
   const onSubmit = async (data) => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
     const success = await signup(data.name, data.email, data.password, data.role);
     setIsSubmitting(false);

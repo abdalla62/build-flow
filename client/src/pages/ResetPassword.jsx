@@ -19,6 +19,7 @@ const ResetPassword = () => {
   } = useForm();
 
   const onSubmit = async (data) => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
     const success = await resetPassword(token, data.password);
     setIsSubmitting(false);

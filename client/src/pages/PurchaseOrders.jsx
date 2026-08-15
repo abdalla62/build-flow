@@ -42,6 +42,8 @@ const PurchaseOrders = () => {
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
+  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [statusSubmitting, setStatusSubmitting] = useState(false);
 
   const {
     register,
@@ -102,7 +104,7 @@ const PurchaseOrders = () => {
   };
 
   const generateInvoiceFromPO = async () => {
-    if (!invoicingOrder?._id) return;
+    if (!invoicingOrder?._id || invoiceUploading) return;
     setInvoiceUploading(true);
     try {
       const res = await axios.post(`/api/orders/${invoicingOrder._id}/generate-invoice`);
@@ -148,6 +150,8 @@ const PurchaseOrders = () => {
   };
 
   const postStatus = async () => {
+    if (statusSubmitting) return;
+    setStatusSubmitting(true);
     try {
       const res = await axios.put(`/api/orders/${updatingOrder._id}/status`, { status: selectedStatus });
       if (res.data.success) {
@@ -157,11 +161,14 @@ const PurchaseOrders = () => {
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to update order status');
+    } finally {
+      setStatusSubmitting(false);
     }
   };
 
   const onInvoiceSubmit = async (e) => {
     e.preventDefault();
+    if (invoiceUploading) return;
     if (!invoiceFileObj) {
       toast.error('Please choose a file (PDF, JPG, PNG, or DOCX)');
       return;
@@ -187,6 +194,8 @@ const PurchaseOrders = () => {
   };
 
   const onEditSubmit = async (data) => {
+    if (formSubmitting) return;
+    setFormSubmitting(true);
     try {
       const res = await axios.put(`/api/orders/${editingOrder._id}`, {
         quantity: Number(data.quantity),
@@ -202,6 +211,8 @@ const PurchaseOrders = () => {
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to update purchase order');
+    } finally {
+      setFormSubmitting(false);
     }
   };
 
@@ -495,9 +506,10 @@ const PurchaseOrders = () => {
 
             <button
               type="submit"
-              className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+              disabled={formSubmitting}
+              className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Save Changes
+              {formSubmitting ? 'Saving…' : 'Save Changes'}
             </button>
           </form>
         )}
@@ -529,9 +541,10 @@ const PurchaseOrders = () => {
             </div>
             <button
               onClick={postStatus}
-              className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+              disabled={statusSubmitting}
+              className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Post Status Update
+              {statusSubmitting ? 'Saving…' : 'Post Status Update'}
             </button>
           </div>
         )}

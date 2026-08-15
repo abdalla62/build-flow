@@ -16,7 +16,7 @@ class ReportsScreen extends ConsumerStatefulWidget {
 }
 
 class _ReportsScreenState extends ConsumerState<ReportsScreen> {
-  static const _tabs = <_ReportTab>[
+  static const _adminTabs = <_ReportTab>[
     _ReportTab(
       id: 'monthlyProcurement',
       label: 'Monthly Procurement',
@@ -54,6 +54,37 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     ),
   ];
 
+  static const _supplierTabs = <_ReportTab>[
+    _ReportTab(
+      id: 'myBids',
+      label: 'My Bids',
+      icon: Icons.request_quote_outlined,
+      hintKey: 'pending',
+      moneyHint: false,
+    ),
+    _ReportTab(
+      id: 'myOrders',
+      label: 'My POs',
+      icon: Icons.description_outlined,
+      hintKey: 'orderValue',
+      moneyHint: true,
+    ),
+    _ReportTab(
+      id: 'myPayments',
+      label: 'Payments',
+      icon: Icons.payments_outlined,
+      hintKey: 'totalPaid',
+      moneyHint: true,
+    ),
+    _ReportTab(
+      id: 'outstandingBalance',
+      label: 'Outstanding',
+      icon: Icons.warning_amber_outlined,
+      hintKey: 'totalOutstanding',
+      moneyHint: true,
+    ),
+  ];
+
   Map<String, dynamic> _reports = {};
   bool _loading = true;
   String? _error;
@@ -61,12 +92,20 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   late String _month;
   bool _exporting = false;
 
+  bool get _isSupplier =>
+      ref.watch(authNotifierProvider).state.user?.role == 'Supplier';
+
+  List<_ReportTab> get _tabs => _isSupplier ? _supplierTabs : _adminTabs;
+
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
     _month = '${now.year}-${now.month.toString().padLeft(2, '0')}';
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_isSupplier) _activeId = 'myBids';
+      _load();
+    });
   }
 
   Future<void> _load() async {
@@ -75,15 +114,19 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       _error = null;
     });
     try {
-      final data = await ref
-          .read(apiRepositoryProvider)
-          .getReports(month: _month);
+      final data = await ref.read(apiRepositoryProvider).getReports(
+            month: _month,
+            supplierView: _isSupplier,
+          );
       final reports = data['reports'];
       if (mounted) {
         setState(() {
           _reports = reports is Map
               ? Map<String, dynamic>.from(reports)
               : <String, dynamic>{};
+          if (!_reports.containsKey(_activeId) && _tabs.isNotEmpty) {
+            _activeId = _tabs.first.id;
+          }
         });
       }
     } catch (e) {
@@ -216,7 +259,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
           Text(
-            'Export Reports',
+            _isSupplier ? 'My Activity Report' : 'Export Reports',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w800,
               letterSpacing: -0.3,

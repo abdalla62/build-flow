@@ -27,6 +27,7 @@ class _DeliveriesScreenState extends ConsumerState<DeliveriesScreen> {
   String _viewMode = 'list'; // list | calendar
   DateTime _calendarMonth = DateTime(DateTime.now().year, DateTime.now().month);
   String? _selectedDayKey;
+  bool _busy = false;
 
   static const _statusFilters = [
     'Scheduled',
@@ -178,6 +179,7 @@ class _DeliveriesScreenState extends ConsumerState<DeliveriesScreen> {
   }
 
   Future<void> _openUpdateStatus(Map<String, dynamic> delivery) async {
+    if (_busy) return;
     String selected = delivery['status']?.toString() ?? 'Preparing';
     if (!_driverStatusOptions.any((e) => e.$1 == selected)) {
       selected = 'Preparing';
@@ -264,6 +266,7 @@ class _DeliveriesScreenState extends ConsumerState<DeliveriesScreen> {
     );
     if (ok != true) return;
 
+    setState(() => _busy = true);
     try {
       await ref
           .read(apiRepositoryProvider)
@@ -278,6 +281,8 @@ class _DeliveriesScreenState extends ConsumerState<DeliveriesScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -912,6 +917,7 @@ class _ScheduleDispatchDialogState
   }
 
   Future<void> _submit() async {
+    if (_submitting) return;
     setState(() => _error = null);
     if (!_formKey.currentState!.validate()) return;
     if (_date == null) {
@@ -1420,6 +1426,7 @@ class _RescheduleDialogState extends ConsumerState<_RescheduleDialog> {
   }
 
   Future<void> _submit() async {
+    if (_submitting) return;
     setState(() => _error = null);
     if (!_formKey.currentState!.validate()) return;
     if (_newDate == null) {

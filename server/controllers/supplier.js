@@ -130,6 +130,83 @@ exports.createSupplier = async (req, res, next) => {
   }
 };
 
+// @desc    Get logged-in supplier company profile
+// @route   GET /api/suppliers/me
+// @access  Private/Supplier
+exports.getMySupplier = async (req, res, next) => {
+  try {
+    const { resolveSupplierProfile } = require('../utils/supplierLink');
+    const supplier = await resolveSupplierProfile(req.user);
+    if (!supplier) {
+      return res.status(404).json({
+        success: false,
+        error: 'No supplier company profile linked to this account'
+      });
+    }
+    const full = await Supplier.findById(supplier._id).populate(
+      'suppliedCategories',
+      'name'
+    );
+    res.status(200).json({ success: true, supplier: full });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update own supplier company profile (contact / terms — not rating)
+// @route   PUT /api/suppliers/me
+// @access  Private/Supplier
+exports.updateMySupplier = async (req, res, next) => {
+  try {
+    const { resolveSupplierProfile } = require('../utils/supplierLink');
+    const linked = await resolveSupplierProfile(req.user);
+    if (!linked) {
+      return res.status(404).json({
+        success: false,
+        error: 'No supplier company profile linked to this account'
+      });
+    }
+
+    const previousEmail = linked.email;
+    const { name, company, phone, email, address, paymentTerms } = req.body;
+
+    const supplier = await Supplier.findByIdAndUpdate(
+      linked._id,
+      {
+        ...(name != null ? { name } : {}),
+        ...(company != null ? { company } : {}),
+        ...(phone != null ? { phone } : {}),
+        ...(email != null ? { email } : {}),
+        ...(address != null ? { address } : {}),
+        ...(paymentTerms != null ? { paymentTerms } : {})
+      },
+      { new: true, runValidators: true }
+    ).populate('suppliedCategories', 'name');
+
+    const linkedUser = await User.findOne({
+      email: previousEmail,
+      role: 'Supplier'
+    });
+    if (linkedUser) {
+      await User.findByIdAndUpdate(linkedUser._id, {
+        name: name || linkedUser.name,
+        ...(email ? { email: String(email).toLowerCase().trim() } : {})
+      });
+    }
+
+    await logActivity(
+      req,
+      req.user,
+      'Update Own Supplier Profile',
+      `Supplier ${supplier.company} updated their company profile`
+    );
+
+    res.status(200).json({ success: true, supplier });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Update supplier
 // @route   PUT /api/suppliers/:id
 // @access  Private/Admin

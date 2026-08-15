@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-import { FiUser, FiMail, FiLock, FiKey, FiSave, FiCamera } from 'react-icons/fi';
+import { FiUser, FiMail, FiLock, FiKey, FiSave, FiCamera, FiTruck } from 'react-icons/fi';
 
 const Profile = () => {
   const { user, updateProfile, changePassword } = useAuth();
+  const isSupplier = user?.role === 'Supplier';
   const [profileSubmitting, setProfileSubmitting] = useState(false);
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+  const [companySubmitting, setCompanySubmitting] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState(user?.avatar || '');
   const [avatarFile, setAvatarFile] = useState(null);
   const [removeAvatar, setRemoveAvatar] = useState(false);
@@ -37,7 +40,36 @@ const Profile = () => {
     formState: { errors: passwordErrors }
   } = useForm();
 
+  const {
+    register: registerCompany,
+    handleSubmit: handleCompanySubmit,
+    reset: resetCompany,
+    formState: { errors: companyErrors }
+  } = useForm();
+
   const watchNewPassword = watchPassword('newPassword');
+
+  useEffect(() => {
+    if (!isSupplier) return;
+    (async () => {
+      try {
+        const res = await axios.get('/api/suppliers/me');
+        if (res.data.success && res.data.supplier) {
+          const s = res.data.supplier;
+          resetCompany({
+            name: s.name || '',
+            company: s.company || '',
+            phone: s.phone || '',
+            email: s.email || '',
+            address: s.address || '',
+            paymentTerms: s.paymentTerms || 'Net 30'
+          });
+        }
+      } catch {
+        /* no linked company profile */
+      }
+    })();
+  }, [isSupplier, resetCompany]);
 
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
@@ -56,6 +88,7 @@ const Profile = () => {
   };
 
   const onProfileSubmit = async (data) => {
+    if (profileSubmitting) return;
     setProfileSubmitting(true);
     const ok = await updateProfile(
       String(data.name || '').trim(),
@@ -71,6 +104,7 @@ const Profile = () => {
   };
 
   const onPasswordSubmit = async (data) => {
+    if (passwordSubmitting) return;
     if (!data.currentPassword?.trim() || !data.newPassword?.trim()) {
       return;
     }
@@ -79,6 +113,21 @@ const Profile = () => {
     setPasswordSubmitting(false);
     if (success) {
       resetPasswordForm();
+    }
+  };
+
+  const onCompanySubmit = async (data) => {
+    if (companySubmitting) return;
+    setCompanySubmitting(true);
+    try {
+      const res = await axios.put('/api/suppliers/me', data);
+      if (res.data.success) {
+        toast.success('Company profile updated');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to update company profile');
+    } finally {
+      setCompanySubmitting(false);
     }
   };
 
@@ -314,6 +363,89 @@ const Profile = () => {
         </div>
 
       </div>
+
+      {isSupplier && (
+        <div className="bg-brand-card dark:bg-brand-darkCard border border-brand-border dark:border-brand-darkBorder rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4 mb-6">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-primary/10 text-brand-primary">
+              <FiTruck className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-950 dark:text-white">Company Profile</h3>
+              <p className="text-xs text-slate-500">
+                Edit your supplier company contact details and payment terms
+              </p>
+            </div>
+          </div>
+
+          <form
+            onSubmit={handleCompanySubmit(onCompanySubmit)}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          >
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase">Contact Name</label>
+              <input
+                className="w-full mt-1.5 rounded-xl border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-sm outline-none focus:border-brand-primary"
+                {...registerCompany('name', { required: 'Required' })}
+              />
+              {companyErrors.name && (
+                <p className="mt-1 text-xs text-red-500 font-semibold">{companyErrors.name.message}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase">Company</label>
+              <input
+                className="w-full mt-1.5 rounded-xl border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-sm outline-none focus:border-brand-primary"
+                {...registerCompany('company', { required: 'Required' })}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase">Phone</label>
+              <input
+                className="w-full mt-1.5 rounded-xl border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-sm outline-none focus:border-brand-primary"
+                {...registerCompany('phone', { required: 'Required' })}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase">Business Email</label>
+              <input
+                type="email"
+                className="w-full mt-1.5 rounded-xl border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-sm outline-none focus:border-brand-primary"
+                {...registerCompany('email', { required: 'Required' })}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-bold text-slate-500 uppercase">Address</label>
+              <input
+                className="w-full mt-1.5 rounded-xl border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-sm outline-none focus:border-brand-primary"
+                {...registerCompany('address', { required: 'Required' })}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase">Payment Terms</label>
+              <select
+                className="w-full mt-1.5 rounded-xl border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-sm outline-none focus:border-brand-primary"
+                {...registerCompany('paymentTerms', { required: 'Required' })}
+              >
+                <option value="Cash on Delivery">Cash on Delivery</option>
+                <option value="Net 15">Net 15</option>
+                <option value="Net 30">Net 30</option>
+                <option value="Net 60">Net 60</option>
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <button
+                type="submit"
+                disabled={companySubmitting}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-primaryHover disabled:opacity-50"
+              >
+                <FiSave className="h-4 w-4" />
+                {companySubmitting ? 'Saving…' : 'Save Company Profile'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

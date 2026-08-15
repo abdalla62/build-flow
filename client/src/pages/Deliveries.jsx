@@ -81,6 +81,8 @@ const Deliveries = () => {
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
   const [rescheduleDelivery, setRescheduleDelivery] = useState(null);
   const [rescheduleSubmitting, setRescheduleSubmitting] = useState(false);
+  const [scheduleSubmitting, setScheduleSubmitting] = useState(false);
+  const [statusSubmitting, setStatusSubmitting] = useState(false);
 
   const {
     register,
@@ -253,6 +255,7 @@ const Deliveries = () => {
   };
 
   const onRescheduleSubmit = async (data) => {
+    if (rescheduleSubmitting) return;
     setRescheduleSubmitting(true);
     try {
       const res = await axios.put(`/api/deliveries/${rescheduleDelivery._id}/reschedule`, {
@@ -274,6 +277,8 @@ const Deliveries = () => {
   };
 
   const onScheduleSubmit = async (data) => {
+    if (scheduleSubmitting) return;
+    setScheduleSubmitting(true);
     try {
       const res = await axios.post('/api/deliveries', data);
       if (res.data.success) {
@@ -283,10 +288,14 @@ const Deliveries = () => {
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to schedule delivery');
+    } finally {
+      setScheduleSubmitting(false);
     }
   };
 
   const postStatusUpdate = async () => {
+    if (statusSubmitting) return;
+    setStatusSubmitting(true);
     try {
       const res = await axios.put(`/api/deliveries/${updatingDelivery._id}/status`, { status: selectedStatus });
       if (res.data.success) {
@@ -296,11 +305,14 @@ const Deliveries = () => {
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to update delivery status');
+    } finally {
+      setStatusSubmitting(false);
     }
   };
 
   const onNoteSubmit = async (e) => {
     e.preventDefault();
+    if (noteUploading) return;
     if (!noteFileObj) {
       toast.error('Please choose a file (PDF, JPG, PNG, or DOCX)');
       return;
@@ -720,9 +732,10 @@ const Deliveries = () => {
 
           <button
             type="submit"
-            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+            disabled={scheduleSubmitting}
+            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Dispatch & Notify Driver
+            {scheduleSubmitting ? 'Saving…' : 'Dispatch & Notify Driver'}
           </button>
         </form>
       </Modal>
@@ -762,9 +775,10 @@ const Deliveries = () => {
             )}
             <button
               onClick={postStatusUpdate}
-              className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+              disabled={statusSubmitting}
+              className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Post Tracking Update
+              {statusSubmitting ? 'Saving…' : 'Post Tracking Update'}
             </button>
           </div>
         )}

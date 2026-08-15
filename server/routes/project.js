@@ -1,6 +1,13 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { getProjects, getProject, createProject, updateProject, deleteProject } = require('../controllers/project');
+const {
+  getProjects,
+  getProject,
+  getProjectBudget,
+  createProject,
+  updateProject,
+  deleteProject
+} = require('../controllers/project');
 const { protect, authorize } = require('../middlewares/auth');
 const validate = require('../middlewares/validator');
 
@@ -21,6 +28,8 @@ const projectValidation = [
 router.route('/')
   .get(getProjects)
   .post(authorize('Administrator'), projectValidation, createProject);
+
+router.get('/:id/budget', getProjectBudget);
 
 router.route('/:id')
   .get(getProject)

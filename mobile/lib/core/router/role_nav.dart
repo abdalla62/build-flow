@@ -55,6 +55,7 @@ List<MenuItem> menuForRole(String role) {
         MenuItem(path: '/purchase-orders', label: 'Purchase Orders', icon: Icons.description_outlined),
         MenuItem(path: '/quotations', label: 'Quotes & Bids', icon: Icons.layers_outlined),
         MenuItem(path: '/purchase-orders', label: 'Invoices & POs', icon: Icons.payments_outlined),
+        MenuItem(path: '/reports', label: 'My Reports', icon: Icons.bar_chart_outlined),
       ]);
     case 'Accountant':
       links.addAll(const [

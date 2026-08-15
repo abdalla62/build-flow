@@ -146,6 +146,7 @@ const Payments = () => {
   };
 
   const onSubmit = async (data) => {
+    if (submitting) return;
     const amount = parsePayAmount(data.paidAmount);
     if (!(amount >= 0.01)) {
       toast.error('Minimum payment is $0.01 (type 0.01 or 001)');

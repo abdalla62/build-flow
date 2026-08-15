@@ -5,6 +5,22 @@ import 'package:construction_material_mobile_app/core/theme/app_theme.dart';
 import 'package:construction_material_mobile_app/providers/app_providers.dart';
 import 'package:construction_material_mobile_app/shared/widgets/ui.dart';
 
+List<Map<String, dynamic>> quoteRequestLines(Map<String, dynamic> r) {
+  final raw = r['lines'];
+  if (raw is List && raw.isNotEmpty) {
+    return raw
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+  return [r];
+}
+
+String quoteRequestIdOf(dynamic q) {
+  if (q is Map) return popId(q['materialRequest']);
+  return '';
+}
+
 class QuotationsScreen extends ConsumerStatefulWidget {
   const QuotationsScreen({super.key});
 
@@ -16,6 +32,7 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
   List<Map<String, dynamic>> _openRequests = [];
   List<Map<String, dynamic>> _quotations = [];
   bool _loading = true;
+  bool _busy = false;
   String? _error;
 
   @override
@@ -33,6 +50,7 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
       final reqs = await ref.read(apiRepositoryProvider).getRequests(
             status: 'Approved',
             limit: 100,
+            grouped: true,
           );
       final quotes = await ref.read(apiRepositoryProvider).getQuotations();
       if (!mounted) return;
@@ -49,25 +67,51 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
     }
   }
 
-  int _bidCountFor(String requestId) {
-    return _quotations.where((q) {
-      final mr = q['materialRequest'];
-      return popId(mr) == requestId;
-    }).length;
+  int _bidCountFor(Map<String, dynamic> request) {
+    final ids = quoteRequestLines(request).map(popId).where((id) => id.isNotEmpty).toSet();
+    final suppliers = <String>{};
+    for (final q in _quotations) {
+      if (ids.contains(quoteRequestIdOf(q))) {
+        final sid = popId(q['supplier']);
+        if (sid.isNotEmpty) suppliers.add(sid);
+      }
+    }
+    return suppliers.length;
   }
 
-  bool _alreadyBid(String requestId) {
+  bool _alreadyBid(Map<String, dynamic> request) {
     final role = ref.read(authNotifierProvider).state.user?.role;
     if (role != 'Supplier') return false;
-    // Supplier quotations endpoint returns only their own bids.
-    return _quotations.any((q) => popId(q['materialRequest']) == requestId);
+    final ids = quoteRequestLines(request).map(popId).where((id) => id.isNotEmpty).toSet();
+    return _quotations.any((q) => ids.contains(quoteRequestIdOf(q)));
   }
 
-  Future<void> _openSubmitBid(Map<String, dynamic> request) async {
+  List<Map<String, dynamic>> _myPendingQuotes(Map<String, dynamic> request) {
+    final role = ref.read(authNotifierProvider).state.user?.role;
+    if (role != 'Supplier') return const [];
+    final ids = quoteRequestLines(request).map(popId).where((id) => id.isNotEmpty).toSet();
+    return _quotations
+        .where(
+          (q) =>
+              ids.contains(quoteRequestIdOf(q)) &&
+              q['status']?.toString() == 'Pending',
+        )
+        .toList();
+  }
+
+  Future<void> _openSubmitBid(
+    Map<String, dynamic> request, {
+    bool edit = false,
+  }) async {
+    final mine = _myPendingQuotes(request);
     final submitted = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => _SubmitBidDialog(request: request),
+      builder: (ctx) => _SubmitBidDialog(
+        request: request,
+        existingQuotes: edit ? mine : const [],
+        editing: edit && mine.isNotEmpty,
+      ),
     );
     if (submitted == true) _load();
   }
@@ -109,7 +153,9 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${popName(request['material'])} · ${popName(request['project'])}',
+                    quoteRequestLines(request)
+                        .map((l) => popName(l['material']))
+                        .join(', '),
                     style: const TextStyle(color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: 12),
@@ -164,6 +210,7 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
   }
 
   Future<void> _select(String id) async {
+    if (_busy) return;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -178,6 +225,7 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
       ),
     );
     if (ok != true) return;
+    setState(() => _busy = true);
     try {
       await ref.read(apiRepositoryProvider).selectQuotation(id);
       if (!mounted) return;
@@ -190,6 +238,8 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -257,12 +307,8 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (_, i) {
                     final r = _openRequests[i];
-                    final id = popId(r);
-                    final material = r['material'];
+                    final lines = quoteRequestLines(r);
                     final project = r['project'];
-                    final qty = r['quantity'];
-                    final unit = material is Map ? material['unit']?.toString() ?? '' : '';
-                    final materialName = popName(material);
                     final projectName = popName(project);
                     final location = project is Map
                         ? project['location']?.toString() ?? ''
@@ -273,8 +319,8 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                                 DateTime.now(),
                           )
                         : '—';
-                    final bids = _bidCountFor(id);
-                    final already = _alreadyBid(id);
+                    final bids = _bidCountFor(r);
+                    final already = _alreadyBid(r);
 
                     return Card(
                       child: Padding(
@@ -298,17 +344,34 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                                 ),
                               ),
                             const SizedBox(height: 8),
-                            Text(
-                              '$qty $unit',
-                              style: const TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                            Text(
-                              materialName,
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 13,
-                              ),
-                            ),
+                            ...lines.map((line) {
+                              final material = line['material'];
+                              final qty = line['quantity'];
+                              final unit = material is Map
+                                  ? material['unit']?.toString() ?? ''
+                                  : '';
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '$qty $unit',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    Text(
+                                      popName(material),
+                                      style: const TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
                             const SizedBox(height: 8),
                             Row(
                               children: [
@@ -334,11 +397,20 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
-                                  onPressed: already
-                                      ? null
-                                      : () => _openSubmitBid(r),
+                                  onPressed: () {
+                                    final pending = _myPendingQuotes(r);
+                                    if (already && pending.isEmpty) return;
+                                    _openSubmitBid(
+                                      r,
+                                      edit: pending.isNotEmpty,
+                                    );
+                                  },
                                   child: Text(
-                                    already ? 'Bid already submitted' : 'Submit Bid',
+                                    _myPendingQuotes(r).isNotEmpty
+                                        ? 'Edit Bid'
+                                        : already
+                                            ? 'Bid already submitted'
+                                            : 'Submit Bid',
                                   ),
                                 ),
                               ),
@@ -369,8 +441,14 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
 
 class _SubmitBidDialog extends ConsumerStatefulWidget {
   final Map<String, dynamic> request;
+  final List<Map<String, dynamic>> existingQuotes;
+  final bool editing;
 
-  const _SubmitBidDialog({required this.request});
+  const _SubmitBidDialog({
+    required this.request,
+    this.existingQuotes = const [],
+    this.editing = false,
+  });
 
   @override
   ConsumerState<_SubmitBidDialog> createState() => _SubmitBidDialogState();
@@ -378,7 +456,7 @@ class _SubmitBidDialog extends ConsumerStatefulWidget {
 
 class _SubmitBidDialogState extends ConsumerState<_SubmitBidDialog> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _unitPrice;
+  late final Map<String, TextEditingController> _linePrices;
   late final TextEditingController _deliveryCost;
   late final TextEditingController _days;
   late final TextEditingController _warranty;
@@ -393,22 +471,55 @@ class _SubmitBidDialogState extends ConsumerState<_SubmitBidDialog> {
     'Net 60',
   ];
 
+  List<Map<String, dynamic>> get _lines => quoteRequestLines(widget.request);
+
   @override
   void initState() {
     super.initState();
-    final material = widget.request['material'];
-    final est = material is Map
-        ? (material['estimatedPrice'] as num?)?.toString() ?? ''
-        : '';
-    _unitPrice = TextEditingController(text: est);
-    _deliveryCost = TextEditingController(text: '50');
-    _days = TextEditingController(text: '3');
-    _warranty = TextEditingController(text: '12');
+    _linePrices = {
+      for (final line in _lines)
+        popId(line): TextEditingController(
+          text: () {
+            final id = popId(line);
+            Map<String, dynamic>? existing;
+            for (final q in widget.existingQuotes) {
+              if (quoteRequestIdOf(q) == id) {
+                existing = q;
+                break;
+              }
+            }
+            if (existing != null) {
+              return (existing['unitPrice'] as num?)?.toString() ?? '';
+            }
+            final material = line['material'];
+            if (material is Map) {
+              return (material['estimatedPrice'] as num?)?.toString() ?? '';
+            }
+            return '';
+          }(),
+        ),
+    };
+    final first = widget.existingQuotes.isNotEmpty
+        ? widget.existingQuotes.first
+        : null;
+    _deliveryCost = TextEditingController(
+      text: (first?['deliveryCost'] as num?)?.toString() ?? '50',
+    );
+    _days = TextEditingController(
+      text: (first?['deliveryTimeDays'] as num?)?.toString() ?? '3',
+    );
+    _warranty = TextEditingController(
+      text: (first?['warrantyMonths'] as num?)?.toString() ?? '12',
+    );
+    final terms = first?['paymentTerms']?.toString();
+    if (terms != null && _terms.contains(terms)) _paymentTerms = terms;
   }
 
   @override
   void dispose() {
-    _unitPrice.dispose();
+    for (final c in _linePrices.values) {
+      c.dispose();
+    }
     _deliveryCost.dispose();
     _days.dispose();
     _warranty.dispose();
@@ -416,22 +527,43 @@ class _SubmitBidDialogState extends ConsumerState<_SubmitBidDialog> {
   }
 
   Future<void> _submit() async {
+    if (_submitting) return;
     setState(() => _error = null);
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _submitting = true);
     try {
-      await ref.read(apiRepositoryProvider).submitQuotation({
+      final body = {
         'materialRequest': popId(widget.request),
-        'unitPrice': double.tryParse(_unitPrice.text.trim()) ?? 0,
+        'items': _lines
+            .map(
+              (line) => {
+                'materialRequest': popId(line),
+                'unitPrice':
+                    double.tryParse(_linePrices[popId(line)]?.text.trim() ?? '') ??
+                    0,
+              },
+            )
+            .toList(),
         'deliveryCost': double.tryParse(_deliveryCost.text.trim()) ?? 0,
         'deliveryTimeDays': int.tryParse(_days.text.trim()) ?? 1,
         'warrantyMonths': int.tryParse(_warranty.text.trim()) ?? 0,
         'paymentTerms': _paymentTerms,
-      });
+      };
+      if (widget.editing) {
+        await ref.read(apiRepositoryProvider).updateQuotationBatch(body);
+      } else {
+        await ref.read(apiRepositoryProvider).submitQuotationBatch(body);
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bid quotation submitted successfully')),
+        SnackBar(
+          content: Text(
+            widget.editing
+                ? 'Bid updated successfully'
+                : 'Bid quotation submitted successfully',
+          ),
+        ),
       );
       Navigator.pop(context, true);
     } catch (e) {
@@ -445,14 +577,10 @@ class _SubmitBidDialogState extends ConsumerState<_SubmitBidDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final material = widget.request['material'];
-    final unit = material is Map ? material['unit']?.toString() ?? 'units' : 'units';
-    final materialName = popName(material);
     final projectName = popName(widget.request['project']);
-    final qty = widget.request['quantity'];
 
     return AlertDialog(
-      title: const Text('Submit Bidding Quote'),
+      title: Text(widget.editing ? 'Edit Bidding Quote' : 'Submit Bidding Quote'),
       content: SizedBox(
         width: 420,
         child: Form(
@@ -502,10 +630,16 @@ class _SubmitBidDialogState extends ConsumerState<_SubmitBidDialog> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        '$qty $unit of $materialName',
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
+                      ..._lines.map((line) {
+                        final material = line['material'];
+                        final unit = material is Map
+                            ? material['unit']?.toString() ?? 'units'
+                            : 'units';
+                        return Text(
+                          '${line['quantity']} $unit of ${popName(material)}',
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        );
+                      }),
                       Text(
                         'Project: $projectName',
                         style: const TextStyle(
@@ -517,20 +651,28 @@ class _SubmitBidDialogState extends ConsumerState<_SubmitBidDialog> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
-                  controller: _unitPrice,
-                  enabled: !_submitting,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: 'Unit Price Offer (\$)',
-                  ),
-                  validator: (v) {
-                    final n = double.tryParse(v?.trim() ?? '');
-                    if (n == null || n < 0) return 'Enter a valid price';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 10),
+                ..._lines.map((line) {
+                  final id = popId(line);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: TextFormField(
+                      controller: _linePrices[id],
+                      enabled: !_submitting,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: InputDecoration(
+                        labelText:
+                            'Unit Price — ${popName(line['material'])} (\$)',
+                      ),
+                      validator: (v) {
+                        final n = double.tryParse(v?.trim() ?? '');
+                        if (n == null || n < 0) return 'Enter a valid price';
+                        return null;
+                      },
+                    ),
+                  );
+                }),
                 TextFormField(
                   controller: _deliveryCost,
                   enabled: !_submitting,
@@ -612,7 +754,9 @@ class _SubmitBidDialogState extends ConsumerState<_SubmitBidDialog> {
                     color: Colors.white,
                   ),
                 )
-              : const Text('Post Bid Quotation'),
+              : Text(
+                  widget.editing ? 'Save Bid Changes' : 'Post Bid Quotation',
+                ),
         ),
       ],
     );

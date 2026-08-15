@@ -22,6 +22,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   }
 
   Future<void> _submit() async {
+    if (ref.read(authNotifierProvider).state.busy) return;
     if (_email.text.trim().isEmpty) return;
     final msg = await ref.read(authNotifierProvider).forgotPassword(_email.text);
     if (!mounted) return;

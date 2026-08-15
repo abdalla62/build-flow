@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:construction_material_mobile_app/core/theme/app_theme.dart';
@@ -28,6 +29,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    final busy = ref.read(authNotifierProvider).state.busy;
+    if (busy) return;
     if (!_formKey.currentState!.validate()) return;
     final ok =
         await ref.read(authNotifierProvider).login(_email.text, _password.text);
@@ -48,7 +51,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final busy = ref.watch(authNotifierProvider).state.busy;
     final size = MediaQuery.sizeOf(context);
 
-    return Scaffold(
+    // Dark hero background → light status-bar icons (battery / Wi‑Fi / signal).
+    // Default light theme uses dark icons, which disappear on this screen.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light, // Android
+        statusBarBrightness: Brightness.dark, // iOS: dark bg → light icons
+        systemNavigationBarColor: Color(0xFF020617),
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -253,6 +266,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 

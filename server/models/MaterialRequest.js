@@ -11,6 +11,12 @@ const MaterialRequestSchema = new mongoose.Schema({
     ref: 'User',
     required: [true, 'Requester is required']
   },
+  // Same id on every line submitted together so PM can review once
+  batchId: {
+    type: String,
+    index: true,
+    default: null
+  },
   material: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Material',

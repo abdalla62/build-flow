@@ -22,6 +22,7 @@ const Projects = () => {
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
+  const [formSubmitting, setFormSubmitting] = useState(false);
 
   const {
     register,
@@ -119,6 +120,8 @@ const Projects = () => {
   };
 
   const onSubmit = async (data) => {
+    if (formSubmitting) return;
+    setFormSubmitting(true);
     try {
       if (editingProject) {
         const res = await axios.put(`/api/projects/${editingProject._id}`, data);
@@ -137,6 +140,8 @@ const Projects = () => {
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to save project');
+    } finally {
+      setFormSubmitting(false);
     }
   };
 
@@ -347,16 +352,21 @@ const Projects = () => {
             >
               <option value="Pending">Pending</option>
               <option value="Active">Active</option>
-              <option value="Completed">Completed</option>
-              <option value="On Hold">On Hold</option>
+              {editingProject && (
+                <>
+                  <option value="Completed">Completed</option>
+                  <option value="On Hold">On Hold</option>
+                </>
+              )}
             </select>
           </div>
 
           <button
             type="submit"
-            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+            disabled={formSubmitting}
+            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {editingProject ? 'Save Changes' : 'Create Project'}
+            {formSubmitting ? 'Saving…' : editingProject ? 'Save Changes' : 'Create Project'}
           </button>
         </form>
       </Modal>

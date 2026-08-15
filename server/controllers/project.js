@@ -1,6 +1,7 @@
 const Project = require('../models/Project');
 const User = require('../models/User');
 const logActivity = require('../utils/audit');
+const { getProjectBudgetSummary } = require('../utils/projectBudget');
 
 // @desc    Get all projects (paginated + search)
 // @route   GET /api/projects
@@ -47,6 +48,21 @@ exports.getProject = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
     res.status(200).json({ success: true, project });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Project budget used / remaining (from material requests)
+// @route   GET /api/projects/:id/budget
+// @access  Private
+exports.getProjectBudget = async (req, res, next) => {
+  try {
+    const summary = await getProjectBudgetSummary(req.params.id);
+    if (!summary) {
+      return res.status(404).json({ success: false, error: 'Project not found' });
+    }
+    res.status(200).json({ success: true, ...summary });
   } catch (error) {
     next(error);
   }

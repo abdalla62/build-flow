@@ -63,7 +63,8 @@ const Sidebar = ({ collapsed, mobileOpen = false, onNavigate }) => {
       links.push(
         { path: '/purchase-orders', label: 'Purchase Orders', icon: FiFileText },
         { path: '/quotations', label: 'Quotes & Bids', icon: FiLayers },
-        { path: '/purchase-orders', label: 'Invoices & POs', icon: FiDollarSign }
+        { path: '/purchase-orders', label: 'Invoices & POs', icon: FiDollarSign },
+        { path: '/reports', label: 'My Reports', icon: FiActivity }
       );
     } else if (role === 'Accountant') {
       links.push(

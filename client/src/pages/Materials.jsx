@@ -27,6 +27,7 @@ const Materials = () => {
   const [editingMaterial, setEditingMaterial] = useState(null);
   const [selectedSuppliers, setSelectedSuppliers] = useState([]);
   const [suppliersError, setSuppliersError] = useState('');
+  const [formSubmitting, setFormSubmitting] = useState(false);
 
   const {
     register,
@@ -142,6 +143,7 @@ const Materials = () => {
   };
 
   const onSubmit = async (data) => {
+    if (formSubmitting) return;
     if (selectedSuppliers.length === 0) {
       setSuppliersError('Select at least one primary supplier');
       return;
@@ -158,6 +160,7 @@ const Materials = () => {
     formData.append('status', data.status || 'Active');
     formData.append('suppliers', JSON.stringify(selectedSuppliers));
 
+    setFormSubmitting(true);
     try {
       if (editingMaterial) {
         const res = await axios.put(`/api/materials/${editingMaterial._id}`, formData, {
@@ -180,6 +183,8 @@ const Materials = () => {
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to save material');
+    } finally {
+      setFormSubmitting(false);
     }
   };
 
@@ -541,9 +546,10 @@ const Materials = () => {
 
           <button
             type="submit"
-            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+            disabled={formSubmitting}
+            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {editingMaterial ? 'Save Changes' : 'Create Material'}
+            {formSubmitting ? 'Saving…' : editingMaterial ? 'Save Changes' : 'Create Material'}
           </button>
         </form>
       </Modal>

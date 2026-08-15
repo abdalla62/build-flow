@@ -30,6 +30,8 @@ const Users = () => {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [updateVehiclePlate, setUpdateVehiclePlate] = useState('');
+  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [roleSubmitting, setRoleSubmitting] = useState(false);
 
   const {
     register,
@@ -88,6 +90,8 @@ const Users = () => {
   };
 
   const handleCreateSubmit = async (data) => {
+    if (formSubmitting) return;
+    setFormSubmitting(true);
     try {
       const res = await axios.post('/api/users', data);
       if (res.data.success) {
@@ -97,6 +101,8 @@ const Users = () => {
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to create user');
+    } finally {
+      setFormSubmitting(false);
     }
   };
 
@@ -134,13 +140,14 @@ const Users = () => {
   };
 
   const handleSaveRole = async () => {
-    if (!selectedUser) return;
+    if (!selectedUser || roleSubmitting) return;
     if (updateRoleValue === 'Delivery Staff') {
       if (!updateVehiclePlate.trim()) {
         toast.error('Vehicle Plate Code is required for Delivery Staff');
         return;
       }
     }
+    setRoleSubmitting(true);
     try {
       const res = await axios.put(`/api/users/${selectedUser._id}/role`, {
         role: updateRoleValue,
@@ -153,6 +160,8 @@ const Users = () => {
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to update user role');
+    } finally {
+      setRoleSubmitting(false);
     }
   };
 
@@ -400,9 +409,10 @@ const Users = () => {
 
           <button
             type="submit"
-            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors flex items-center justify-center gap-1.5"
+            disabled={formSubmitting}
+            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <FiUserPlus /> Add User Account
+            <FiUserPlus /> {formSubmitting ? 'Saving…' : 'Add User Account'}
           </button>
         </form>
       </Modal>
@@ -447,9 +457,10 @@ const Users = () => {
 
           <button
             onClick={handleSaveRole}
-            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+            disabled={roleSubmitting}
+            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Update User Role
+            {roleSubmitting ? 'Saving…' : 'Update User Role'}
           </button>
         </div>
       </Modal>

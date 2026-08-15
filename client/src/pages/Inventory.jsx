@@ -27,6 +27,7 @@ const Inventory = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
   const [projects, setProjects] = useState([]);
+  const [formSubmitting, setFormSubmitting] = useState(false);
 
   const {
     register,
@@ -105,6 +106,8 @@ const Inventory = () => {
   };
 
   const onAdjustSubmit = async (data) => {
+    if (formSubmitting) return;
+    setFormSubmitting(true);
     try {
       const res = await axios.post('/api/inventory/adjust', data);
       if (res.data.success) {
@@ -116,6 +119,8 @@ const Inventory = () => {
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to post adjustment');
+    } finally {
+      setFormSubmitting(false);
     }
   };
 
@@ -382,9 +387,10 @@ const Inventory = () => {
 
           <button
             type="submit"
-            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors flex items-center justify-center gap-1"
+            disabled={formSubmitting}
+            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <FiSettings /> Log Stock Adjustment
+            <FiSettings /> {formSubmitting ? 'Saving…' : 'Log Stock Adjustment'}
           </button>
         </form>
       </Modal>

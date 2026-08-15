@@ -405,3 +405,216 @@ exports.getReportStats = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * @desc    Supplier self-service activity report (own bids / POs / payments)
+ * @route   GET /api/reports/supplier?month=YYYY-MM
+ * @access  Private/Supplier (or Admin)
+ */
+exports.getSupplierReportStats = async (req, res, next) => {
+  try {
+    const Quotation = require('../models/Quotation');
+    const { resolveSupplierProfile } = require('../utils/supplierLink');
+    const { month, start, end } = monthRange(req.query.month);
+    const inMonth = { $gte: start, $lt: end };
+
+    const supplierProfile = await resolveSupplierProfile(req.user);
+    if (!supplierProfile) {
+      return res.status(400).json({
+        success: false,
+        error: 'No supplier company profile is linked to this login'
+      });
+    }
+
+    const sid = supplierProfile._id;
+
+    const [quotes, orders, payments, outstandingOrders] = await Promise.all([
+      Quotation.find({ supplier: sid, createdAt: inMonth })
+        .populate({
+          path: 'materialRequest',
+          select: 'quantity status project material',
+          populate: [
+            { path: 'project', select: 'name' },
+            { path: 'material', select: 'name unit' }
+          ]
+        })
+        .sort({ createdAt: -1 })
+        .limit(500),
+      PurchaseOrder.find({ supplier: sid, createdAt: inMonth })
+        .populate('items.material', 'name unit')
+        .sort({ createdAt: -1 })
+        .limit(500),
+      Payment.find({
+        $or: [{ paymentDate: inMonth }, { createdAt: inMonth }]
+      })
+        .populate({
+          path: 'purchaseOrder',
+          select: 'purchaseOrderNumber grandTotal paymentStatus supplier',
+          match: { supplier: sid }
+        })
+        .sort({ createdAt: -1 })
+        .limit(500),
+      PurchaseOrder.find({
+        supplier: sid,
+        paymentStatus: { $in: ['Unpaid', 'Partially Paid', 'Overdue'] }
+      })
+        .populate('items.material', 'name unit')
+        .sort({ createdAt: -1 })
+        .limit(500)
+    ]);
+
+    const myPayments = payments.filter((p) => p.purchaseOrder);
+
+    const outstandingIds = outstandingOrders.map((o) => o._id);
+    const paidAgg = outstandingIds.length
+      ? await Payment.aggregate([
+          { $match: { purchaseOrder: { $in: outstandingIds } } },
+          { $group: { _id: '$purchaseOrder', totalPaid: { $sum: '$paidAmount' } } }
+        ])
+      : [];
+    const paidMap = Object.fromEntries(
+      paidAgg.map((a) => [String(a._id), money(a.totalPaid)])
+    );
+
+    const myBidsRows = quotes.map((q) => {
+      const mr = q.materialRequest;
+      return {
+        id: String(q._id),
+        date: q.createdAt,
+        material: mr?.material?.name || '—',
+        project: mr?.project?.name || '—',
+        quantity: mr?.quantity ?? 0,
+        unitPrice: money(q.unitPrice),
+        deliveryCost: money(q.deliveryCost),
+        deliveryDays: q.deliveryTimeDays,
+        status: q.status,
+        paymentTerms: q.paymentTerms || '—'
+      };
+    });
+
+    const myOrdersRows = orders.map((o) => {
+      const item = o.items?.[0];
+      return {
+        id: String(o._id),
+        date: o.createdAt,
+        po: o.purchaseOrderNumber || '—',
+        material: item?.material?.name || '—',
+        quantity: item?.quantity ?? 0,
+        grandTotal: money(o.grandTotal),
+        status: o.status,
+        paymentStatus: o.paymentStatus,
+        invoice: o.invoiceFile ? 'Uploaded' : 'Not uploaded'
+      };
+    });
+
+    const myPaymentsRows = myPayments.map((p) => ({
+      id: String(p._id),
+      date: p.paymentDate || p.createdAt,
+      po: p.purchaseOrder?.purchaseOrderNumber || '—',
+      amount: money(p.paidAmount),
+      method: p.paymentMethod || '—',
+      reference: p.referenceNumber || p.accountNo || '—'
+    }));
+
+    const outstandingRows = outstandingOrders.map((o) => {
+      const paid = paidMap[String(o._id)] || 0;
+      const remaining = money(Math.max(0, Number(o.grandTotal || 0) - paid));
+      const item = o.items?.[0];
+      return {
+        id: String(o._id),
+        po: o.purchaseOrderNumber || '—',
+        material: item?.material?.name || '—',
+        grandTotal: money(o.grandTotal),
+        paid,
+        remaining,
+        paymentStatus: o.paymentStatus
+      };
+    });
+
+    const pack = (title, description, headers, rows, summary = {}) => ({
+      title,
+      description,
+      headers,
+      rows: rows.map((r) => headers.map((h) => {
+        const key = {
+          Date: 'date',
+          Material: 'material',
+          Project: 'project',
+          Qty: 'quantity',
+          'Unit Price': 'unitPrice',
+          Delivery: 'deliveryCost',
+          Days: 'deliveryDays',
+          Status: 'status',
+          Terms: 'paymentTerms',
+          PO: 'po',
+          Total: 'grandTotal',
+          Payment: 'paymentStatus',
+          Invoice: 'invoice',
+          Amount: 'amount',
+          Method: 'method',
+          Reference: 'reference',
+          Paid: 'paid',
+          Remaining: 'remaining'
+        }[h];
+        return key ? r[key] : '—';
+      })),
+      count: rows.length,
+      summary
+    });
+
+    const reports = {
+      myBids: pack(
+        'My Quotation Bids',
+        `Bids you submitted in ${month}`,
+        ['Date', 'Material', 'Project', 'Qty', 'Unit Price', 'Delivery', 'Days', 'Status', 'Terms'],
+        myBidsRows,
+        {
+          bidCount: myBidsRows.length,
+          pending: myBidsRows.filter((r) => r.status === 'Pending').length,
+          selected: myBidsRows.filter((r) => r.status === 'Selected').length
+        }
+      ),
+      myOrders: pack(
+        'My Purchase Orders',
+        `Purchase orders awarded to your company in ${month}`,
+        ['Date', 'PO', 'Material', 'Qty', 'Total', 'Status', 'Payment', 'Invoice'],
+        myOrdersRows,
+        {
+          orderCount: myOrdersRows.length,
+          orderValue: money(myOrdersRows.reduce((s, r) => s + Number(r.grandTotal || 0), 0))
+        }
+      ),
+      myPayments: pack(
+        'Payments Received',
+        `Payments recorded against your POs in ${month}`,
+        ['Date', 'PO', 'Amount', 'Method', 'Reference'],
+        myPaymentsRows,
+        {
+          paymentCount: myPaymentsRows.length,
+          totalPaid: money(myPaymentsRows.reduce((s, r) => s + Number(r.amount || 0), 0))
+        }
+      ),
+      outstandingBalance: pack(
+        'Outstanding Balances',
+        'Your unpaid / partially paid purchase orders',
+        ['PO', 'Material', 'Total', 'Paid', 'Remaining', 'Payment'],
+        outstandingRows,
+        {
+          outstandingCount: outstandingRows.length,
+          totalOutstanding: money(
+            outstandingRows.reduce((s, r) => s + Number(r.remaining || 0), 0)
+          )
+        }
+      )
+    };
+
+    res.status(200).json({
+      success: true,
+      month,
+      company: supplierProfile.company,
+      reports
+    });
+  } catch (error) {
+    next(error);
+  }
+};

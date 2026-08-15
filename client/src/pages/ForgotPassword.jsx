@@ -17,6 +17,7 @@ const ForgotPassword = () => {
   } = useForm();
 
   const onSubmit = async (data) => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
     const success = await forgotPassword(data.email);
     setIsSubmitting(false);

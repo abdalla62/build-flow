@@ -13,6 +13,7 @@ class CategoriesScreen extends ConsumerStatefulWidget {
 class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
   List<Map<String, dynamic>> _items = [];
   bool _loading = true;
+  bool _saving = false;
   String? _error;
 
   @override
@@ -37,6 +38,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
   }
 
   Future<void> _save({Map<String, dynamic>? existing}) async {
+    if (_saving) return;
     final name = TextEditingController(text: existing?['name']?.toString());
     final desc = TextEditingController(text: existing?['description']?.toString());
 
@@ -59,6 +61,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
     );
     if (ok != true) return;
 
+    setState(() => _saving = true);
     try {
       await ref.read(apiRepositoryProvider).saveCategory(
         {'name': name.text, 'description': desc.text},
@@ -67,6 +70,8 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
       _load();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -104,7 +109,10 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton(onPressed: () => _save(), child: const Icon(Icons.add)),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _saving ? null : () => _save(),
+        child: const Icon(Icons.add),
+      ),
     );
   }
 }

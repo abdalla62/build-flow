@@ -36,6 +36,7 @@ const Login = () => {
   } = useForm();
 
   const onSubmit = async (data) => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
     const loggedInUser = await login(data.email, data.password);
     setIsSubmitting(false);

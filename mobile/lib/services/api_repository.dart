@@ -199,6 +199,18 @@ class ApiRepository {
     _ensureSuccess(data);
   }
 
+  /// Project budget total / used / remaining (from material requests).
+  Future<Map<String, dynamic>> getProjectBudget(String projectId) async {
+    final data = await _get('/api/projects/$projectId/budget');
+    _ensureSuccess(data);
+    return {
+      'budget': (data['budget'] as num?)?.toDouble() ?? 0,
+      'used': (data['used'] as num?)?.toDouble() ?? 0,
+      'remaining': (data['remaining'] as num?)?.toDouble() ?? 0,
+      'projectName': data['projectName']?.toString() ?? '',
+    };
+  }
+
   // ── Categories ─────────────────────────────────────────────────────────
 
   Future<PagedResult<Map<String, dynamic>>> getCategories({
@@ -348,6 +360,7 @@ class ApiRepository {
     int limit = 20,
     String? search,
     String? status,
+    bool grouped = false,
   }) async {
     final data = await _get(
       '/api/requests',
@@ -356,6 +369,7 @@ class ApiRepository {
         'limit': limit,
         if (search != null && search.isNotEmpty) 'search': search,
         if (status != null && status.isNotEmpty) 'status': status,
+        if (grouped) 'grouped': 'true',
       },
     );
     _ensureSuccess(data);
@@ -378,6 +392,15 @@ class ApiRepository {
     final data = await _post('/api/requests', data: body);
     _ensureSuccess(data);
     return Map<String, dynamic>.from(data['request'] as Map);
+  }
+
+  /// One submit for several material lines (PM reviews them together).
+  Future<Map<String, dynamic>> createRequestBatch(
+    Map<String, dynamic> body,
+  ) async {
+    final data = await _post('/api/requests/batch', data: body);
+    _ensureSuccess(data);
+    return Map<String, dynamic>.from(data);
   }
 
   /// Site Engineer revises Pending/Returned request (resets to Pending).
@@ -406,6 +429,25 @@ class ApiRepository {
     );
     _ensureSuccess(data);
     return Map<String, dynamic>.from(data['request'] as Map);
+  }
+
+  Future<Map<String, dynamic>> bulkReviewRequests({
+    required List<String> requestIds,
+    required String action,
+    required String comments,
+    List<String>? suppliers,
+  }) async {
+    final data = await _put(
+      '/api/requests/bulk-review',
+      data: {
+        'requestIds': requestIds,
+        'action': action,
+        'comments': comments,
+        if (suppliers != null) 'suppliers': suppliers,
+      },
+    );
+    _ensureSuccess(data);
+    return Map<String, dynamic>.from(data);
   }
 
   Future<Map<String, dynamic>> receiveRequest(
@@ -457,6 +499,34 @@ class ApiRepository {
     final data = await _post('/api/quotations', data: body);
     _ensureSuccess(data);
     return Map<String, dynamic>.from(data['quotation'] as Map);
+  }
+
+  Future<Map<String, dynamic>> submitQuotationBatch(
+    Map<String, dynamic> body,
+  ) async {
+    final data = await _post('/api/quotations/batch', data: body);
+    _ensureSuccess(data);
+    return Map<String, dynamic>.from(data);
+  }
+
+  Future<Map<String, dynamic>> updateQuotationBatch(
+    Map<String, dynamic> body,
+  ) async {
+    final data = await _put('/api/quotations/batch', data: body);
+    _ensureSuccess(data);
+    return Map<String, dynamic>.from(data);
+  }
+
+  Future<Map<String, dynamic>> getMySupplier() async {
+    final data = await _get('/api/suppliers/me');
+    _ensureSuccess(data);
+    return Map<String, dynamic>.from(data['supplier'] as Map);
+  }
+
+  Future<Map<String, dynamic>> updateMySupplier(Map<String, dynamic> body) async {
+    final data = await _put('/api/suppliers/me', data: body);
+    _ensureSuccess(data);
+    return Map<String, dynamic>.from(data['supplier'] as Map);
   }
 
   Future<Map<String, dynamic>> selectQuotation(String id) async {
@@ -795,9 +865,12 @@ class ApiRepository {
     return _parsePage(data, 'logs', 'totalLogs');
   }
 
-  Future<Map<String, dynamic>> getReports({String? month}) async {
+  Future<Map<String, dynamic>> getReports({
+    String? month,
+    bool supplierView = false,
+  }) async {
     final data = await _get(
-      '/api/reports',
+      supplierView ? '/api/reports/supplier' : '/api/reports',
       params: {
         if (month != null && month.isNotEmpty) 'month': month,
       },

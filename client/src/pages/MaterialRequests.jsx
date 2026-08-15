@@ -11,6 +11,7 @@ import {
   FiSearch,
   FiEdit,
   FiTrash2,
+  FiCheckCircle,
   FiXCircle,
   FiCornerUpLeft,
   FiAlertTriangle,
@@ -47,6 +48,8 @@ const MaterialRequests = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedLines, setSelectedLines] = useState([]);
   const [linesError, setLinesError] = useState('');
+  const [projectBudget, setProjectBudget] = useState(null);
+  const [budgetLoading, setBudgetLoading] = useState(false);
   const todayMin = getTodayLocal();
 
   // Modals
@@ -61,6 +64,8 @@ const MaterialRequests = () => {
   const [selectedSuppliers, setSelectedSuppliers] = useState([]);
   const [suppliersError, setSuppliersError] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [receiveSubmitting, setReceiveSubmitting] = useState(false);
 
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const [receivingRequest, setReceivingRequest] = useState(null);
@@ -85,6 +90,7 @@ const MaterialRequests = () => {
   // Watch for cost estimation (edit mode / single material)
   const watchQty = watch('quantity', 0);
   const watchMatId = watch('material', '');
+  const watchProjectId = watch('project', '');
   const [selectedMaterialPrice, setSelectedMaterialPrice] = useState(0);
   const [selectedMaterialUnit, setSelectedMaterialUnit] = useState('units');
 
@@ -98,12 +104,60 @@ const MaterialRequests = () => {
     }
   }, [watchMatId, materials]);
 
+  useEffect(() => {
+    const loadBudget = async () => {
+      if (!watchProjectId || !isSubmitOpen) {
+        setProjectBudget(null);
+        return;
+      }
+      setBudgetLoading(true);
+      try {
+        const res = await axios.get(`/api/projects/${watchProjectId}/budget`);
+        if (res.data.success) {
+          setProjectBudget({
+            budget: Number(res.data.budget) || 0,
+            used: Number(res.data.used) || 0,
+            remaining: Number(res.data.remaining) || 0,
+            projectName: res.data.projectName
+          });
+        }
+      } catch (err) {
+        setProjectBudget(null);
+      } finally {
+        setBudgetLoading(false);
+      }
+    };
+    loadBudget();
+  }, [watchProjectId, isSubmitOpen]);
+
   const multiEstTotal = selectedLines.reduce((sum, line) => {
     const mat = materials.find((m) => m._id === line.materialId);
     const price = mat?.estimatedPrice || 0;
     const qty = Number(line.quantity) || 0;
     return sum + qty * price;
   }, 0);
+
+  const editEstTotal =
+    editingRequest && watchQty > 0 && selectedMaterialPrice > 0
+      ? Number(watchQty) * Number(selectedMaterialPrice)
+      : 0;
+
+  const thisRequestCost = editingRequest ? editEstTotal : multiEstTotal;
+
+  // When editing, this request's old cost is already in "used" — credit it back for live remaining
+  const editingPriorCost = editingRequest
+    ? Number(editingRequest.quantity || 0) *
+      Number(editingRequest.material?.estimatedPrice || 0)
+    : 0;
+
+  const liveUsedBase = projectBudget
+    ? Math.max(0, projectBudget.used - (editingRequest ? editingPriorCost : 0))
+    : 0;
+  const liveRemainingAfter = projectBudget
+    ? projectBudget.budget - liveUsedBase - thisRequestCost
+    : null;
+  const budgetExceeded =
+    projectBudget != null && thisRequestCost > 0 && liveRemainingAfter < -0.009;
 
   const handleAddMaterialLine = (e) => {
     const materialId = e.target.value;
@@ -133,7 +187,8 @@ const MaterialRequests = () => {
         params: {
           page: currentPage,
           status: statusFilter,
-          priority: priorityFilter
+          priority: priorityFilter,
+          grouped: true
         }
       });
       if (res.data.success) {
@@ -201,7 +256,7 @@ const MaterialRequests = () => {
   };
 
   const handleCancelRequest = async (id) => {
-    if (!window.confirm('Are you sure you want to cancel this request?')) return;
+    if (!window.confirm('Are you sure you want to cancel this request? All items in it will be cancelled.')) return;
     try {
       const res = await axios.delete(`/api/requests/${id}`);
       if (res.data.success) {
@@ -230,11 +285,18 @@ const MaterialRequests = () => {
     return [...new Set(ids)];
   };
 
+  const requestLines = (r) =>
+    Array.isArray(r?.lines) && r.lines.length > 0 ? r.lines : r ? [r] : [];
+
+  const lineCost = (r) =>
+    Number(r.quantity || 0) * Number(r.material?.estimatedPrice || 0);
+
   const handleOpenReview = (request) => {
     setReviewingRequest(request);
     setReviewComments('');
     setReviewAction('Approve');
-    const preferred = preferredSuppliersFromRequests([request]);
+    const lines = requestLines(request);
+    const preferred = preferredSuppliersFromRequests(lines);
     setSelectedSuppliers(
       preferred.length > 0
         ? preferred
@@ -245,7 +307,9 @@ const MaterialRequests = () => {
   };
 
   const handleOpenReceive = (request) => {
-    setReceivingRequest(request);
+    const ready =
+      requestLines(request).find((l) => l.canConfirmReceipt) || request;
+    setReceivingRequest(ready);
     setDamagedQuantity(0);
     setDamagedComments('');
     setMissingQuantity(0);
@@ -267,8 +331,14 @@ const MaterialRequests = () => {
   };
 
   const onFormSubmit = async (data) => {
+    if (formSubmitting) return;
     try {
       if (editingRequest) {
+        if (budgetExceeded) {
+          toast.error('Xadkii waad dhaaftay — budget limit exceeded');
+          return;
+        }
+        setFormSubmitting(true);
         const res = await axios.put(`/api/requests/${editingRequest._id}`, data);
         if (res.data.success) {
           toast.success('Request resubmitted successfully');
@@ -285,26 +355,27 @@ const MaterialRequests = () => {
           setLinesError('Each material quantity must be at least 1');
           return;
         }
+        if (budgetExceeded) {
+          setLinesError('Xadkii waad dhaaftay — this request exceeds remaining budget');
+          toast.error('Xadkii waad dhaaftay — budget limit exceeded');
+          return;
+        }
         setLinesError('');
-        const shared = {
+        setFormSubmitting(true);
+        await axios.post('/api/requests/batch', {
           project: data.project,
           priority: data.priority,
           reason: data.reason,
-          requiredDate: data.requiredDate
-        };
-        await Promise.all(
-          selectedLines.map((line) =>
-            axios.post('/api/requests', {
-              ...shared,
-              material: line.materialId,
-              quantity: Number(line.quantity)
-            })
-          )
-        );
+          requiredDate: data.requiredDate,
+          lines: selectedLines.map((line) => ({
+            material: line.materialId,
+            quantity: Number(line.quantity)
+          }))
+        });
         toast.success(
           selectedLines.length === 1
             ? 'Material request submitted'
-            : `${selectedLines.length} material requests submitted`
+            : `Material request submitted (${selectedLines.length} items)`
         );
         setIsSubmitOpen(false);
         setSelectedLines([]);
@@ -312,10 +383,13 @@ const MaterialRequests = () => {
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to submit request');
+    } finally {
+      setFormSubmitting(false);
     }
   };
 
   const postReview = async () => {
+    if (reviewSubmitting) return;
     try {
       if (!reviewComments.trim()) {
         toast.error('Remarks / comments are required');
@@ -338,7 +412,12 @@ const MaterialRequests = () => {
       if (reviewingRequest) {
         const res = await axios.put(`/api/requests/${reviewingRequest._id}/review`, payload);
         if (res.data.success) {
-          toast.success(`Request successfully ${reviewAction.toLowerCase()}d`);
+          const n = res.data.reviewedCount || reviewItems.length || 1;
+          toast.success(
+            n > 1
+              ? `${n} items ${reviewAction.toLowerCase()}d`
+              : `Request successfully ${reviewAction.toLowerCase()}d`
+          );
           setIsReviewOpen(false);
           fetchRequests();
         }
@@ -351,6 +430,7 @@ const MaterialRequests = () => {
   };
 
   const postReceive = async () => {
+    if (receiveSubmitting) return;
     try {
       const damaged = Number(damagedQuantity) || 0;
       const missing = Number(missingQuantity) || 0;
@@ -359,6 +439,7 @@ const MaterialRequests = () => {
         toast.error(`Damaged + missing cannot exceed ${total}`);
         return;
       }
+      setReceiveSubmitting(true);
       const res = await axios.put(`/api/requests/${receivingRequest._id}/receive`, {
         damagedQuantity: damaged,
         missingQuantity: missing,
@@ -373,14 +454,16 @@ const MaterialRequests = () => {
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to confirm receipt');
+    } finally {
+      setReceiveSubmitting(false);
     }
   };
 
   // PM budget warning calculation
   const getBudgetReviewDetails = () => {
     if (!reviewingRequest) return null;
-    const reqCost =
-      reviewingRequest.quantity * (reviewingRequest.material?.estimatedPrice || 0);
+    const items = requestLines(reviewingRequest);
+    const reqCost = items.reduce((sum, r) => sum + lineCost(r), 0);
     const budget = reviewingRequest.project?.budget || 0;
     const limitWarning = reqCost > budget * 0.20;
 
@@ -388,12 +471,12 @@ const MaterialRequests = () => {
       cost: reqCost,
       budget,
       limitWarning,
-      itemCount: 1
+      itemCount: items.length
     };
   };
 
   const budgetDetails = getBudgetReviewDetails();
-  const reviewItems = reviewingRequest ? [reviewingRequest] : [];
+  const reviewItems = reviewingRequest ? requestLines(reviewingRequest) : [];
 
   const headers = [
     { key: 'project', label: 'Project details', render: (r) => (
@@ -402,18 +485,28 @@ const MaterialRequests = () => {
         <p className="text-[10px] text-slate-500">{r.project?.location || ''}</p>
       </div>
     )},
-    { key: 'material', label: 'Material items', render: (r) => (
+    { key: 'material', label: 'Material items', render: (r) => {
+      const items = requestLines(r);
+      return (
       <div>
-        <p className="font-bold text-slate-800 dark:text-slate-200">
-          {r.quantity} {r.material?.unit}
-        </p>
-        <p className="text-xs text-slate-500">{r.material?.name || 'Unknown'}</p>
+        {items.slice(0, 3).map((line) => (
+          <div key={line._id || line.material?._id} className="mb-1 last:mb-0">
+            <p className="font-bold text-slate-800 dark:text-slate-200">
+              {line.quantity} {line.material?.unit}
+            </p>
+            <p className="text-xs text-slate-500">{line.material?.name || 'Unknown'}</p>
+          </div>
+        ))}
+        {items.length > 3 && (
+          <p className="text-[11px] font-semibold text-brand-primary">+{items.length - 3} more</p>
+        )}
       </div>
-    )},
+      );
+    }},
     { key: 'estCost', label: 'Est. Cost', render: (r) => (
       <span className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-0.5">
         <FiDollarSign className="text-slate-400" />
-        {(r.quantity * (r.material?.estimatedPrice || 0)).toLocaleString()}
+        {requestLines(r).reduce((sum, line) => sum + lineCost(line), 0).toLocaleString()}
       </span>
     )},
     { key: 'priority', label: 'Priority', render: (r) => {
@@ -606,6 +699,66 @@ const MaterialRequests = () => {
               <p className="mt-1 text-xs text-red-500 font-semibold">{errors.project.message}</p>
             )}
           </div>
+
+          {watchProjectId && (
+            <div
+              className={`rounded-xl border p-3 space-y-2 ${
+                budgetExceeded
+                  ? 'border-red-300 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30'
+                  : 'border-brand-primary/20 bg-brand-primary/5 dark:border-slate-800 dark:bg-slate-950/40'
+              }`}
+            >
+              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <FiDollarSign size={14} />
+                Project budget counter
+                {budgetLoading && <span className="font-medium normal-case">(loading…)</span>}
+              </div>
+              {projectBudget && (
+                <>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-[10px] uppercase text-slate-400 font-semibold">Total</p>
+                      <p className="text-sm font-extrabold text-slate-800 dark:text-slate-100">
+                        ${projectBudget.budget.toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase text-slate-400 font-semibold">Already used</p>
+                      <p className="text-sm font-extrabold text-slate-800 dark:text-slate-100">
+                        ${(liveUsedBase + thisRequestCost).toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase text-slate-400 font-semibold">Remaining</p>
+                      <p
+                        className={`text-sm font-extrabold ${
+                          liveRemainingAfter < 0
+                            ? 'text-red-600'
+                            : 'text-brand-primary dark:text-brand-primaryHover'
+                        }`}
+                      >
+                        ${Number(liveRemainingAfter).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/70 dark:border-slate-800">
+                    <span className="text-slate-500 dark:text-slate-400 font-medium">
+                      This request (live)
+                    </span>
+                    <span className="font-extrabold text-slate-800 dark:text-slate-100">
+                      ${thisRequestCost.toLocaleString()}
+                    </span>
+                  </div>
+                  {budgetExceeded && (
+                    <p className="text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-1">
+                      <FiAlertTriangle size={14} />
+                      Xadkii waad dhaaftay — reduce quantity or remove materials.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {editingRequest ? (
             <>
@@ -822,23 +975,30 @@ const MaterialRequests = () => {
 
           <button
             type="submit"
-            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+            disabled={budgetExceeded || budgetLoading || formSubmitting}
+            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {editingRequest ? 'Resubmit Request' : 'Submit Request'}
+            {formSubmitting
+              ? 'Saving…'
+              : budgetExceeded
+              ? 'Xadkii waad dhaaftay'
+              : editingRequest
+                ? 'Resubmit Request'
+                : 'Submit Request'}
           </button>
         </form>
       </Modal>
 
-      {/* Review Request Modal (for PM) */}
+      {/* Review Request Modal (for PM) — single or bulk */}
       <Modal
         isOpen={isReviewOpen}
         onClose={() => {
           setIsReviewOpen(false);
-          setReviewingBatch([]);
+          setReviewingRequest(null);
         }}
         title={
           reviewItems.length > 1
-            ? `Review ${reviewItems.length} Material Requests`
+            ? `Review Request (${reviewItems.length} items)`
             : 'Review Material Request'
         }
       >
@@ -848,7 +1008,7 @@ const MaterialRequests = () => {
             {/* Request Summary */}
             <div className="bg-slate-50 dark:bg-slate-950/30 border border-slate-100 dark:border-slate-850 p-4 rounded-xl space-y-2">
               <p className="text-xs text-slate-400 font-bold uppercase">
-                {reviewItems.length > 1 ? 'Selected items' : 'Requested details'}
+                {reviewItems.length > 1 ? 'Items in this request' : 'Requested details'}
               </p>
               {reviewItems.length === 1 ? (
                 <>
@@ -1060,9 +1220,10 @@ const MaterialRequests = () => {
 
             <button
               onClick={postReceive}
-              className="w-full mt-4 bg-green-700 hover:bg-green-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+              disabled={receiveSubmitting}
+              className="w-full mt-4 bg-green-700 hover:bg-green-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Sign Delivery Receipt
+              {receiveSubmitting ? 'Saving…' : 'Sign Delivery Receipt'}
             </button>
           </div>
         )}

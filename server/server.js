@@ -12,9 +12,6 @@ const Role = require('./models/Role');
 // Load env vars
 dotenv.config();
 
-// Connect to database
-connectDB();
-
 // Seed roles function
 const seedRoles = async () => {
   try {
@@ -36,7 +33,6 @@ const seedRoles = async () => {
     console.error(`Failed to seed roles: ${error.message}`);
   }
 };
-seedRoles();
 
 const app = express();
 
@@ -126,13 +122,28 @@ if (process.env.NODE_ENV === 'production') {
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+let server;
+
+const startServer = async () => {
+  await connectDB();
+  await seedRoles();
+  server = app.listen(PORT, () => {
+    console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  });
+};
+
+startServer().catch((err) => {
+  console.error(`Failed to start server: ${err.message}`);
+  process.exit(1);
 });
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {
   console.error(`Unhandled Rejection Error: ${err.message}`);
   // Close server & exit process
-  server.close(() => process.exit(1));
+  if (server) {
+    server.close(() => process.exit(1));
+  } else {
+    process.exit(1);
+  }
 });

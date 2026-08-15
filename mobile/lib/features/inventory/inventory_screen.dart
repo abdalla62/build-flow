@@ -16,6 +16,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   List<Map<String, dynamic>> _ledger = [];
   List<Map<String, dynamic>> _alerts = [];
   bool _loading = true;
+  bool _saving = false;
   String? _error;
 
   @override
@@ -51,6 +52,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   }
 
   Future<void> _adjust() async {
+    if (_saving) return;
     final materials = _materials.isNotEmpty
         ? _materials
         : (await ref.read(apiRepositoryProvider).getMaterials(limit: 100))
@@ -120,6 +122,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     );
     if (ok != true || materialId == null) return;
 
+    setState(() => _saving = true);
     try {
       await ref.read(apiRepositoryProvider).adjustStock({
         'material': materialId,
@@ -134,6 +137,8 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
           SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
         );
       }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -290,7 +295,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
       ),
       floatingActionButton: isAdmin
           ? FloatingActionButton(
-              onPressed: _adjust,
+              onPressed: _saving ? null : _adjust,
               child: const Icon(Icons.tune),
             )
           : null,

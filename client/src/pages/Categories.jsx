@@ -20,6 +20,7 @@ const Categories = () => {
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
+  const [formSubmitting, setFormSubmitting] = useState(false);
 
   const {
     register,
@@ -91,6 +92,8 @@ const Categories = () => {
   };
 
   const onSubmit = async (data) => {
+    if (formSubmitting) return;
+    setFormSubmitting(true);
     try {
       if (editingCategory) {
         const res = await axios.put(`/api/categories/${editingCategory._id}`, data);
@@ -109,6 +112,8 @@ const Categories = () => {
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to save category');
+    } finally {
+      setFormSubmitting(false);
     }
   };
 
@@ -239,9 +244,10 @@ const Categories = () => {
 
           <button
             type="submit"
-            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+            disabled={formSubmitting}
+            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {editingCategory ? 'Save Changes' : 'Create Category'}
+            {formSubmitting ? 'Saving…' : editingCategory ? 'Save Changes' : 'Create Category'}
           </button>
         </form>
       </Modal>

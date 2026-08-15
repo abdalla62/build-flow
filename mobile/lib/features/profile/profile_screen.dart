@@ -27,9 +27,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _removeAvatar = false;
   bool _profileSubmitting = false;
   bool _passwordSubmitting = false;
+  bool _companySubmitting = false;
   bool _showCurrent = false;
   bool _showNew = false;
   bool _showConfirm = false;
+
+  final _contactName = TextEditingController();
+  final _company = TextEditingController();
+  final _phone = TextEditingController();
+  final _bizEmail = TextEditingController();
+  final _address = TextEditingController();
+  String _paymentTerms = 'Net 30';
+  bool _hasCompany = false;
 
   String? _nameError;
   String? _emailError;
@@ -41,6 +50,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void initState() {
     super.initState();
     _syncFromUser();
+    _loadCompanyIfSupplier();
+  }
+
+  Future<void> _loadCompanyIfSupplier() async {
+    final role = ref.read(authNotifierProvider).state.user?.role;
+    if (role != 'Supplier') return;
+    try {
+      final s = await ref.read(apiRepositoryProvider).getMySupplier();
+      if (!mounted) return;
+      setState(() {
+        _hasCompany = true;
+        _contactName.text = s['name']?.toString() ?? '';
+        _company.text = s['company']?.toString() ?? '';
+        _phone.text = s['phone']?.toString() ?? '';
+        _bizEmail.text = s['email']?.toString() ?? '';
+        _address.text = s['address']?.toString() ?? '';
+        final terms = s['paymentTerms']?.toString();
+        if (terms != null && terms.isNotEmpty) _paymentTerms = terms;
+      });
+    } catch (_) {
+      /* no linked profile */
+    }
   }
 
   void _syncFromUser() {
@@ -56,7 +87,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _currentPw.dispose();
     _newPw.dispose();
     _confirmPw.dispose();
+    _contactName.dispose();
+    _company.dispose();
+    _phone.dispose();
+    _bizEmail.dispose();
+    _address.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveCompany() async {
+    if (_companySubmitting) return;
+    setState(() => _companySubmitting = true);
+    try {
+      await ref.read(apiRepositoryProvider).updateMySupplier({
+        'name': _contactName.text.trim(),
+        'company': _company.text.trim(),
+        'phone': _phone.text.trim(),
+        'email': _bizEmail.text.trim(),
+        'address': _address.text.trim(),
+        'paymentTerms': _paymentTerms,
+      });
+      if (!mounted) return;
+      _snack('Company profile updated');
+    } catch (e) {
+      if (!mounted) return;
+      _snack(e.toString().replaceFirst('Exception: ', ''), error: true);
+    } finally {
+      if (mounted) setState(() => _companySubmitting = false);
+    }
   }
 
   void _snack(String msg, {bool error = false}) {
@@ -118,6 +176,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
+    if (_profileSubmitting) return;
     if (!_validateProfile()) return;
 
     setState(() => _profileSubmitting = true);
@@ -176,6 +235,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _changePassword() async {
+    if (_passwordSubmitting) return;
     if (!_validatePassword()) return;
 
     setState(() => _passwordSubmitting = true);
@@ -486,6 +546,72 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ],
           ),
         ),
+        if (_hasCompany) ...[
+          const SizedBox(height: 16),
+          _SettingsCard(
+            icon: Icons.local_shipping_outlined,
+            iconBg: AppColors.primary.withValues(alpha: 0.12),
+            iconColor: AppColors.primary,
+            title: 'Company Profile',
+            subtitle: 'Edit supplier company contact details',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _contactName,
+                  decoration: const InputDecoration(labelText: 'Contact Name'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _company,
+                  decoration: const InputDecoration(labelText: 'Company'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _phone,
+                  decoration: const InputDecoration(labelText: 'Phone'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _bizEmail,
+                  decoration: const InputDecoration(labelText: 'Business Email'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _address,
+                  decoration: const InputDecoration(labelText: 'Address'),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: _paymentTerms,
+                  items: const [
+                    'Cash on Delivery',
+                    'Net 15',
+                    'Net 30',
+                    'Net 60',
+                  ]
+                      .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                      .toList(),
+                  onChanged: _companySubmitting
+                      ? null
+                      : (v) {
+                          if (v == null) return;
+                          setState(() => _paymentTerms = v);
+                        },
+                  decoration: const InputDecoration(labelText: 'Payment Terms'),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: _companySubmitting ? null : _saveCompany,
+                  icon: const Icon(Icons.save_outlined, size: 18),
+                  label: Text(
+                    _companySubmitting ? 'Saving…' : 'Save Company Profile',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }

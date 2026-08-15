@@ -23,6 +23,7 @@ const Suppliers = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [selectedCats, setSelectedCats] = useState([]);
+  const [formSubmitting, setFormSubmitting] = useState(false);
 
   const {
     register,
@@ -130,12 +131,14 @@ const Suppliers = () => {
   };
 
   const onSubmit = async (data) => {
+    if (formSubmitting) return;
     if (selectedCats.length === 0) {
       toast.error('Please select at least one supplied category');
       return;
     }
     const postData = { ...data, suppliedCategories: selectedCats };
 
+    setFormSubmitting(true);
     try {
       if (editingSupplier) {
         const res = await axios.put(`/api/suppliers/${editingSupplier._id}`, postData);
@@ -154,6 +157,8 @@ const Suppliers = () => {
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to save supplier');
+    } finally {
+      setFormSubmitting(false);
     }
   };
 
@@ -448,9 +453,10 @@ const Suppliers = () => {
 
           <button
             type="submit"
-            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors"
+            disabled={formSubmitting}
+            className="w-full mt-4 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {editingSupplier ? 'Save Changes' : 'Create Supplier Partner'}
+            {formSubmitting ? 'Saving…' : editingSupplier ? 'Save Changes' : 'Create Supplier Partner'}
           </button>
         </form>
       </Modal>

@@ -4,7 +4,86 @@ const Project = require('../models/Project');
 const PurchaseOrder = require('../models/PurchaseOrder');
 const Delivery = require('../models/Delivery');
 const Notification = require('../models/Notification');
+const Material = require('../models/Material');
 const logActivity = require('../utils/audit');
+const { assertWithinBudget } = require('../utils/projectBudget');
+const { randomUUID } = require('crypto');
+
+const REQUEST_POPULATE = [
+  ['project', 'name location budget manager'],
+  ['requestedBy', 'name email'],
+  ['material', 'name unit estimatedPrice category supplier'],
+  ['supplier', 'name company'],
+  ['suppliers', 'name company']
+];
+
+function populateRequest(query) {
+  REQUEST_POPULATE.forEach(([path, select]) => query.populate(path, select));
+  return query;
+}
+
+function groupStatus(lines) {
+  const statuses = [...new Set(lines.map((l) => l.status))];
+  if (statuses.length === 1) return statuses[0];
+  const order = ['Pending', 'Returned', 'Rejected', 'Approved', 'Ordered', 'Delivered', 'Cancelled'];
+  return order.find((s) => statuses.includes(s)) || lines[0].status;
+}
+
+function toGroupedRequest(lines, readyRequestIds) {
+  const sorted = [...lines].sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+  );
+  const lineObjs = sorted.map((r) => {
+    const obj = r.toObject ? r.toObject() : { ...r };
+    obj.canConfirmReceipt = r.status === 'Ordered' && readyRequestIds.has(r._id.toString());
+    return obj;
+  });
+  const primary = { ...lineObjs[0] };
+  primary.lines = lineObjs;
+  primary.lineCount = lineObjs.length;
+  primary.status = groupStatus(lineObjs);
+  primary.canConfirmReceipt = lineObjs.some((l) => l.canConfirmReceipt);
+  return primary;
+}
+
+async function attachBatchLines(requestDoc) {
+  const obj = requestDoc.toObject();
+  if (!obj.batchId) {
+    obj.lineCount = 1;
+    obj.lines = [{ ...obj }];
+    return obj;
+  }
+  const siblings = await populateRequest(
+    MaterialRequest.find({ batchId: obj.batchId })
+  ).sort({ createdAt: 1 });
+  obj.lines = siblings.map((s) => s.toObject());
+  obj.lineCount = obj.lines.length;
+  obj.status = groupStatus(obj.lines);
+  return obj;
+}
+
+async function findReceiptReadyIds(requests) {
+  const orderedIds = requests.filter((r) => r.status === 'Ordered').map((r) => r._id);
+  const readyRequestIds = new Set();
+  if (orderedIds.length === 0) return readyRequestIds;
+
+  const pos = await PurchaseOrder.find({ materialRequest: { $in: orderedIds } })
+    .select('_id materialRequest');
+  const poIds = pos.map((p) => p._id);
+  if (poIds.length === 0) return readyRequestIds;
+
+  const delivered = await Delivery.find({
+    purchaseOrder: { $in: poIds },
+    status: 'Delivered'
+  }).select('purchaseOrder');
+  const deliveredPoIds = new Set(delivered.map((d) => d.purchaseOrder.toString()));
+  pos.forEach((p) => {
+    if (deliveredPoIds.has(p._id.toString()) && p.materialRequest) {
+      readyRequestIds.add(p.materialRequest.toString());
+    }
+  });
+  return readyRequestIds;
+}
 
 // @desc    Get all material requests (role-filtered + paginated)
 // @route   GET /api/requests
@@ -59,53 +138,52 @@ exports.getRequests = async (req, res, next) => {
     if (priority) query.priority = priority;
     if (projectId) query.project = projectId;
 
-    const count = await MaterialRequest.countDocuments(query);
-    const requests = await MaterialRequest.find(query)
-      .populate('project', 'name location budget manager')
-      .populate('requestedBy', 'name email')
-      .populate('material', 'name unit estimatedPrice category supplier')
-      .populate('supplier', 'name company')
-      .populate('suppliers', 'name company')
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .sort({ createdAt: -1 });
+    const grouped = String(req.query.grouped || '') === 'true';
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
 
-    // Confirm Receipt only after Delivery Staff marks shipment Delivered
-    const orderedIds = requests
-      .filter((r) => r.status === 'Ordered')
-      .map((r) => r._id);
-
-    const readyRequestIds = new Set();
-    if (orderedIds.length > 0) {
-      const pos = await PurchaseOrder.find({ materialRequest: { $in: orderedIds } })
-        .select('_id materialRequest');
-      const poIds = pos.map((p) => p._id);
-      if (poIds.length > 0) {
-        const delivered = await Delivery.find({
-          purchaseOrder: { $in: poIds },
-          status: 'Delivered'
-        }).select('purchaseOrder');
-        const deliveredPoIds = new Set(delivered.map((d) => d.purchaseOrder.toString()));
-        pos.forEach((p) => {
-          if (deliveredPoIds.has(p._id.toString()) && p.materialRequest) {
-            readyRequestIds.add(p.materialRequest.toString());
-          }
-        });
-      }
-    }
-
-    const enrichedRequests = requests.map((r) => {
-      const obj = r.toObject();
-      obj.canConfirmReceipt = r.status === 'Ordered' && readyRequestIds.has(r._id.toString());
-      return obj;
+    const allMatching = await populateRequest(MaterialRequest.find(query)).sort({
+      createdAt: -1
     });
+    const readyRequestIds = await findReceiptReadyIds(allMatching);
+
+    let enrichedRequests;
+    let totalRequests;
+
+    if (grouped) {
+      const seen = new Set();
+      const groups = [];
+      for (const r of allMatching) {
+        const key = r.batchId || r._id.toString();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const lines = r.batchId
+          ? allMatching.filter((x) => x.batchId === r.batchId)
+          : [r];
+        groups.push(toGroupedRequest(lines, readyRequestIds));
+      }
+      totalRequests = groups.length;
+      const start = (pageNum - 1) * limitNum;
+      enrichedRequests = groups.slice(start, start + limitNum);
+    } else {
+      totalRequests = allMatching.length;
+      const start = (pageNum - 1) * limitNum;
+      const pageRows = allMatching.slice(start, start + limitNum);
+      enrichedRequests = pageRows.map((r) => {
+        const obj = r.toObject();
+        obj.canConfirmReceipt = r.status === 'Ordered' && readyRequestIds.has(r._id.toString());
+        obj.lineCount = 1;
+        obj.lines = [{ ...obj }];
+        return obj;
+      });
+    }
 
     res.status(200).json({
       success: true,
       requests: enrichedRequests,
-      totalPages: Math.ceil(count / limit),
-      currentPage: Number(page),
-      totalRequests: count
+      totalPages: Math.ceil(totalRequests / limitNum) || 0,
+      currentPage: pageNum,
+      totalRequests
     });
   } catch (error) {
     next(error);
@@ -131,7 +209,8 @@ exports.getRequest = async (req, res, next) => {
     const approvals = await Approval.find({ request: request._id })
       .populate('approver', 'name role');
 
-    res.status(200).json({ success: true, request, approvals });
+    const withLines = await attachBatchLines(request);
+    res.status(200).json({ success: true, request: withLines, approvals });
   } catch (error) {
     next(error);
   }
@@ -143,6 +222,22 @@ exports.getRequest = async (req, res, next) => {
 exports.createRequest = async (req, res, next) => {
   try {
     const { project, material, quantity, priority, reason, requiredDate } = req.body;
+
+    const materialDoc = await Material.findById(material).select('name unit estimatedPrice');
+    if (!materialDoc) {
+      return res.status(404).json({ success: false, error: 'Material not found' });
+    }
+
+    const qty = Number(quantity) || 0;
+    const lineCost = qty * (Number(materialDoc.estimatedPrice) || 0);
+    const budgetCheck = await assertWithinBudget(project, lineCost);
+    if (!budgetCheck.ok) {
+      return res.status(budgetCheck.status).json({
+        success: false,
+        error: budgetCheck.error,
+        budget: budgetCheck.summary
+      });
+    }
 
     const newRequest = await MaterialRequest.create({
       project,
@@ -169,7 +264,98 @@ exports.createRequest = async (req, res, next) => {
 
     await logActivity(req, req.user, 'Create Material Request', `Requested ${quantity} of material ID: ${material}`);
 
-    res.status(201).json({ success: true, request: populated });
+    res.status(201).json({ success: true, request: populated, budget: budgetCheck.summary });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Create several material lines as one request (same batchId)
+// @route   POST /api/requests/batch
+// @access  Private/Site Engineer
+exports.createRequestBatch = async (req, res, next) => {
+  try {
+    const { project, lines, priority, reason, requiredDate } = req.body;
+    if (!Array.isArray(lines) || lines.length === 0) {
+      return res.status(400).json({ success: false, error: 'Add at least one material' });
+    }
+
+    const materialIds = lines.map((l) => l.material);
+    const materialDocs = await Material.find({ _id: { $in: materialIds } }).select(
+      'name unit estimatedPrice'
+    );
+    const byId = new Map(materialDocs.map((m) => [m._id.toString(), m]));
+
+    let totalCost = 0;
+    const normalized = [];
+    for (const line of lines) {
+      const mat = byId.get(String(line.material));
+      if (!mat) {
+        return res.status(404).json({ success: false, error: 'Material not found' });
+      }
+      const qty = Number(line.quantity) || 0;
+      if (qty < 1) {
+        return res.status(400).json({ success: false, error: 'Each quantity must be at least 1' });
+      }
+      totalCost += qty * (Number(mat.estimatedPrice) || 0);
+      normalized.push({ material: line.material, quantity: qty, mat });
+    }
+
+    const budgetCheck = await assertWithinBudget(project, totalCost);
+    if (!budgetCheck.ok) {
+      return res.status(budgetCheck.status).json({
+        success: false,
+        error: budgetCheck.error,
+        budget: budgetCheck.summary
+      });
+    }
+
+    const batchId = randomUUID();
+    const created = await MaterialRequest.insertMany(
+      normalized.map((line) => ({
+        project,
+        requestedBy: req.user.id,
+        material: line.material,
+        quantity: line.quantity,
+        priority,
+        reason,
+        requiredDate,
+        batchId
+      }))
+    );
+
+    const populated = await populateRequest(
+      MaterialRequest.find({ _id: { $in: created.map((c) => c._id) } })
+    ).sort({ createdAt: 1 });
+
+    const first = populated[0];
+    if (first?.project?.manager) {
+      const itemSummary = populated
+        .map((r) => `${r.quantity} ${r.material.unit} ${r.material.name}`)
+        .join(', ');
+      await Notification.create({
+        user: first.project.manager,
+        title: 'New Material Request',
+        message: `${req.user.name} submitted a request (${populated.length} item${
+          populated.length > 1 ? 's' : ''
+        }: ${itemSummary}) for project "${first.project.name}".`,
+        type: 'Request'
+      });
+    }
+
+    await logActivity(
+      req,
+      req.user,
+      'Create Material Request',
+      `Requested ${populated.length} material line(s) as batch ${batchId}`
+    );
+
+    res.status(201).json({
+      success: true,
+      batchId,
+      requests: populated,
+      budget: budgetCheck.summary
+    });
   } catch (error) {
     next(error);
   }
@@ -194,6 +380,27 @@ exports.updateRequest = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Cannot modify a request once reviewed or ordered' });
     }
 
+    const nextProject = req.body.project || request.project;
+    const nextMaterial = req.body.material || request.material;
+    const nextQty = Number(req.body.quantity != null ? req.body.quantity : request.quantity) || 0;
+
+    const materialDoc = await Material.findById(nextMaterial).select('estimatedPrice');
+    if (!materialDoc) {
+      return res.status(404).json({ success: false, error: 'Material not found' });
+    }
+
+    const lineCost = nextQty * (Number(materialDoc.estimatedPrice) || 0);
+    const budgetCheck = await assertWithinBudget(nextProject, lineCost, {
+      excludeRequestIds: [request._id]
+    });
+    if (!budgetCheck.ok) {
+      return res.status(budgetCheck.status).json({
+        success: false,
+        error: budgetCheck.error,
+        budget: budgetCheck.summary
+      });
+    }
+
     // Update details and set back to Pending if it was Returned
     req.body.status = 'Pending';
     request = await MaterialRequest.findByIdAndUpdate(req.params.id, req.body, {
@@ -213,13 +420,13 @@ exports.updateRequest = async (req, res, next) => {
 
     await logActivity(req, req.user, 'Resubmit Material Request', `Revised request ID: ${request._id}`);
 
-    res.status(200).json({ success: true, request });
+    res.status(200).json({ success: true, request, budget: budgetCheck.summary });
   } catch (error) {
     next(error);
   }
 };
 
-async function applyReviewToRequest(request, { action, comments, suppliers, user, req }) {
+async function applyReviewToRequest(request, { action, comments, suppliers, user, req, notify = true, itemCount = 1 }) {
   let status = 'Pending';
   if (action === 'Approve') status = 'Approved';
   if (action === 'Reject') status = 'Rejected';
@@ -238,14 +445,22 @@ async function applyReviewToRequest(request, { action, comments, suppliers, user
     comments
   });
 
-  await Notification.create({
-    user: request.requestedBy,
-    title: `Request ${action}d`,
-    message: `Your material request for ${request.quantity} ${request.material.unit} of ${request.material.name} was ${action.toLowerCase()}d by ${user.name}. Remarks: "${comments}"`,
-    type: 'Approval'
-  });
+  const requesterId = request.requestedBy?._id || request.requestedBy;
+  const itemLabel =
+    itemCount > 1
+      ? `your material request (${itemCount} items)`
+      : `your material request for ${request.quantity} ${request.material.unit} of ${request.material.name}`;
 
-  if (action === 'Approve' && Array.isArray(suppliers) && suppliers.length > 0) {
+  if (notify && requesterId) {
+    await Notification.create({
+      user: requesterId,
+      title: `Request ${action}d`,
+      message: `${itemLabel} was ${action.toLowerCase()}d by ${user.name}. Remarks: "${comments}"`,
+      type: 'Approval'
+    });
+  }
+
+  if (notify && action === 'Approve' && Array.isArray(suppliers) && suppliers.length > 0) {
     const Supplier = require('../models/Supplier');
     const User = require('../models/User');
     const invitedProfiles = await Supplier.find({ _id: { $in: suppliers } });
@@ -263,7 +478,9 @@ async function applyReviewToRequest(request, { action, comments, suppliers, user
         await Notification.create({
           user: supplierUser._id,
           title: 'New Quotation Opportunity',
-          message: `A material request for ${request.quantity} ${request.material.unit} of ${request.material.name} is approved and open for bidding.`,
+          message: itemCount > 1
+            ? `A material request with ${itemCount} items is approved and open for bidding.`
+            : `A material request for ${request.quantity} ${request.material.unit} of ${request.material.name} is approved and open for bidding.`,
           type: 'Request'
         });
       }
@@ -313,22 +530,38 @@ exports.reviewRequest = async (req, res, next) => {
       return res.status(403).json({ success: false, error: 'You are not authorized to review requests for this project' });
     }
 
-    if (!['Pending', 'Returned', 'Rejected'].includes(request.status)) {
+    const siblings = request.batchId
+      ? await populateRequest(MaterialRequest.find({ batchId: request.batchId }))
+      : [request];
+
+    const reviewable = siblings.filter((r) =>
+      ['Pending', 'Returned', 'Rejected'].includes(r.status)
+    );
+    if (reviewable.length === 0) {
       return res.status(400).json({
         success: false,
         error: 'Cannot change review once the request is approved or ordered'
       });
     }
 
-    await applyReviewToRequest(request, {
-      action,
-      comments,
-      suppliers,
-      user: req.user,
-      req
-    });
+    let last = request;
+    for (let i = 0; i < reviewable.length; i++) {
+      last = await applyReviewToRequest(reviewable[i], {
+        action,
+        comments,
+        suppliers,
+        user: req.user,
+        req,
+        notify: i === 0,
+        itemCount: reviewable.length
+      });
+    }
 
-    res.status(200).json({ success: true, request });
+    res.status(200).json({
+      success: true,
+      request: last,
+      reviewedCount: reviewable.length
+    });
   } catch (error) {
     next(error);
   }
@@ -559,14 +792,34 @@ exports.cancelRequest = async (req, res, next) => {
       return res.status(403).json({ success: false, error: 'Not authorized' });
     }
 
-    if (request.status !== 'Pending') {
-      return res.status(400).json({ success: false, error: 'Cannot cancel requests already under review or processed' });
+    const toCancel = request.batchId
+      ? await MaterialRequest.find({
+          batchId: request.batchId,
+          requestedBy: req.user.id,
+          status: 'Pending'
+        })
+      : request.status === 'Pending'
+        ? [request]
+        : [];
+
+    if (toCancel.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot cancel requests already under review or processed'
+      });
     }
 
-    request.status = 'Cancelled';
-    await request.save();
+    await MaterialRequest.updateMany(
+      { _id: { $in: toCancel.map((r) => r._id) } },
+      { $set: { status: 'Cancelled' } }
+    );
 
-    await logActivity(req, req.user, 'Cancel Material Request', `Cancelled request ID: ${request._id}`);
+    await logActivity(
+      req,
+      req.user,
+      'Cancel Material Request',
+      `Cancelled ${toCancel.length} line(s) of request ${request._id}`
+    );
 
     res.status(200).json({ success: true, request });
   } catch (error) {

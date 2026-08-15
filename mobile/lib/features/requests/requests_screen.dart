@@ -1,9 +1,151 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:construction_material_mobile_app/core/theme/app_theme.dart';
 import 'package:construction_material_mobile_app/providers/app_providers.dart';
 import 'package:construction_material_mobile_app/shared/widgets/ui.dart';
+
+List<Map<String, dynamic>> requestLines(Map<String, dynamic> r) {
+  final raw = r['lines'];
+  if (raw is List && raw.isNotEmpty) {
+    return raw
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+  return [r];
+}
+
+double lineEstCost(Map<String, dynamic> r) {
+  final qty = (r['quantity'] as num?)?.toDouble() ?? 0;
+  final material = r['material'];
+  final price = material is Map
+      ? (material['estimatedPrice'] as num?)?.toDouble() ?? 0
+      : 0;
+  return qty * price;
+}
+
+String _moneyAmt(double v) {
+  return NumberFormat.currency(symbol: '\$', decimalDigits: 2).format(v);
+}
+
+class _ProjectBudgetCounter extends StatelessWidget {
+  final bool loading;
+  final double? budget;
+  final double usedWithThis;
+  final double remaining;
+  final double thisRequest;
+  final bool exceeded;
+
+  const _ProjectBudgetCounter({
+    required this.loading,
+    required this.budget,
+    required this.usedWithThis,
+    required this.remaining,
+    required this.thisRequest,
+    required this.exceeded,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: exceeded
+            ? AppColors.danger.withValues(alpha: 0.08)
+            : AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: exceeded ? AppColors.danger : AppColors.border,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            loading ? 'PROJECT BUDGET COUNTER (loading…)' : 'PROJECT BUDGET COUNTER',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textSecondary,
+              letterSpacing: 0.4,
+            ),
+          ),
+          if (budget != null) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(child: _mini('Total', _moneyAmt(budget!))),
+                Expanded(child: _mini('Already used', _moneyAmt(usedWithThis))),
+                Expanded(
+                  child: _mini(
+                    'Remaining',
+                    _moneyAmt(remaining),
+                    valueColor: remaining < 0 ? AppColors.danger : AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'This request (live)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                Text(
+                  _moneyAmt(thisRequest),
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ],
+            ),
+            if (exceeded) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Xadkii waad dhaaftay — reduce quantity or remove materials.',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.danger,
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _mini(String label, String value, {Color? valueColor}) {
+    return Column(
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: const TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: valueColor,
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class RequestsScreen extends ConsumerStatefulWidget {
   const RequestsScreen({super.key});
@@ -29,7 +171,10 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
       _error = null;
     });
     try {
-      final res = await ref.read(apiRepositoryProvider).getRequests(limit: 100);
+      final res = await ref.read(apiRepositoryProvider).getRequests(
+            limit: 100,
+            grouped: true,
+          );
       if (mounted) setState(() => _items = res.items);
     } catch (e) {
       if (mounted) {
@@ -337,9 +482,21 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
                   final canConfirm = (role == 'Site Engineer' ||
                           role == 'Administrator') &&
                       r['canConfirmReceipt'] == true;
+                  final lines = requestLines(r);
+                  final title = lines.length > 1
+                      ? '${lines.length} materials'
+                      : popName(r['material']);
+                  final names = lines
+                      .map((l) => popName(l['material']))
+                      .where((n) => n != '—')
+                      .take(2)
+                      .join(', ');
+                  final subtitle = lines.length > 1
+                      ? '${popName(r['project'])} · $names'
+                      : '${popName(r['project'])} · Qty ${r['quantity']}';
                   return ModuleListTile(
-                    title: popName(r['material']),
-                    subtitle: '${popName(r['project'])} Â· Qty ${r['quantity']}',
+                    title: title,
+                    subtitle: subtitle,
                     status: status,
                     icon: Icons.assignment_outlined,
                     onTap: () => _openItem(r),
@@ -423,7 +580,8 @@ class _ReviewRequestDialogState extends ConsumerState<_ReviewRequestDialog> {
 
   double get _qty => (widget.request['quantity'] as num?)?.toDouble() ?? 0;
 
-  double get _estimatedCost => _qty * _unitPrice;
+  double get _estimatedCost =>
+      requestLines(widget.request).fold<double>(0, (sum, l) => sum + lineEstCost(l));
 
   double get _projectBudget {
     final project = widget.request['project'];
@@ -451,6 +609,7 @@ class _ReviewRequestDialogState extends ConsumerState<_ReviewRequestDialog> {
   }
 
   Future<void> _submit() async {
+    if (_submitting) return;
     setState(() => _error = null);
     final comments = _commentsCtrl.text.trim();
     if (comments.isEmpty) {
@@ -490,7 +649,11 @@ class _ReviewRequestDialogState extends ConsumerState<_ReviewRequestDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Review Material Request'),
+      title: Text(
+        requestLines(widget.request).length > 1
+            ? 'Review Request (${requestLines(widget.request).length} items)'
+            : 'Review Material Request',
+      ),
       content: SizedBox(
         width: 440,
         child: SingleChildScrollView(
@@ -541,13 +704,33 @@ class _ReviewRequestDialogState extends ConsumerState<_ReviewRequestDialog> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                      '${_qty.toInt()} $_unit of $_materialName',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                    if (requestLines(widget.request).length == 1)
+                      Text(
+                        '${_qty.toInt()} $_unit of $_materialName',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      )
+                    else
+                      ...requestLines(widget.request).map(
+                        (line) {
+                          final material = line['material'];
+                          final unit = material is Map
+                              ? material['unit']?.toString() ?? 'units'
+                              : 'units';
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              '${line['quantity']} $unit of ${popName(line['material'])}',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    ),
                     const SizedBox(height: 4),
                     Text(
                       'Project: $_projectName | Reason: "$_reason"',
@@ -815,8 +998,7 @@ class _BudgetCard extends StatelessWidget {
   }
 }
 
-/// Multi-line create (same as web): one shared project/priority/date/reason,
-/// then N POST /api/requests â€” one per material line.
+/// Multi-line create (same as web): one batch, live budget counter.
 class _CreateRequestDialog extends ConsumerStatefulWidget {
   final List<Map<String, dynamic>> projects;
   final List<Map<String, dynamic>> materials;
@@ -839,6 +1021,9 @@ class _CreateRequestDialogState extends ConsumerState<_CreateRequestDialog> {
   final _lines = <({String materialId, int quantity})>[];
   bool _submitting = false;
   String? _error;
+  bool _budgetLoading = false;
+  double? _budgetTotal;
+  double _budgetUsed = 0;
 
   @override
   void initState() {
@@ -848,6 +1033,7 @@ class _CreateRequestDialogState extends ConsumerState<_CreateRequestDialog> {
       text: DateFormat('yyyy-MM-dd')
           .format(DateTime.now().add(const Duration(days: 7))),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadBudget());
   }
 
   @override
@@ -886,6 +1072,36 @@ class _CreateRequestDialogState extends ConsumerState<_CreateRequestDialog> {
         (sum, l) => sum + l.quantity * _priceOf(l.materialId),
       );
 
+  double get _liveRemaining =>
+      (_budgetTotal ?? 0) - _budgetUsed - _estTotal;
+
+  bool get _budgetExceeded =>
+      _budgetTotal != null && _estTotal > 0 && _liveRemaining < -0.009;
+
+  Future<void> _loadBudget() async {
+    final id = _projectId;
+    if (id == null || id.isEmpty) {
+      setState(() {
+        _budgetTotal = null;
+        _budgetUsed = 0;
+      });
+      return;
+    }
+    setState(() => _budgetLoading = true);
+    try {
+      final b = await ref.read(apiRepositoryProvider).getProjectBudget(id);
+      if (!mounted) return;
+      setState(() {
+        _budgetTotal = (b['budget'] as num?)?.toDouble() ?? 0;
+        _budgetUsed = (b['used'] as num?)?.toDouble() ?? 0;
+        _budgetLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _budgetLoading = false);
+    }
+  }
+
   void _addMaterial(String? id) {
     if (id == null || id.isEmpty) return;
     if (_lines.any((l) => l.materialId == id)) return;
@@ -893,6 +1109,7 @@ class _CreateRequestDialogState extends ConsumerState<_CreateRequestDialog> {
   }
 
   Future<void> _submit() async {
+    if (_submitting) return;
     setState(() => _error = null);
     if (_projectId == null || _projectId!.isEmpty) {
       setState(() => _error = 'Select a project');
@@ -910,29 +1127,35 @@ class _CreateRequestDialogState extends ConsumerState<_CreateRequestDialog> {
       setState(() => _error = 'Required date is required');
       return;
     }
+    if (_budgetExceeded) {
+      setState(() => _error = 'Xadkii waad dhaaftay — budget limit exceeded');
+      return;
+    }
 
     setState(() => _submitting = true);
     try {
       final api = ref.read(apiRepositoryProvider);
-      await Future.wait(
-        _lines.map(
-          (line) => api.createRequest({
-            'project': _projectId,
-            'material': line.materialId,
-            'quantity': line.quantity,
-            'priority': _priority,
-            'reason': _reasonCtrl.text.trim(),
-            'requiredDate': _dateCtrl.text.trim(),
-          }),
-        ),
-      );
+      await api.createRequestBatch({
+        'project': _projectId,
+        'priority': _priority,
+        'reason': _reasonCtrl.text.trim(),
+        'requiredDate': _dateCtrl.text.trim(),
+        'lines': _lines
+            .map(
+              (line) => {
+                'material': line.materialId,
+                'quantity': line.quantity,
+              },
+            )
+            .toList(),
+      });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             _lines.length == 1
                 ? 'Material request submitted'
-                : '${_lines.length} material requests submitted',
+                : 'Material request submitted (${_lines.length} items)',
           ),
         ),
       );
@@ -982,8 +1205,22 @@ class _CreateRequestDialogState extends ConsumerState<_CreateRequestDialog> {
                     .toList(),
                 onChanged: _submitting
                     ? null
-                    : (v) => setState(() => _projectId = v),
+                    : (v) {
+                        setState(() => _projectId = v);
+                        _loadBudget();
+                      },
               ),
+              if (_projectId != null && _projectId!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _ProjectBudgetCounter(
+                  loading: _budgetLoading,
+                  budget: _budgetTotal,
+                  usedWithThis: _budgetUsed + _estTotal,
+                  remaining: _liveRemaining,
+                  thisRequest: _estTotal,
+                  exceeded: _budgetExceeded,
+                ),
+              ],
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 key: ValueKey(available.length),
@@ -1127,14 +1364,14 @@ class _CreateRequestDialogState extends ConsumerState<_CreateRequestDialog> {
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: _submitting ? null : _submit,
+          onPressed: (_submitting || _budgetExceeded) ? null : _submit,
           child: _submitting
               ? const SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Submit'),
+              : Text(_budgetExceeded ? 'Xadkii waad dhaaftay' : 'Submit'),
         ),
       ],
     );
@@ -1163,6 +1400,9 @@ class _EditRequestDialogState extends ConsumerState<_EditRequestDialog> {
   late String _priority;
   bool _submitting = false;
   String? _error;
+  bool _budgetLoading = false;
+  double? _budgetTotal;
+  double _budgetUsed = 0;
 
   @override
   void initState() {
@@ -1186,6 +1426,10 @@ class _EditRequestDialogState extends ConsumerState<_EditRequestDialog> {
           : DateFormat('yyyy-MM-dd')
               .format(DateTime.now().add(const Duration(days: 7))),
     );
+    _qtyCtrl.addListener(() {
+      if (mounted) setState(() {});
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadBudget());
   }
 
   @override
@@ -1196,7 +1440,52 @@ class _EditRequestDialogState extends ConsumerState<_EditRequestDialog> {
     super.dispose();
   }
 
+  double _priceOf(String materialId) {
+    final m = widget.materials.firstWhere(
+      (e) => popId(e) == materialId,
+      orElse: () => <String, dynamic>{},
+    );
+    return (m['estimatedPrice'] as num?)?.toDouble() ?? 0;
+  }
+
+  double get _priorCost => lineEstCost(widget.request);
+
+  double get _editCost {
+    final qty = int.tryParse(_qtyCtrl.text.trim()) ?? 0;
+    return qty * _priceOf(_materialId);
+  }
+
+  double get _liveUsedBase {
+    final v = _budgetUsed - _priorCost;
+    return v < 0 ? 0 : v;
+  }
+
+  double get _liveRemaining =>
+      (_budgetTotal ?? 0) - _liveUsedBase - _editCost;
+
+  bool get _budgetExceeded =>
+      _budgetTotal != null && _editCost > 0 && _liveRemaining < -0.009;
+
+  Future<void> _loadBudget() async {
+    final projectId = popId(widget.request['project']);
+    if (projectId.isEmpty) return;
+    setState(() => _budgetLoading = true);
+    try {
+      final b = await ref.read(apiRepositoryProvider).getProjectBudget(projectId);
+      if (!mounted) return;
+      setState(() {
+        _budgetTotal = (b['budget'] as num?)?.toDouble() ?? 0;
+        _budgetUsed = (b['used'] as num?)?.toDouble() ?? 0;
+        _budgetLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _budgetLoading = false);
+    }
+  }
+
   Future<void> _submit() async {
+    if (_submitting) return;
     setState(() => _error = null);
     final qty = int.tryParse(_qtyCtrl.text.trim()) ?? 0;
     if (qty < 1) {
@@ -1205,6 +1494,10 @@ class _EditRequestDialogState extends ConsumerState<_EditRequestDialog> {
     }
     if (_reasonCtrl.text.trim().isEmpty) {
       setState(() => _error = 'Reason is required');
+      return;
+    }
+    if (_budgetExceeded) {
+      setState(() => _error = 'Xadkii waad dhaaftay — budget limit exceeded');
       return;
     }
 
@@ -1249,6 +1542,15 @@ class _EditRequestDialogState extends ConsumerState<_EditRequestDialog> {
                 Text(_error!, style: const TextStyle(color: AppColors.danger)),
                 const SizedBox(height: 8),
               ],
+              _ProjectBudgetCounter(
+                loading: _budgetLoading,
+                budget: _budgetTotal,
+                usedWithThis: _liveUsedBase + _editCost,
+                remaining: _liveRemaining,
+                thisRequest: _editCost,
+                exceeded: _budgetExceeded,
+              ),
+              const SizedBox(height: 12),
               if (isReturned)
                 const Padding(
                   padding: EdgeInsets.only(bottom: 10),
@@ -1315,14 +1617,18 @@ class _EditRequestDialogState extends ConsumerState<_EditRequestDialog> {
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: _submitting ? null : _submit,
+          onPressed: (_submitting || _budgetExceeded) ? null : _submit,
           child: _submitting
               ? const SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : Text(isReturned ? 'Resubmit' : 'Save'),
+              : Text(
+                  _budgetExceeded
+                      ? 'Xadkii waad dhaaftay'
+                      : (isReturned ? 'Resubmit' : 'Save'),
+                ),
         ),
       ],
     );
@@ -1367,6 +1673,7 @@ class _ConfirmReceiptDialogState extends ConsumerState<_ConfirmReceiptDialog> {
   }
 
   Future<void> _submit() async {
+    if (_submitting) return;
     setState(() => _error = null);
     final damaged = int.tryParse(_damagedCtrl.text.trim()) ?? 0;
     final missing = int.tryParse(_missingCtrl.text.trim()) ?? 0;

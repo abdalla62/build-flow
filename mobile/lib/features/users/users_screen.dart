@@ -690,6 +690,7 @@ class _EditUserRoleDialogState extends ConsumerState<_EditUserRoleDialog> {
   bool get _isDelivery => _role == 'Delivery Staff';
 
   Future<void> _submit() async {
+    if (_submitting) return;
     setState(() => _error = null);
     if (!_formKey.currentState!.validate()) return;
 
@@ -877,6 +878,7 @@ class _CreateUserDialogState extends ConsumerState<_CreateUserDialog> {
   bool get _isDelivery => _role == 'Delivery Staff';
 
   Future<void> _submit() async {
+    if (_submitting) return;
     setState(() => _error = null);
     if (!_formKey.currentState!.validate()) return;
 
