@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import Table from '../components/UI/Table';
 import Modal from '../components/UI/Modal';
 import { FiPlus, FiBriefcase, FiMapPin, FiDollarSign, FiSearch, FiEdit, FiTrash2 } from 'react-icons/fi';
+import { pageCache } from '../utils/pageCache';
 
 const Projects = () => {
   const { user } = useAuth();
@@ -32,8 +33,17 @@ const Projects = () => {
     formState: { errors }
   } = useForm();
 
-  const fetchProjects = async () => {
-    setLoading(true);
+  const fetchProjects = async ({ soft = false } = {}) => {
+    const key = `projects:${currentPage}:${statusFilter || ''}:${search || ''}`;
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setProjects(cached.projects);
+      setTotalPages(cached.totalPages);
+      setLoading(false);
+    } else if (!cached?.projects?.length) {
+      setLoading(true);
+    }
+
     try {
       const res = await axios.get('/api/projects', {
         params: {
@@ -45,6 +55,10 @@ const Projects = () => {
       if (res.data.success) {
         setProjects(res.data.projects);
         setTotalPages(res.data.totalPages);
+        pageCache.set(key, {
+          projects: res.data.projects,
+          totalPages: res.data.totalPages
+        });
       }
     } catch (err) {
       toast.error('Failed to load projects');
@@ -66,7 +80,7 @@ const Projects = () => {
     }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     fetchProjects();
   }, [currentPage, statusFilter]);
 
@@ -79,7 +93,7 @@ const Projects = () => {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setCurrentPage(1);
-    fetchProjects();
+    fetchProjects({ soft: true });
   };
 
   const handleOpenCreate = () => {
@@ -112,7 +126,8 @@ const Projects = () => {
       const res = await axios.delete(`/api/projects/${id}`);
       if (res.data.success) {
         toast.success('Project deleted successfully');
-        fetchProjects();
+        pageCache.invalidate('projects:');
+        fetchProjects({ soft: true });
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to delete project');
@@ -128,14 +143,16 @@ const Projects = () => {
         if (res.data.success) {
           toast.success('Project updated successfully');
           setIsModalOpen(false);
-          fetchProjects();
+          pageCache.invalidate('projects:');
+          fetchProjects({ soft: true });
         }
       } else {
         const res = await axios.post('/api/projects', data);
         if (res.data.success) {
           toast.success('Project created successfully');
           setIsModalOpen(false);
-          fetchProjects();
+          pageCache.invalidate('projects:');
+          fetchProjects({ soft: true });
         }
       }
     } catch (err) {

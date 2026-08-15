@@ -19,12 +19,15 @@ exports.getProjects = async (req, res, next) => {
       query.status = status;
     }
 
-    const count = await Project.countDocuments(query);
-    const projects = await Project.find(query)
-      .populate('manager', 'name email')
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .sort({ createdAt: -1 });
+    const [count, projects] = await Promise.all([
+      Project.countDocuments(query),
+      Project.find(query)
+        .populate('manager', 'name email')
+        .lean()
+        .limit(limit * 1)
+        .skip((page - 1) * limit)
+        .sort({ createdAt: -1 })
+    ]);
 
     res.status(200).json({
       success: true,

@@ -21,11 +21,15 @@ exports.getUsers = async (req, res, next) => {
       query.role = role;
     }
 
-    const count = await User.countDocuments(query);
-    const users = await User.find(query)
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .sort({ createdAt: -1 });
+    const [count, users] = await Promise.all([
+      User.countDocuments(query),
+      User.find(query)
+        .select('-password -resetPasswordToken -resetPasswordExpire')
+        .lean()
+        .limit(limit * 1)
+        .skip((page - 1) * limit)
+        .sort({ createdAt: -1 })
+    ]);
 
     res.status(200).json({
       success: true,

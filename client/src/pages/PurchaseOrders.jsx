@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
@@ -15,6 +15,7 @@ import {
   FiDollarSign
 } from 'react-icons/fi';
 import { mediaUrl, openUploadedFile } from '../utils/mediaUrl';
+import { pageCache } from '../utils/pageCache';
 
 const PurchaseOrders = () => {
   const { user } = useAuth();
@@ -59,8 +60,17 @@ const PurchaseOrders = () => {
     formState: { errors: editErrors }
   } = useForm();
 
-  const fetchOrders = async () => {
-    setLoading(true);
+  const fetchOrders = async ({ soft = false } = {}) => {
+    const key = `orders:${currentPage}:${statusFilter || ''}:${paymentFilter || ''}:${search || ''}`;
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setOrders(cached.orders);
+      setTotalPages(cached.totalPages);
+      setLoading(false);
+    } else if (!cached?.orders?.length) {
+      setLoading(true);
+    }
+
     try {
       const res = await axios.get('/api/orders', {
         params: {
@@ -73,6 +83,10 @@ const PurchaseOrders = () => {
       if (res.data.success) {
         setOrders(res.data.orders);
         setTotalPages(res.data.totalPages);
+        pageCache.set(key, {
+          orders: res.data.orders,
+          totalPages: res.data.totalPages
+        });
       }
     } catch (err) {
       toast.error('Failed to load purchase orders');
@@ -81,14 +95,19 @@ const PurchaseOrders = () => {
     }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     fetchOrders();
   }, [currentPage, statusFilter, paymentFilter]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setCurrentPage(1);
-    fetchOrders();
+    fetchOrders({ soft: true });
+  };
+
+  const refreshOrders = () => {
+    pageCache.invalidate('orders:');
+    fetchOrders({ soft: true });
   };
 
   const handleOpenStatus = (order) => {
@@ -112,7 +131,7 @@ const PurchaseOrders = () => {
         toast.success('Invoice generated from PO — ready for payment!');
         setIsInvoiceOpen(false);
         setInvoiceFileObj(null);
-        fetchOrders();
+        refreshOrders();
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to generate invoice');
@@ -142,7 +161,7 @@ const PurchaseOrders = () => {
       const res = await axios.delete(`/api/orders/${order._id}`);
       if (res.data.success) {
         toast.success('Purchase order deleted');
-        fetchOrders();
+        refreshOrders();
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to delete purchase order');
@@ -157,7 +176,7 @@ const PurchaseOrders = () => {
       if (res.data.success) {
         toast.success(`Order set to ${selectedStatus}`);
         setIsStatusOpen(false);
-        fetchOrders();
+        refreshOrders();
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to update order status');
@@ -184,7 +203,7 @@ const PurchaseOrders = () => {
         toast.success('Invoice uploaded successfully. Notification sent to Accountant.');
         setIsInvoiceOpen(false);
         setInvoiceFileObj(null);
-        fetchOrders();
+        refreshOrders();
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to upload invoice');
@@ -207,7 +226,7 @@ const PurchaseOrders = () => {
       if (res.data.success) {
         toast.success('Purchase order updated');
         setIsEditOpen(false);
-        fetchOrders();
+        refreshOrders();
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to update purchase order');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -10,6 +10,7 @@ import {
   FiStar,
   FiAward
 } from 'react-icons/fi';
+import { pageCache } from '../utils/pageCache';
 
 const requestLines = (r) =>
   Array.isArray(r?.lines) && r.lines.length > 0 ? r.lines : r ? [r] : [];
@@ -43,14 +44,23 @@ const Quotations = () => {
   const [comparingRequest, setComparingRequest] = useState(null);
   const [compareQuotes, setCompareQuotes] = useState([]);
 
-  const fetchApprovedRequests = async () => {
-    setLoading(true);
+  const fetchApprovedRequests = async ({ soft = false } = {}) => {
+    const key = 'quotations:approved';
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setApprovedRequests(cached);
+      setLoading(false);
+    } else if (!cached?.length) {
+      setLoading(true);
+    }
+
     try {
       const res = await axios.get('/api/requests', {
         params: { status: 'Approved', limit: 100, grouped: true }
       });
       if (res.data.success) {
         setApprovedRequests(res.data.requests);
+        pageCache.set(key, res.data.requests);
       }
     } catch (err) {
       toast.error('Failed to load approved requests');
@@ -59,21 +69,34 @@ const Quotations = () => {
     }
   };
 
-  const fetchQuotations = async () => {
+  const fetchQuotations = async ({ soft = false } = {}) => {
+    const key = 'quotations:list';
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setQuotations(cached);
+    }
+
     try {
       const res = await axios.get('/api/quotations');
       if (res.data.success) {
         setQuotations(res.data.quotations);
+        pageCache.set(key, res.data.quotations);
       }
     } catch (err) {
       console.error(err);
     }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     fetchApprovedRequests();
     fetchQuotations();
   }, []);
+
+  const refreshQuotes = () => {
+    pageCache.invalidate('quotations:');
+    fetchApprovedRequests({ soft: true });
+    fetchQuotations({ soft: true });
+  };
 
   const quotesFor = (request) => {
     const ids = new Set(requestLines(request).map(lineId).filter(Boolean));
@@ -166,7 +189,8 @@ const Quotations = () => {
         );
         setIsBidOpen(false);
         setEditingBid(false);
-        fetchQuotations();
+        pageCache.invalidate('quotations:');
+        fetchQuotations({ soft: true });
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to save bid');
@@ -184,8 +208,9 @@ const Quotations = () => {
       if (res.data.success) {
         toast.success('Contract awarded! Purchase Order auto-generated.');
         setIsCompareOpen(false);
-        fetchApprovedRequests();
-        fetchQuotations();
+        refreshQuotes();
+        pageCache.invalidate('orders:');
+        pageCache.invalidate('requests:');
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to award contract');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
@@ -22,6 +22,7 @@ import {
   FiChevronRight
 } from 'react-icons/fi';
 import { mediaUrl, openUploadedFile } from '../utils/mediaUrl';
+import { pageCache } from '../utils/pageCache';
 
 const getTodayLocal = () => {
   const d = new Date();
@@ -138,8 +139,17 @@ const Deliveries = () => {
     setValue('deliveryDate', '');
   }, [watchPurchaseOrder, setValue]);
 
-  const fetchDeliveries = async () => {
-    setLoading(true);
+  const fetchDeliveries = async ({ soft = false } = {}) => {
+    const key = `deliveries:list:${currentPage}:${statusFilter || ''}`;
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setDeliveries(cached.deliveries);
+      setTotalPages(cached.totalPages);
+      setLoading(false);
+    } else if (!cached?.deliveries?.length) {
+      setLoading(true);
+    }
+
     try {
       const res = await axios.get('/api/deliveries', {
         params: {
@@ -150,6 +160,10 @@ const Deliveries = () => {
       if (res.data.success) {
         setDeliveries(res.data.deliveries);
         setTotalPages(res.data.totalPages);
+        pageCache.set(key, {
+          deliveries: res.data.deliveries,
+          totalPages: res.data.totalPages
+        });
       }
     } catch (err) {
       toast.error('Failed to load deliveries');
@@ -158,10 +172,18 @@ const Deliveries = () => {
     }
   };
 
-  const fetchCalendarDeliveries = async () => {
-    setCalendarLoading(true);
+  const fetchCalendarDeliveries = async ({ soft = false } = {}) => {
+    const { fromDate, toDate } = monthBounds(calendarMonth);
+    const key = `deliveries:cal:${fromDate}:${toDate}:${statusFilter || ''}`;
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setCalendarDeliveries(cached);
+      setCalendarLoading(false);
+    } else if (!cached?.length) {
+      setCalendarLoading(true);
+    }
+
     try {
-      const { fromDate, toDate } = monthBounds(calendarMonth);
       const res = await axios.get('/api/deliveries', {
         params: {
           page: 1,
@@ -173,6 +195,7 @@ const Deliveries = () => {
       });
       if (res.data.success) {
         setCalendarDeliveries(res.data.deliveries);
+        pageCache.set(key, res.data.deliveries);
       }
     } catch (err) {
       toast.error('Failed to load calendar deliveries');
@@ -182,31 +205,45 @@ const Deliveries = () => {
   };
 
   const fetchSchedulingResources = async () => {
+    const cached = pageCache.get('deliveries:resources');
+    if (cached) {
+      setDrivers(cached.drivers);
+      setAcceptedPOs(cached.acceptedPOs);
+      return;
+    }
     try {
-      // Fetch drivers
       const usersRes = await axios.get('/api/users', { params: { limit: 100 } });
+      let driversList = [];
       if (usersRes.data.success) {
-        const deliveryStaff = usersRes.data.users.filter(u => u.role === 'Delivery Staff');
-        setDrivers(deliveryStaff);
+        driversList = usersRes.data.users.filter(u => u.role === 'Delivery Staff');
+        setDrivers(driversList);
       }
 
-      // Fetch accepted POs that aren't fully completed or scheduled yet
       const poRes = await axios.get('/api/orders', { params: { status: 'Accepted', limit: 100 } });
+      let accepted = [];
       if (poRes.data.success) {
-        setAcceptedPOs(poRes.data.orders);
+        accepted = poRes.data.orders;
+        setAcceptedPOs(accepted);
       }
+      pageCache.set('deliveries:resources', { drivers: driversList, acceptedPOs: accepted });
     } catch (err) {
       console.error(err);
     }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (viewMode === 'list') fetchDeliveries();
   }, [currentPage, statusFilter, viewMode]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (viewMode === 'calendar') fetchCalendarDeliveries();
   }, [calendarMonth, statusFilter, viewMode]);
+
+  const refreshDeliveries = () => {
+    pageCache.invalidate('deliveries:');
+    if (viewMode === 'calendar') fetchCalendarDeliveries({ soft: true });
+    else fetchDeliveries({ soft: true });
+  };
 
   useEffect(() => {
     if (isProc) {
@@ -266,8 +303,7 @@ const Deliveries = () => {
       if (res.data.success) {
         toast.success('Delivery rescheduled successfully');
         setIsRescheduleOpen(false);
-        if (viewMode === 'calendar') fetchCalendarDeliveries();
-        else fetchDeliveries();
+        refreshDeliveries();
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to reschedule delivery');
@@ -284,7 +320,7 @@ const Deliveries = () => {
       if (res.data.success) {
         toast.success('Delivery scheduled successfully! Driver notified.');
         setIsScheduleOpen(false);
-        fetchDeliveries();
+        refreshDeliveries();
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to schedule delivery');
@@ -301,7 +337,7 @@ const Deliveries = () => {
       if (res.data.success) {
         toast.success(`Delivery status updated to ${selectedStatus}`);
         setIsStatusOpen(false);
-        fetchDeliveries();
+        refreshDeliveries();
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to update delivery status');
@@ -328,7 +364,7 @@ const Deliveries = () => {
         toast.success('Signed delivery note uploaded successfully.');
         setIsNoteOpen(false);
         setNoteFileObj(null);
-        fetchDeliveries();
+        refreshDeliveries();
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to upload note');
@@ -344,7 +380,7 @@ const Deliveries = () => {
       const res = await axios.delete(`/api/deliveries/${delivery._id}`);
       if (res.data.success) {
         toast.success('Delivery deleted');
-        fetchDeliveries();
+        refreshDeliveries();
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to delete delivery');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import Table from '../components/UI/Table';
 import Modal from '../components/UI/Modal';
 import { FiPlus, FiBox, FiSearch, FiEdit, FiTrash2, FiAlertTriangle } from 'react-icons/fi';
+import { pageCache } from '../utils/pageCache';
 
 const Materials = () => {
   const { user } = useAuth();
@@ -36,8 +37,17 @@ const Materials = () => {
     formState: { errors }
   } = useForm();
 
-  const fetchMaterials = async () => {
-    setLoading(true);
+  const fetchMaterials = async ({ soft = false } = {}) => {
+    const key = `materials:${currentPage}:${categoryFilter}:${supplierFilter}:${lowStockFilter}:${search}`;
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setMaterials(cached.materials);
+      setTotalPages(cached.totalPages);
+      setLoading(false);
+    } else if (!cached?.materials?.length) {
+      setLoading(true);
+    }
+
     try {
       const res = await axios.get('/api/materials', {
         params: {
@@ -51,6 +61,10 @@ const Materials = () => {
       if (res.data.success) {
         setMaterials(res.data.materials);
         setTotalPages(res.data.totalPages);
+        pageCache.set(key, {
+          materials: res.data.materials,
+          totalPages: res.data.totalPages
+        });
       }
     } catch (err) {
       toast.error('Failed to load materials database');
@@ -70,7 +84,7 @@ const Materials = () => {
     }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     fetchMaterials();
   }, [currentPage, categoryFilter, supplierFilter, lowStockFilter]);
 
@@ -135,7 +149,8 @@ const Materials = () => {
       const res = await axios.delete(`/api/materials/${id}`);
       if (res.data.success) {
         toast.success('Material deleted successfully');
-        fetchMaterials();
+        pageCache.invalidate('materials:');
+        fetchMaterials({ soft: true });
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to delete material');
@@ -169,7 +184,8 @@ const Materials = () => {
         if (res.data.success) {
           toast.success('Stock item updated');
           setIsModalOpen(false);
-          fetchMaterials();
+          pageCache.invalidate('materials:');
+          fetchMaterials({ soft: true });
         }
       } else {
         const res = await axios.post('/api/materials', formData, {
@@ -178,7 +194,8 @@ const Materials = () => {
         if (res.data.success) {
           toast.success('Stock item added');
           setIsModalOpen(false);
-          fetchMaterials();
+          pageCache.invalidate('materials:');
+          fetchMaterials({ soft: true });
         }
       }
     } catch (err) {

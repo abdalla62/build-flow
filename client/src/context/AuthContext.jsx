@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { pageCache } from '../utils/pageCache';
 
 const AuthContext = createContext();
 
@@ -92,20 +93,26 @@ export const AuthProvider = ({ children }) => {
     try {
       await axios.get('/api/auth/logout');
       setUser(null);
+      pageCache.clear();
       toast.success('Logged out successfully');
     } catch (err) {
       toast.error('Logout failed');
     }
   };
 
-  // Forgot password
+  // Forgot password — returns true | { resetUrl } | false
   const forgotPassword = async (email) => {
     try {
       const res = await axios.post('/api/auth/forgot-password', { email });
       if (res.data.success) {
-        toast.success('Password reset link sent to your email.');
+        if (res.data.resetUrl) {
+          toast.success('Continue to set your new password.');
+          return { resetUrl: res.data.resetUrl };
+        }
+        toast.success('If that email exists, a password reset link was sent.');
         return true;
       }
+      return false;
     } catch (err) {
       toast.error(err.response?.data?.error || 'Request failed');
       return false;

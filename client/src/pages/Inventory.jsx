@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
@@ -12,6 +12,7 @@ import {
   FiTrendingDown,
   FiSettings
 } from 'react-icons/fi';
+import { pageCache } from '../utils/pageCache';
 
 const Inventory = () => {
   const { user } = useAuth();
@@ -36,11 +37,22 @@ const Inventory = () => {
     formState: { errors }
   } = useForm();
 
-  const fetchAlerts = async () => {
-    setLoadingAlerts(true);
+  const fetchAlerts = async ({ soft = false } = {}) => {
+    const key = 'inventory:alerts';
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setAlerts(cached);
+      setLoadingAlerts(false);
+    } else if (!cached?.length) {
+      setLoadingAlerts(true);
+    }
+
     try {
       const res = await axios.get('/api/inventory/alerts');
-      if (res.data.success) setAlerts(res.data.alerts);
+      if (res.data.success) {
+        setAlerts(res.data.alerts);
+        pageCache.set(key, res.data.alerts);
+      }
     } catch (err) {
       console.error('Failed to load stock alerts:', err);
     } finally {
@@ -48,11 +60,22 @@ const Inventory = () => {
     }
   };
 
-  const fetchStockLevels = async () => {
-    setLoadingStock(true);
+  const fetchStockLevels = async ({ soft = false } = {}) => {
+    const key = 'inventory:stock';
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setMaterials(cached);
+      setLoadingStock(false);
+    } else if (!cached?.length) {
+      setLoadingStock(true);
+    }
+
     try {
       const res = await axios.get('/api/materials', { params: { limit: 100 } });
-      if (res.data.success) setMaterials(res.data.materials);
+      if (res.data.success) {
+        setMaterials(res.data.materials);
+        pageCache.set(key, res.data.materials);
+      }
     } catch (err) {
       toast.error('Failed to load stock levels');
     } finally {
@@ -60,13 +83,26 @@ const Inventory = () => {
     }
   };
 
-  const fetchHistoryLedger = async () => {
-    setLoadingHistory(true);
+  const fetchHistoryLedger = async ({ soft = false } = {}) => {
+    const key = `inventory:history:${currentPage}`;
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setHistoryLogs(cached.logs);
+      setTotalPages(cached.totalPages);
+      setLoadingHistory(false);
+    } else if (!cached?.logs?.length) {
+      setLoadingHistory(true);
+    }
+
     try {
       const res = await axios.get('/api/inventory', { params: { page: currentPage } });
       if (res.data.success) {
         setHistoryLogs(res.data.logs);
         setTotalPages(res.data.totalPages);
+        pageCache.set(key, {
+          logs: res.data.logs,
+          totalPages: res.data.totalPages
+        });
       }
     } catch (err) {
       console.error(err);
@@ -76,20 +112,28 @@ const Inventory = () => {
   };
 
   const fetchProjectsList = async () => {
+    const cached = pageCache.get('inventory:projects');
+    if (cached) {
+      setProjects(cached);
+      return;
+    }
     try {
       const res = await axios.get('/api/projects', { params: { limit: 100 } });
-      if (res.data.success) setProjects(res.data.projects);
+      if (res.data.success) {
+        setProjects(res.data.projects);
+        pageCache.set('inventory:projects', res.data.projects);
+      }
     } catch (err) {
       console.error(err);
     }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     fetchAlerts();
     fetchStockLevels();
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     fetchHistoryLedger();
   }, [currentPage]);
 
@@ -113,9 +157,10 @@ const Inventory = () => {
       if (res.data.success) {
         toast.success('Stock adjustment logged successfully!');
         setIsAdjustOpen(false);
-        fetchAlerts();
-        fetchStockLevels();
-        fetchHistoryLedger();
+        pageCache.invalidate('inventory:');
+        fetchAlerts({ soft: true });
+        fetchStockLevels({ soft: true });
+        fetchHistoryLedger({ soft: true });
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to post adjustment');

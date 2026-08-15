@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
@@ -18,6 +18,7 @@ import {
   FiUpload
 } from 'react-icons/fi';
 import { mediaUrl, openUploadedFile } from '../utils/mediaUrl';
+import { pageCache } from '../utils/pageCache';
 
 const Payments = () => {
   const { user } = useAuth();
@@ -48,13 +49,26 @@ const Payments = () => {
   const [poPaidBefore, setPOPaidBefore] = useState(0);
   const [poRemaining, setPORemaining] = useState(0);
 
-  const fetchPayments = async () => {
-    setLoading(true);
+  const fetchPayments = async ({ soft = false } = {}) => {
+    const key = `payments:${currentPage}`;
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setPayments(cached.payments);
+      setTotalPages(cached.totalPages);
+      setLoading(false);
+    } else if (!cached?.payments?.length) {
+      setLoading(true);
+    }
+
     try {
       const res = await axios.get('/api/payments', { params: { page: currentPage } });
       if (res.data.success) {
         setPayments(res.data.payments);
         setTotalPages(res.data.totalPages);
+        pageCache.set(key, {
+          payments: res.data.payments,
+          totalPages: res.data.totalPages
+        });
       }
     } catch (err) {
       toast.error('Failed to load payment logs');
@@ -64,10 +78,15 @@ const Payments = () => {
   };
 
   const fetchActivePOs = async () => {
+    const key = 'payments:activePOs';
+    const cached = pageCache.get(key);
+    if (cached) {
+      setActivePOs(cached);
+      return;
+    }
     try {
       const res = await axios.get('/api/orders', { params: { limit: 100 } });
       if (res.data.success) {
-        // Payable: invoice uploaded, delivered, not fully paid / cancelled
         const filterPOs = res.data.orders.filter(
           (o) =>
             o.paymentStatus !== 'Paid' &&
@@ -78,13 +97,14 @@ const Payments = () => {
             Boolean(o.invoiceFile)
         );
         setActivePOs(filterPOs);
+        pageCache.set(key, filterPOs);
       }
     } catch (err) {
       console.error(err);
     }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     fetchPayments();
   }, [currentPage]);
 
@@ -185,7 +205,10 @@ const Payments = () => {
         );
         setIsRecordOpen(false);
         setReceiptFileObj(null);
-        fetchPayments();
+        pageCache.invalidate('payments:');
+        pageCache.invalidate('orders:');
+        fetchPayments({ soft: true });
+        pageCache.invalidate('payments:activePOs');
         fetchActivePOs();
       }
     } catch (err) {

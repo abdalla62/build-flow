@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import Table from '../components/UI/Table';
@@ -10,6 +10,7 @@ import {
   FiClock,
   FiLayers
 } from 'react-icons/fi';
+import { pageCache } from '../utils/pageCache';
 
 const AuditLogs = () => {
   const [logs, setLogs] = useState([]);
@@ -20,8 +21,17 @@ const AuditLogs = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  const fetchLogs = async () => {
-    setLoading(true);
+  const fetchLogs = async ({ soft = false } = {}) => {
+    const key = `audit:${currentPage}:${actionFilter || ''}:${roleFilter || ''}:${search || ''}`;
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setLogs(cached.logs);
+      setTotalPages(cached.totalPages);
+      setLoading(false);
+    } else if (!cached?.logs?.length) {
+      setLoading(true);
+    }
+
     try {
       const res = await axios.get('/api/audit', {
         params: {
@@ -34,6 +44,10 @@ const AuditLogs = () => {
       if (res.data.success) {
         setLogs(res.data.logs);
         setTotalPages(res.data.totalPages);
+        pageCache.set(key, {
+          logs: res.data.logs,
+          totalPages: res.data.totalPages
+        });
       }
     } catch (err) {
       toast.error('Failed to load audit logs');
@@ -42,14 +56,14 @@ const AuditLogs = () => {
     }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     fetchLogs();
   }, [currentPage, actionFilter, roleFilter]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setCurrentPage(1);
-    fetchLogs();
+    fetchLogs({ soft: true });
   };
 
   // CSV Exporter logic

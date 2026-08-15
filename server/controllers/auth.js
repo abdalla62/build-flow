@@ -150,26 +150,63 @@ exports.forgotPassword = async (req, res, next) => {
 
     await user.save({ validateBeforeSave: false });
 
-    // Create reset url
-    const resetUrl = `${req.protocol}://${req.get('host')}/reset-password/${resetToken}`;
+    // Frontend URL (Vite / production site) — never the API host
+    const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '');
+    const resetUrl = `${clientUrl}/reset-password/${resetToken}`;
 
-    const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please make a PUT request to: \n\n ${resetUrl}`;
+    const message =
+      `You requested a password reset for BuildFlow.\n\n` +
+      `Open this link (valid 10 minutes):\n${resetUrl}\n\n` +
+      `If you did not request this, ignore this email.`;
+
+    const html =
+      `<p>You requested a password reset for <strong>BuildFlow</strong>.</p>` +
+      `<p><a href="${resetUrl}">Reset your password</a></p>` +
+      `<p>Or copy this link (valid 10 minutes):<br/><code>${resetUrl}</code></p>` +
+      `<p>If you did not request this, ignore this email.</p>`;
 
     try {
       await sendEmail({
         email: user.email,
-        subject: 'Password reset token',
-        message
+        subject: 'BuildFlow — Reset your password',
+        message,
+        html
       });
 
       await logActivity(req, user, 'Forgot Password Requested', `Reset email sent to ${user.email}`);
 
-      res.status(200).json({ success: true, data: 'Email sent' });
+      const payload = { success: true, data: 'Email sent' };
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`\n[DEV] Password reset link: ${resetUrl}\n`);
+        payload.resetUrl = resetUrl;
+      }
+      res.status(200).json(payload);
     } catch (err) {
-      console.error(err);
+      console.error('Forgot-password email failed:', err.message || err);
+
+      // Local/dev: keep token and return link so the user can reset without real SMTP
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('\n========== PASSWORD RESET (dev / SMTP failed) ==========');
+        console.log(`User:  ${user.email}`);
+        console.log(`Link:  ${resetUrl}`);
+        console.log('========================================================\n');
+
+        await logActivity(
+          req,
+          user,
+          'Forgot Password Requested',
+          `SMTP failed — reset link returned for ${user.email}`
+        );
+
+        return res.status(200).json({
+          success: true,
+          data: 'Reset link ready (email not configured)',
+          resetUrl
+        });
+      }
+
       user.resetPasswordToken = undefined;
       user.resetPasswordExpire = undefined;
-
       await user.save({ validateBeforeSave: false });
 
       return res.status(500).json({ success: false, error: 'Email could not be sent' });

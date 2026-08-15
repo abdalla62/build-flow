@@ -41,7 +41,7 @@ const Table = ({
           </thead>
 
           <tbody className="divide-y divide-brand-border/70 dark:divide-brand-darkBorder/70">
-            {loading ? (
+            {loading && data.length === 0 ? (
               Array.from({ length: 4 }).map((_, idx) => (
                 <tr key={idx} className="animate-pulse">
                   {headers.map((h, i) => (
@@ -61,7 +61,9 @@ const Table = ({
               data.map((row, idx) => (
                 <tr
                   key={row.id || row._id || idx}
-                  className="transition-colors hover:bg-brand-bg/70 dark:hover:bg-white/[0.03]"
+                  className={`transition-colors hover:bg-brand-bg/70 dark:hover:bg-white/[0.03] ${
+                    loading ? 'opacity-70' : ''
+                  }`}
                 >
                   {headers.map((h) => (
                     <td key={h.key} className="px-6 py-4 font-medium text-brand-text dark:text-slate-100">

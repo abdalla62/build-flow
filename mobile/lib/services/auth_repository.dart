@@ -50,7 +50,8 @@ class AuthRepository {
     await api.clearSession();
   }
 
-  Future<String> forgotPassword(String email) async {
+  /// Returns message + optional [resetUrl] (dev when SMTP is unavailable).
+  Future<({String message, String? resetUrl})> forgotPassword(String email) async {
     try {
       final res = await api.dio.post(
         '/api/auth/forgot-password',
@@ -60,8 +61,12 @@ class AuthRepository {
       if (data['success'] != true) {
         throw Exception(data['error'] ?? 'Request failed');
       }
-      return (data['message'] ?? 'If the account exists, a reset link was sent.')
-          .toString();
+      final resetUrl = data['resetUrl']?.toString();
+      final message = resetUrl != null && resetUrl.isNotEmpty
+          ? 'Reset link ready — open it below to set a new password.'
+          : (data['data'] ?? data['message'] ?? 'If the account exists, a reset link was sent.')
+              .toString();
+      return (message: message, resetUrl: resetUrl);
     } catch (e) {
       throw Exception(apiErrorMessage(e));
     }

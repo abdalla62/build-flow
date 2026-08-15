@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
 import Table from '../components/UI/Table';
 import Modal from '../components/UI/Modal';
+import { pageCache } from '../utils/pageCache';
 import {
   FiUser,
   FiSearch,
@@ -13,6 +14,9 @@ import {
   FiTrash2,
   FiUserPlus
 } from 'react-icons/fi';
+
+const usersCacheKey = (page, role, search) =>
+  `users:${page}:${role || ''}:${search || ''}`;
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -43,8 +47,17 @@ const Users = () => {
 
   const watchRole = watch('role');
 
-  const fetchUsers = async () => {
-    setLoading(true);
+  const fetchUsers = async ({ soft = false } = {}) => {
+    const key = usersCacheKey(currentPage, roleFilter, search);
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setUsers(cached.users);
+      setTotalPages(cached.totalPages);
+      setLoading(false);
+    } else if (!cached?.users?.length) {
+      setLoading(true);
+    }
+
     try {
       const res = await axios.get('/api/users', {
         params: {
@@ -56,6 +69,10 @@ const Users = () => {
       if (res.data.success) {
         setUsers(res.data.users);
         setTotalPages(res.data.totalPages);
+        pageCache.set(key, {
+          users: res.data.users,
+          totalPages: res.data.totalPages
+        });
       }
     } catch (err) {
       toast.error('Failed to load users');
@@ -65,17 +82,23 @@ const Users = () => {
   };
 
   const fetchRoles = async () => {
+    const cached = pageCache.get('users:roles');
+    if (cached) {
+      setRoles(cached);
+      return;
+    }
     try {
       const res = await axios.get('/api/users/roles');
       if (res.data.success) {
         setRoles(res.data.roles);
+        pageCache.set('users:roles', res.data.roles);
       }
     } catch (err) {
       console.error(err);
     }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     fetchUsers();
   }, [currentPage, roleFilter]);
 
@@ -86,7 +109,7 @@ const Users = () => {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setCurrentPage(1);
-    fetchUsers();
+    fetchUsers({ soft: true });
   };
 
   const handleCreateSubmit = async (data) => {
@@ -97,7 +120,8 @@ const Users = () => {
       if (res.data.success) {
         toast.success('New employee user created successfully!');
         setIsCreateOpen(false);
-        fetchUsers();
+        pageCache.invalidate('users:');
+        fetchUsers({ soft: true });
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to create user');
@@ -112,7 +136,8 @@ const Users = () => {
       const res = await axios.put(`/api/users/${user._id}/status`, { status: nextStatus });
       if (res.data.success) {
         toast.success(`User marked as ${nextStatus}`);
-        fetchUsers();
+        pageCache.invalidate('users:');
+        fetchUsers({ soft: true });
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to update user status');
@@ -125,7 +150,8 @@ const Users = () => {
       const res = await axios.delete(`/api/users/${userId}`);
       if (res.data.success) {
         toast.success('User account deleted successfully.');
-        fetchUsers();
+        pageCache.invalidate('users:');
+        fetchUsers({ soft: true });
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to delete user');
@@ -156,7 +182,8 @@ const Users = () => {
       if (res.data.success) {
         toast.success('Role updated successfully');
         setIsEditOpen(false);
-        fetchUsers();
+        pageCache.invalidate('users:');
+        fetchUsers({ soft: true });
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to update user role');

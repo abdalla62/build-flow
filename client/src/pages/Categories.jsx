@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import Table from '../components/UI/Table';
 import Modal from '../components/UI/Modal';
 import { FiPlus, FiLayers, FiSearch, FiEdit, FiTrash2 } from 'react-icons/fi';
+import { pageCache } from '../utils/pageCache';
 
 const Categories = () => {
   const { user } = useAuth();
@@ -30,8 +31,17 @@ const Categories = () => {
     formState: { errors }
   } = useForm();
 
-  const fetchCategories = async () => {
-    setLoading(true);
+  const fetchCategories = async ({ soft = false } = {}) => {
+    const key = `categories:${currentPage}:${search || ''}`;
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setCategories(cached.categories);
+      setTotalPages(cached.totalPages);
+      setLoading(false);
+    } else if (!cached?.categories?.length) {
+      setLoading(true);
+    }
+
     try {
       const res = await axios.get('/api/categories', {
         params: {
@@ -42,6 +52,10 @@ const Categories = () => {
       if (res.data.success) {
         setCategories(res.data.categories);
         setTotalPages(res.data.totalPages);
+        pageCache.set(key, {
+          categories: res.data.categories,
+          totalPages: res.data.totalPages
+        });
       }
     } catch (err) {
       toast.error('Failed to load categories');
@@ -50,7 +64,7 @@ const Categories = () => {
     }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     fetchCategories();
   }, [currentPage]);
 
@@ -84,7 +98,8 @@ const Categories = () => {
       const res = await axios.delete(`/api/categories/${id}`);
       if (res.data.success) {
         toast.success('Category deleted successfully');
-        fetchCategories();
+        pageCache.invalidate('categories:');
+        fetchCategories({ soft: true });
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to delete category');
@@ -100,14 +115,16 @@ const Categories = () => {
         if (res.data.success) {
           toast.success('Category updated successfully');
           setIsModalOpen(false);
-          fetchCategories();
+          pageCache.invalidate('categories:');
+          fetchCategories({ soft: true });
         }
       } else {
         const res = await axios.post('/api/categories', data);
         if (res.data.success) {
           toast.success('Category created successfully');
           setIsModalOpen(false);
-          fetchCategories();
+          pageCache.invalidate('categories:');
+          fetchCategories({ soft: true });
         }
       }
     } catch (err) {

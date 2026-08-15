@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
@@ -26,6 +26,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
+import { pageCache } from '../utils/pageCache';
 
 const pageVariants = {
   hidden: { opacity: 0 },
@@ -73,18 +74,29 @@ const Dashboard = () => {
   const [deliveryStats, setDeliveryStats] = useState(null);
   const [deliveryLoading, setDeliveryLoading] = useState(false);
 
-  const reloadAdminDashboard = () => {
-    setAdminLoading(true);
+  const reloadAdminDashboard = ({ soft = false } = {}) => {
+    const key = 'dashboard:admin';
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setAdminStats(cached.stats);
+      setAdminCharts(cached.charts);
+      setAdminLoading(false);
+    } else if (!cached) {
+      setAdminLoading(true);
+    }
+
     axios
       .get('/api/dashboard/admin')
       .then((res) => {
         if (res.data.success) {
-          setAdminStats(res.data.stats);
-          setAdminCharts({
+          const charts = {
             spendTrends: res.data.spendTrends || [],
             categoryData: res.data.categoryData || [],
             totalCategorySpend: res.data.totalCategorySpend || 0
-          });
+          };
+          setAdminStats(res.data.stats);
+          setAdminCharts(charts);
+          pageCache.set(key, { stats: res.data.stats, charts });
         }
       })
       .catch(() => {
@@ -94,61 +106,107 @@ const Dashboard = () => {
       .finally(() => setAdminLoading(false));
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const role = user?.role;
     if (role === 'Administrator') {
       reloadAdminDashboard();
       return;
     }
     if (role === 'Site Engineer') {
-      setSiteLoading(true);
+      const key = 'dashboard:site';
+      const cached = pageCache.get(key);
+      if (cached) {
+        setSiteStats(cached);
+        setSiteLoading(false);
+      } else {
+        setSiteLoading(true);
+      }
       axios
         .get('/api/dashboard/site-engineer')
         .then((res) => {
-          if (res.data.success) setSiteStats(res.data.stats);
+          if (res.data.success) {
+            setSiteStats(res.data.stats);
+            pageCache.set(key, res.data.stats);
+          }
         })
         .catch(() => setSiteStats(null))
         .finally(() => setSiteLoading(false));
       return;
     }
     if (role === 'Project Manager') {
-      setPmLoading(true);
+      const key = 'dashboard:pm';
+      const cached = pageCache.get(key);
+      if (cached) {
+        setPmStats(cached);
+        setPmLoading(false);
+      } else {
+        setPmLoading(true);
+      }
       axios
         .get('/api/dashboard/project-manager')
         .then((res) => {
-          if (res.data.success) setPmStats(res.data.stats);
+          if (res.data.success) {
+            setPmStats(res.data.stats);
+            pageCache.set(key, res.data.stats);
+          }
         })
         .catch(() => setPmStats(null))
         .finally(() => setPmLoading(false));
       return;
     }
     if (role === 'Procurement Officer') {
-      setProcLoading(true);
+      const key = 'dashboard:proc';
+      const cached = pageCache.get(key);
+      if (cached) {
+        setProcStats(cached);
+        setProcLoading(false);
+      } else {
+        setProcLoading(true);
+      }
       axios
         .get('/api/dashboard/procurement')
         .then((res) => {
-          if (res.data.success) setProcStats(res.data.stats);
+          if (res.data.success) {
+            setProcStats(res.data.stats);
+            pageCache.set(key, res.data.stats);
+          }
         })
         .catch(() => setProcStats(null))
         .finally(() => setProcLoading(false));
       return;
     }
     if (role === 'Delivery Staff') {
-      setDeliveryLoading(true);
+      const key = 'dashboard:delivery';
+      const cached = pageCache.get(key);
+      if (cached) {
+        setDeliveryStats(cached);
+        setDeliveryLoading(false);
+      } else {
+        setDeliveryLoading(true);
+      }
       axios
         .get('/api/dashboard/delivery-staff')
         .then((res) => {
-          if (res.data.success) setDeliveryStats(res.data.stats);
+          if (res.data.success) {
+            setDeliveryStats(res.data.stats);
+            pageCache.set(key, res.data.stats);
+          }
         })
         .catch(() => setDeliveryStats(null))
         .finally(() => setDeliveryLoading(false));
       return;
     }
     if (!['Accountant', 'Supplier'].includes(role)) return;
+    const payKey = 'dashboard:paySummary';
+    const payCached = pageCache.get(payKey);
+    if (payCached) setPaySummary(payCached);
     axios
       .get('/api/payments/summary')
       .then((res) => {
-        if (res.data.success) setPaySummary(res.data.summary);
+        if (res.data.success) {
+          setPaySummary(res.data.summary);
+          pageCache.set(payKey, res.data.summary);
+        }
       })
       .catch(() => {});
   }, [user?.role]);

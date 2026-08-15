@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../context/AuthContext';
 import Table from '../components/UI/Table';
 import Modal from '../components/UI/Modal';
+import { pageCache } from '../utils/pageCache';
 import {
   FiPlus,
   FiClipboard,
@@ -180,8 +181,17 @@ const MaterialRequests = () => {
     setSelectedLines((prev) => prev.filter((l) => l.materialId !== materialId));
   };
 
-  const fetchRequests = async () => {
-    setLoading(true);
+  const fetchRequests = async ({ soft = false } = {}) => {
+    const key = `requests:${currentPage}:${statusFilter || ''}:${priorityFilter || ''}`;
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setRequests(cached.requests);
+      setTotalPages(cached.totalPages);
+      setLoading(false);
+    } else if (!cached?.requests?.length) {
+      setLoading(true);
+    }
+
     try {
       const res = await axios.get('/api/requests', {
         params: {
@@ -194,6 +204,10 @@ const MaterialRequests = () => {
       if (res.data.success) {
         setRequests(res.data.requests);
         setTotalPages(res.data.totalPages);
+        pageCache.set(key, {
+          requests: res.data.requests,
+          totalPages: res.data.totalPages
+        });
       }
     } catch (err) {
       toast.error('Failed to load requests');
@@ -203,6 +217,13 @@ const MaterialRequests = () => {
   };
 
   const fetchResources = async () => {
+    const cached = pageCache.get('requests:resources');
+    if (cached) {
+      setProjects(cached.projects);
+      setMaterials(cached.materials);
+      setSuppliers(cached.suppliers);
+      return;
+    }
     try {
       const projRes = await axios.get('/api/projects', { params: { limit: 100 } });
       const matRes = await axios.get('/api/materials', { params: { limit: 100 } });
@@ -210,18 +231,28 @@ const MaterialRequests = () => {
       if (projRes.data.success) setProjects(projRes.data.projects);
       if (matRes.data.success) setMaterials(matRes.data.materials);
       if (supRes.data.success) setSuppliers(supRes.data.suppliers);
+      pageCache.set('requests:resources', {
+        projects: projRes.data.projects || [],
+        materials: matRes.data.materials || [],
+        suppliers: supRes.data.suppliers || []
+      });
     } catch (err) {
       console.error(err);
     }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     fetchRequests();
   }, [currentPage, statusFilter, priorityFilter]);
 
   useEffect(() => {
     fetchResources();
   }, []);
+
+  const refreshRequests = () => {
+    pageCache.invalidate('requests:');
+    fetchRequests({ soft: true });
+  };
 
   const handleOpenSubmit = () => {
     setEditingRequest(null);
@@ -261,7 +292,7 @@ const MaterialRequests = () => {
       const res = await axios.delete(`/api/requests/${id}`);
       if (res.data.success) {
         toast.success('Request cancelled successfully');
-        fetchRequests();
+        refreshRequests();
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to cancel request');
@@ -343,7 +374,7 @@ const MaterialRequests = () => {
         if (res.data.success) {
           toast.success('Request resubmitted successfully');
           setIsSubmitOpen(false);
-          fetchRequests();
+          refreshRequests();
         }
       } else {
         if (selectedLines.length === 0) {
@@ -379,7 +410,7 @@ const MaterialRequests = () => {
         );
         setIsSubmitOpen(false);
         setSelectedLines([]);
-        fetchRequests();
+        refreshRequests();
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to submit request');
@@ -419,7 +450,7 @@ const MaterialRequests = () => {
               : `Request successfully ${reviewAction.toLowerCase()}d`
           );
           setIsReviewOpen(false);
-          fetchRequests();
+          refreshRequests();
         }
       }
     } catch (err) {
@@ -450,7 +481,7 @@ const MaterialRequests = () => {
       if (res.data.success) {
         toast.success('Materials marked as Received');
         setIsReceiveOpen(false);
-        fetchRequests();
+        refreshRequests();
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to confirm receipt');

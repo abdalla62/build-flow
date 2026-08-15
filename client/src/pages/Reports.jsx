@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useLayoutEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import {
@@ -15,6 +15,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { downloadExcel } from '../utils/exportExcel';
 import { downloadPdf } from '../utils/exportPdf';
+import { pageCache } from '../utils/pageCache';
 
 const ADMIN_REPORT_META = [
   {
@@ -120,14 +121,27 @@ const Reports = () => {
     setActiveTab(isSupplierView ? 'myBids' : 'monthlyProcurement');
   }, [isSupplierView]);
 
-  const fetchReports = async () => {
-    setLoading(true);
+  const fetchReports = async ({ soft = false } = {}) => {
+    const key = `reports:${isSupplierView ? 'supplier' : 'admin'}:${month}`;
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setReports(cached.reports || {});
+      setCompany(cached.company || '');
+      setLoading(false);
+    } else if (!cached) {
+      setLoading(true);
+    }
+
     try {
       const url = isSupplierView ? '/api/reports/supplier' : '/api/reports';
       const res = await axios.get(url, { params: { month } });
       if (res.data.success) {
         setReports(res.data.reports || {});
         setCompany(res.data.company || '');
+        pageCache.set(key, {
+          reports: res.data.reports || {},
+          company: res.data.company || ''
+        });
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to load reports');
@@ -136,7 +150,7 @@ const Reports = () => {
     }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     fetchReports();
   }, [month, isSupplierView]);
 

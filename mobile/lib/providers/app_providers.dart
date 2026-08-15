@@ -102,14 +102,14 @@ class AuthNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> forgotPassword(String email) async {
+  Future<({String message, String? resetUrl})?> forgotPassword(String email) async {
     state = state.copyWith(busy: true, clearError: true);
     notifyListeners();
     try {
-      final msg = await _repo.forgotPassword(email);
+      final result = await _repo.forgotPassword(email);
       state = state.copyWith(busy: false);
       notifyListeners();
-      return msg;
+      return result;
     } catch (e) {
       state = state.copyWith(
         busy: false,

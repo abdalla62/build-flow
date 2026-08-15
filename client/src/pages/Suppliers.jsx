@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import Table from '../components/UI/Table';
 import Modal from '../components/UI/Modal';
 import { FiPlus, FiTruck, FiSearch, FiEdit, FiTrash2, FiStar, FiMail, FiPhone, FiMapPin } from 'react-icons/fi';
+import { pageCache } from '../utils/pageCache';
 
 const Suppliers = () => {
   const { user } = useAuth();
@@ -33,8 +34,17 @@ const Suppliers = () => {
     formState: { errors }
   } = useForm();
 
-  const fetchSuppliers = async () => {
-    setLoading(true);
+  const fetchSuppliers = async ({ soft = false } = {}) => {
+    const key = `suppliers:${currentPage}:${categoryFilter || ''}:${search || ''}`;
+    const cached = pageCache.get(key);
+    if (cached && !soft) {
+      setSuppliers(cached.suppliers);
+      setTotalPages(cached.totalPages);
+      setLoading(false);
+    } else if (!cached?.suppliers?.length) {
+      setLoading(true);
+    }
+
     try {
       const res = await axios.get('/api/suppliers', {
         params: {
@@ -46,6 +56,10 @@ const Suppliers = () => {
       if (res.data.success) {
         setSuppliers(res.data.suppliers);
         setTotalPages(res.data.totalPages);
+        pageCache.set(key, {
+          suppliers: res.data.suppliers,
+          totalPages: res.data.totalPages
+        });
       }
     } catch (err) {
       toast.error('Failed to load suppliers');
@@ -65,7 +79,7 @@ const Suppliers = () => {
     }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     fetchSuppliers();
   }, [currentPage, categoryFilter]);
 
@@ -117,7 +131,8 @@ const Suppliers = () => {
       const res = await axios.delete(`/api/suppliers/${id}`);
       if (res.data.success) {
         toast.success('Supplier deleted successfully');
-        fetchSuppliers();
+        pageCache.invalidate('suppliers:');
+        fetchSuppliers({ soft: true });
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to delete supplier');
@@ -145,14 +160,16 @@ const Suppliers = () => {
         if (res.data.success) {
           toast.success('Supplier profile updated');
           setIsModalOpen(false);
-          fetchSuppliers();
+          pageCache.invalidate('suppliers:');
+          fetchSuppliers({ soft: true });
         }
       } else {
         const res = await axios.post('/api/suppliers', postData);
         if (res.data.success) {
           toast.success('Supplier created — login account added under Users');
           setIsModalOpen(false);
-          fetchSuppliers();
+          pageCache.invalidate('suppliers:');
+          fetchSuppliers({ soft: true });
         }
       }
     } catch (err) {
