@@ -21,6 +21,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   Map<String, dynamic>? _data;
   bool _loading = true;
   String? _error;
+  List<Map<String, dynamic>> _supplierMessages = const [];
 
   late final AnimationController _kenBurns;
   late final AnimationController _enter;
@@ -65,8 +66,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           },
         _ => <String, dynamic>{},
       };
+
+      var messages = <Map<String, dynamic>>[];
+      if (role == 'Supplier') {
+        final notes = await api.getNotifications();
+        messages = notes.where((n) {
+          final t = '${n['title'] ?? ''}';
+          return t.contains('Bid Not Selected') ||
+              t.contains('Purchase Order') ||
+              t.contains('Bid');
+        }).take(10).toList();
+      }
+
       if (mounted) {
-        setState(() => _data = data);
+        setState(() {
+          _data = data;
+          _supplierMessages = messages;
+        });
         _enter.forward(from: 0);
       }
     } catch (e) {
@@ -386,6 +402,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   );
                 },
               ),
+              if (role == 'Supplier') ...[
+                const SizedBox(height: 16),
+                _SupplierBidMessagesCard(messages: _supplierMessages),
+              ],
               if (role == 'Administrator') ...[
                 const SizedBox(height: 16),
                 _AdminSpendTrendCard(
@@ -410,6 +430,157 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Supplier dashboard: awarded / not-selected bid messages.
+class _SupplierBidMessagesCard extends StatelessWidget {
+  final List<Map<String, dynamic>> messages;
+
+  const _SupplierBidMessagesCard({required this.messages});
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: dark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: dark ? AppColors.darkBorder : AppColors.border,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.notifications_outlined, color: AppColors.primary, size: 20),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bid updates',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                    ),
+                    Text(
+                      'Awarded and not-selected bid messages',
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (messages.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(
+                child: Text(
+                  'No bid messages yet',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            )
+          else
+            ...messages.map((n) {
+              final title = '${n['title'] ?? ''}';
+              final lost = title.contains('Bid Not Selected');
+              final won = title.contains('Purchase Order');
+              final bg = lost
+                  ? (dark ? const Color(0x33F59E0B) : const Color(0xFFFFFBEB))
+                  : won
+                      ? (dark ? const Color(0x330F766E) : const Color(0xFFF0FDFA))
+                      : (dark ? AppColors.darkNavy : AppColors.lightBg);
+              final border = lost
+                  ? const Color(0x66F59E0B)
+                  : won
+                      ? const Color(0x660F766E)
+                      : (dark ? AppColors.darkBorder : AppColors.border);
+              final created = n['createdAt']?.toString();
+              DateTime? when;
+              if (created != null) when = DateTime.tryParse(created);
+              return Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        if (n['read'] != true)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: const Text(
+                              'New',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${n['message'] ?? ''}',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        height: 1.35,
+                      ),
+                    ),
+                    if (when != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        DateFormat.yMMMd().add_jm().format(when.toLocal()),
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
     );
   }
 }

@@ -52,6 +52,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       hintKey: 'totalQtyOut',
       moneyHint: false,
     ),
+    _ReportTab(
+      id: 'supplierPerformance',
+      label: 'Supplier Performance',
+      icon: Icons.emoji_events_outlined,
+      hintKey: 'supplierCount',
+      moneyHint: false,
+    ),
   ];
 
   static const _supplierTabs = <_ReportTab>[
@@ -82,6 +89,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       icon: Icons.warning_amber_outlined,
       hintKey: 'totalOutstanding',
       moneyHint: true,
+    ),
+    _ReportTab(
+      id: 'myPerformance',
+      label: 'My Performance',
+      icon: Icons.emoji_events_outlined,
+      hintKey: 'completedOrders',
+      moneyHint: false,
     ),
   ];
 

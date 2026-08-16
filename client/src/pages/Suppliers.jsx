@@ -103,7 +103,6 @@ const Suppliers = () => {
       email: '',
       password: '',
       address: '',
-      paymentTerms: 'Net 30',
       performanceRating: 5
     });
     setIsModalOpen(true);
@@ -119,7 +118,6 @@ const Suppliers = () => {
       email: supplier.email,
       password: '',
       address: supplier.address,
-      paymentTerms: supplier.paymentTerms,
       performanceRating: supplier.performanceRating
     });
     setIsModalOpen(true);
@@ -151,7 +149,11 @@ const Suppliers = () => {
       toast.error('Please select at least one supplied category');
       return;
     }
-    const postData = { ...data, suppliedCategories: selectedCats };
+    const postData = {
+      ...data,
+      suppliedCategories: selectedCats,
+      paymentTerms: 'Net 30'
+    };
 
     setFormSubmitting(true);
     try {
@@ -215,11 +217,6 @@ const Suppliers = () => {
           </span>
         ))}
       </div>
-    )},
-    { key: 'paymentTerms', label: 'Terms', render: (s) => (
-      <span className="text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 rounded-lg">
-        {s.paymentTerms}
-      </span>
     )},
     { key: 'performanceRating', label: 'Rating', render: (s) => renderStars(s.performanceRating) },
     ...(hasAccess ? [{
@@ -422,33 +419,18 @@ const Suppliers = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase">Payment Terms</label>
-              <select
-                className="w-full mt-1.5 px-4 py-2 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card"
-                {...register('paymentTerms')}
-              >
-                <option value="Cash on Delivery">Cash on Delivery</option>
-                <option value="Net 15">Net 15</option>
-                <option value="Net 30">Net 30</option>
-                <option value="Net 60">Net 60</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase">Performance Rating (1-5)</label>
-              <select
-                className="w-full mt-1.5 px-4 py-2 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card"
-                {...register('performanceRating')}
-              >
-                <option value={5}>⭐⭐⭐⭐⭐ (5)</option>
-                <option value={4}>⭐⭐⭐⭐ (4)</option>
-                <option value={3}>⭐⭐⭐ (3)</option>
-                <option value={2}>⭐⭐ (2)</option>
-                <option value={1}>⭐ (1)</option>
-              </select>
-            </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase">Performance Rating (1-5)</label>
+            <select
+              className="w-full mt-1.5 px-4 py-2 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary focus:bg-brand-card"
+              {...register('performanceRating')}
+            >
+              <option value={5}>⭐⭐⭐⭐⭐ (5)</option>
+              <option value={4}>⭐⭐⭐⭐ (4)</option>
+              <option value={3}>⭐⭐⭐ (3)</option>
+              <option value={2}>⭐⭐ (2)</option>
+              <option value={1}>⭐ (1)</option>
+            </select>
           </div>
 
           <div>

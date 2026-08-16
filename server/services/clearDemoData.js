@@ -16,6 +16,7 @@ const Inventory = require('../models/Inventory');
 const Approval = require('../models/Approval');
 const Notification = require('../models/Notification');
 const AuditLog = require('../models/AuditLog');
+const ProjectStock = require('../models/ProjectStock');
 const User = require('../models/User');
 const Role = require('../models/Role');
 
@@ -32,6 +33,7 @@ async function clearDemoData() {
     payments: await clearCollection(Payment),
     deliveries: await clearCollection(Delivery),
     inventoryLogs: await clearCollection(Inventory),
+    projectStock: await clearCollection(ProjectStock),
     quotations: await clearCollection(Quotation),
     purchaseOrders: await clearCollection(PurchaseOrder),
     approvals: await clearCollection(Approval),

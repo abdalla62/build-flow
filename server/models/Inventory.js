@@ -23,7 +23,7 @@ const InventorySchema = new mongoose.Schema({
   },
   referenceType: {
     type: String,
-    enum: ['Delivery', 'Adjustment', 'Request'],
+    enum: ['Delivery', 'Adjustment', 'Request', 'Site Usage'],
     required: true
   },
   referenceId: {

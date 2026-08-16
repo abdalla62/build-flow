@@ -20,6 +20,188 @@ function money(n) {
   return Number(Number(n || 0).toFixed(2));
 }
 
+function daysBetween(a, b) {
+  const ms = new Date(b).getTime() - new Date(a).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return null;
+  return ms / (1000 * 60 * 60 * 24);
+}
+
+/**
+ * Feature 10.13 — non-AI supplier performance metrics (all-time).
+ * Optional filterSupplierId limits to one supplier (self-service).
+ */
+async function buildSupplierPerformanceReport(filterSupplierId = null) {
+  const Supplier = require('../models/Supplier');
+  const supplierQuery = filterSupplierId ? { _id: filterSupplierId } : {};
+  const suppliers = await Supplier.find(supplierQuery)
+    .select('company name email')
+    .sort({ company: 1 })
+    .lean();
+
+  if (suppliers.length === 0) {
+    return {
+      title: 'Supplier Performance Record',
+      description:
+        'Non-AI supplier evaluation: completed orders, delays, delivery time, cancellations, transaction value, and payment history',
+      headers: [
+        'Supplier',
+        'Completed Orders',
+        'Delayed Deliveries',
+        'Avg Delivery Days',
+        'Cancelled Orders',
+        'Total Transaction Value',
+        'Payments Paid',
+        'Payments Unpaid',
+        'Payments Overdue',
+        'Total Paid Amount'
+      ],
+      rows: [],
+      summary: { supplierCount: 0 },
+      count: 0
+    };
+  }
+
+  const supplierIds = suppliers.map((s) => s._id);
+  const [orders, deliveries, payments] = await Promise.all([
+    PurchaseOrder.find({ supplier: { $in: supplierIds } })
+      .select('supplier status paymentStatus grandTotal createdAt')
+      .lean(),
+    Delivery.find()
+      .populate({
+        path: 'purchaseOrder',
+        select: 'supplier createdAt',
+        match: { supplier: { $in: supplierIds } }
+      })
+      .select(
+        'status deliveryDate actualDeliveredAt originalDeliveryDate purchaseOrder rescheduleHistory'
+      )
+      .lean(),
+    Payment.find()
+      .populate({
+        path: 'purchaseOrder',
+        select: 'supplier',
+        match: { supplier: { $in: supplierIds } }
+      })
+      .select('paidAmount purchaseOrder')
+      .lean()
+  ]);
+
+  const byId = new Map(
+    suppliers.map((s) => [
+      String(s._id),
+      {
+        company: s.company || s.name || '—',
+        completedOrders: 0,
+        cancelledOrders: 0,
+        delayedDeliveries: 0,
+        deliveryDurations: [],
+        totalTransactionValue: 0,
+        paidPayments: 0,
+        unpaidPos: 0,
+        overduePos: 0,
+        totalPaidAmount: 0
+      }
+    ])
+  );
+
+  for (const o of orders) {
+    const key = String(o.supplier);
+    const row = byId.get(key);
+    if (!row) continue;
+    if (o.status === 'Delivered') row.completedOrders += 1;
+    if (o.status === 'Cancelled' || o.status === 'Rejected') row.cancelledOrders += 1;
+    if (!['Cancelled', 'Rejected'].includes(o.status)) {
+      row.totalTransactionValue += Number(o.grandTotal || 0);
+    }
+    if (o.paymentStatus === 'Unpaid' || o.paymentStatus === 'Partially Paid') {
+      row.unpaidPos += 1;
+    }
+    if (o.paymentStatus === 'Overdue') row.overduePos += 1;
+    if (o.paymentStatus === 'Paid') row.paidPayments += 1;
+  }
+
+  for (const d of deliveries) {
+    const po = d.purchaseOrder;
+    if (!po?.supplier) continue;
+    const key = String(po.supplier);
+    const row = byId.get(key);
+    if (!row) continue;
+
+    const scheduled = d.originalDeliveryDate || d.deliveryDate;
+    const delayed =
+      d.status === 'Delayed' ||
+      (Array.isArray(d.rescheduleHistory) && d.rescheduleHistory.length > 0) ||
+      (d.status === 'Delivered' &&
+        d.actualDeliveredAt &&
+        scheduled &&
+        new Date(d.actualDeliveredAt) > new Date(scheduled));
+
+    if (delayed) row.delayedDeliveries += 1;
+
+    if (d.actualDeliveredAt && po.createdAt) {
+      const days = daysBetween(po.createdAt, d.actualDeliveredAt);
+      if (days != null) row.deliveryDurations.push(days);
+    }
+  }
+
+  for (const p of payments) {
+    const po = p.purchaseOrder;
+    if (!po?.supplier) continue;
+    const row = byId.get(String(po.supplier));
+    if (!row) continue;
+    row.totalPaidAmount += Number(p.paidAmount || 0);
+  }
+
+  const rows = [...byId.values()].map((r) => {
+    const avg =
+      r.deliveryDurations.length > 0
+        ? money(
+            r.deliveryDurations.reduce((s, d) => s + d, 0) / r.deliveryDurations.length
+          )
+        : null;
+    return [
+      r.company,
+      r.completedOrders,
+      r.delayedDeliveries,
+      avg == null ? '—' : avg,
+      r.cancelledOrders,
+      money(r.totalTransactionValue),
+      r.paidPayments,
+      r.unpaidPos,
+      r.overduePos,
+      money(r.totalPaidAmount)
+    ];
+  });
+
+  return {
+    title: 'Supplier Performance Record',
+    description:
+      'Non-AI supplier evaluation (all-time): completed orders, delayed deliveries, average delivery time, cancelled orders, transaction value, and payment history',
+    headers: [
+      'Supplier',
+      'Completed Orders',
+      'Delayed Deliveries',
+      'Avg Delivery Days',
+      'Cancelled Orders',
+      'Total Transaction Value',
+      'Payments Paid (PO count)',
+      'Unpaid / Partial POs',
+      'Overdue POs',
+      'Total Paid Amount'
+    ],
+    rows,
+    summary: {
+      supplierCount: rows.length,
+      completedOrders: rows.reduce((s, r) => s + Number(r[1] || 0), 0),
+      delayedDeliveries: rows.reduce((s, r) => s + Number(r[2] || 0), 0),
+      cancelledOrders: rows.reduce((s, r) => s + Number(r[4] || 0), 0),
+      totalTransactionValue: money(rows.reduce((s, r) => s + Number(r[5] || 0), 0)),
+      totalPaidAmount: money(rows.reduce((s, r) => s + Number(r[9] || 0), 0))
+    },
+    count: rows.length
+  };
+}
+
 /**
  * @desc    Feature 10.14 — downloadable operational reports
  * @route   GET /api/reports?month=YYYY-MM
@@ -31,6 +213,7 @@ function money(n) {
  *  - deliverySchedule
  *  - outstandingBalance
  *  - materialUsage
+ *  - supplierPerformance (10.13)
  */
 exports.getReportStats = async (req, res, next) => {
   try {
@@ -388,6 +571,8 @@ exports.getReportStats = async (req, res, next) => {
       )
     };
 
+    reports.supplierPerformance = await buildSupplierPerformanceReport();
+
     // Keep legacy keys lightly for any older clients (summary counts only).
     res.status(200).json({
       success: true,
@@ -398,7 +583,8 @@ exports.getReportStats = async (req, res, next) => {
         supplierPayments: reports.supplierPayments.count,
         deliverySchedule: reports.deliverySchedule.count,
         outstandingBalance: reports.outstandingBalance.count,
-        materialUsage: reports.materialUsage.count
+        materialUsage: reports.materialUsage.count,
+        supplierPerformance: reports.supplierPerformance.count
       }
     });
   } catch (error) {
@@ -605,7 +791,8 @@ exports.getSupplierReportStats = async (req, res, next) => {
             outstandingRows.reduce((s, r) => s + Number(r.remaining || 0), 0)
           )
         }
-      )
+      ),
+      myPerformance: await buildSupplierPerformanceReport(sid)
     };
 
     res.status(200).json({

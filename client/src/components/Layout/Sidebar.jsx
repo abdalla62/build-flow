@@ -44,7 +44,8 @@ const Sidebar = ({ collapsed, mobileOpen = false, onNavigate }) => {
     } else if (role === 'Site Engineer') {
       links.push(
         { path: '/material-requests', label: 'Material Requests', icon: FiClipboard },
-        { path: '/deliveries', label: 'Track Delivery', icon: FiTruck }
+        { path: '/deliveries', label: 'Track Delivery', icon: FiTruck },
+        { path: '/site-stock', label: 'Site Stock', icon: FiBox }
       );
     } else if (role === 'Project Manager') {
       links.push(

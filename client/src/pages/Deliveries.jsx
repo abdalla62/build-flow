@@ -403,7 +403,11 @@ const Deliveries = () => {
           {d.purchaseOrder?.purchaseOrderNumber}
         </p>
         <p className="text-[10px] text-slate-500">
-          Material: {d.purchaseOrder?.items[0]?.quantity} x {d.purchaseOrder?.items[0]?.material?.name}
+          {(d.purchaseOrder?.items || []).length > 0
+            ? (d.purchaseOrder.items || [])
+                .map((it) => `${it?.quantity} x ${it?.material?.name || 'Material'}`)
+                .join(', ')
+            : 'No items'}
         </p>
       </div>
     )},
@@ -651,7 +655,11 @@ const Deliveries = () => {
               <option value="">Select PO</option>
               {acceptedPOs.map((o) => (
                 <option key={o._id} value={o._id}>
-                  {o.purchaseOrderNumber} - {o.supplier?.company} ({o.items[0]?.quantity} x {o.items[0]?.material?.name})
+                  {o.purchaseOrderNumber} - {o.supplier?.company} (
+                  {(o.items || [])
+                    .map((it) => `${it?.quantity} x ${it?.material?.name || 'Material'}`)
+                    .join(', ') || 'No items'}
+                  )
                 </option>
               ))}
             </select>

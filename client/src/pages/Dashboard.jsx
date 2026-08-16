@@ -12,7 +12,8 @@ import {
   FiAlertTriangle,
   FiClock,
   FiUsers,
-  FiBriefcase
+  FiBriefcase,
+  FiBell
 } from 'react-icons/fi';
 import {
   ResponsiveContainer,
@@ -73,6 +74,8 @@ const Dashboard = () => {
   const [procLoading, setProcLoading] = useState(false);
   const [deliveryStats, setDeliveryStats] = useState(null);
   const [deliveryLoading, setDeliveryLoading] = useState(false);
+  const [supplierMessages, setSupplierMessages] = useState([]);
+  const [supplierMessagesLoading, setSupplierMessagesLoading] = useState(false);
 
   const reloadAdminDashboard = ({ soft = false } = {}) => {
     const key = 'dashboard:admin';
@@ -209,6 +212,27 @@ const Dashboard = () => {
         }
       })
       .catch(() => {});
+
+    if (role === 'Supplier') {
+      setSupplierMessagesLoading(true);
+      axios
+        .get('/api/notifications')
+        .then((res) => {
+          if (!res.data.success) return;
+          const list = (res.data.notifications || []).filter((n) => {
+            const t = String(n.title || '');
+            return (
+              t.includes('Bid Not Selected') ||
+              t.includes('Purchase Order') ||
+              t.includes('quote was accepted') ||
+              t.includes('Bid')
+            );
+          });
+          setSupplierMessages(list.slice(0, 10));
+        })
+        .catch(() => setSupplierMessages([]))
+        .finally(() => setSupplierMessagesLoading(false));
+    }
   }, [user?.role]);
 
   const monthlyExpenditure = adminCharts.spendTrends;
@@ -449,6 +473,65 @@ const Dashboard = () => {
             );
           })}
         </motion.div>
+
+        {user?.role === 'Supplier' && (
+          <motion.div variants={itemVariants} className="bf-card p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-primary/10 text-brand-primary">
+                <FiBell className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="font-bold text-brand-text dark:text-white">Bid updates</h3>
+                <p className="text-xs text-brand-muted dark:text-brand-darkMuted">
+                  Awarded and not-selected bid messages
+                </p>
+              </div>
+            </div>
+            {supplierMessagesLoading ? (
+              <p className="py-6 text-center text-sm font-semibold text-brand-muted">Loading messages…</p>
+            ) : supplierMessages.length === 0 ? (
+              <p className="py-6 text-center text-sm font-semibold text-brand-muted">
+                No bid messages yet
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {supplierMessages.map((n) => {
+                  const lost = String(n.title || '').includes('Bid Not Selected');
+                  const won = String(n.title || '').includes('Purchase Order');
+                  return (
+                    <li
+                      key={n._id}
+                      className={`rounded-xl border px-4 py-3 ${
+                        lost
+                          ? 'border-amber-200/80 bg-amber-50/80 dark:border-amber-900/40 dark:bg-amber-950/20'
+                          : won
+                            ? 'border-teal-200/80 bg-teal-50/70 dark:border-teal-900/40 dark:bg-teal-950/20'
+                            : 'border-brand-border bg-brand-card/60 dark:border-brand-darkBorder dark:bg-white/5'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-bold text-brand-text dark:text-white">{n.title}</p>
+                          <p className="mt-1 text-xs leading-relaxed text-brand-muted dark:text-slate-300">
+                            {n.message}
+                          </p>
+                        </div>
+                        {!n.read && (
+                          <span className="shrink-0 rounded-full bg-brand-primary px-2 py-0.5 text-[10px] font-bold text-white">
+                            New
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-2 text-[10px] font-semibold text-slate-400">
+                        {n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </motion.div>
+        )}
 
         {isAdmin && (
           <motion.div className="grid grid-cols-1 gap-6 lg:grid-cols-3" variants={pageVariants}>

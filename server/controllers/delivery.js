@@ -7,6 +7,7 @@ const Inventory = require('../models/Inventory');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const logActivity = require('../utils/audit');
+const { applyProjectStockChange } = require('../utils/projectStock');
 
 const toObjectId = (id) => {
   if (!id) return id;
@@ -215,7 +216,10 @@ exports.updateDeliveryStatus = async (req, res, next) => {
       .populate('driver')
       .populate({
         path: 'purchaseOrder',
-        populate: { path: 'materialRequest', populate: { path: 'project' } }
+        populate: {
+          path: 'materialRequest',
+          populate: [{ path: 'project' }, { path: 'requestedBy' }]
+        }
       });
 
     if (!delivery) {
@@ -235,46 +239,57 @@ exports.updateDeliveryStatus = async (req, res, next) => {
     await delivery.save();
 
     // Propagate status update to Purchase Order
-    const po = await PurchaseOrder.findById(delivery.purchaseOrder._id);
+    const populatedPo = delivery.purchaseOrder;
+    const po = await PurchaseOrder.findById(populatedPo._id);
     po.status = status === 'Delivered' ? 'Delivered' : status;
     await po.save();
 
     await logActivity(req, req.user, `Delivery Status Update - ${status}`, `Delivery ID: ${delivery._id} set from ${oldStatus} to ${status}`);
 
-    // Auto-update Inventory balance when status becomes "Delivered"
-    if (status === 'Delivered' && oldStatus !== 'Delivered') {
-      // Loop over PO items to record Stock In
-      for (let item of po.items) {
-        // Create Inventory Ledger entry
-        await Inventory.create({
-          material: item.material,
-          project: po.materialRequest?.project?._id || null,
-          quantity: item.quantity,
-          type: 'Stock In',
-          referenceType: 'Delivery',
-          referenceId: delivery._id
-        });
+    const mr = populatedPo.materialRequest;
+    const projectId = mr?.project?._id || mr?.project || null;
+    const requesterId = mr?.requestedBy?._id || mr?.requestedBy || null;
 
-        // Increment Material Stock Balance
+    // Auto-update Inventory + project/site stock when status becomes "Delivered"
+    if (status === 'Delivered' && oldStatus !== 'Delivered') {
+      for (const item of po.items) {
+        if (projectId) {
+          await applyProjectStockChange({
+            projectId,
+            materialId: item.material,
+            quantity: item.quantity,
+            type: 'Stock In',
+            referenceType: 'Delivery',
+            referenceId: delivery._id
+          });
+        } else {
+          await Inventory.create({
+            material: item.material,
+            project: null,
+            quantity: item.quantity,
+            type: 'Stock In',
+            referenceType: 'Delivery',
+            referenceId: delivery._id
+          });
+        }
+
         await Material.findByIdAndUpdate(item.material, {
           $inc: { currentStock: item.quantity }
         });
       }
 
-      // Notify Site Engineer & PM that goods arrived
-      if (po.materialRequest?.requestedBy) {
+      if (requesterId) {
         await Notification.create({
-          user: po.materialRequest.requestedBy,
+          user: requesterId,
           title: 'Materials Delivered on Site',
           message: `Delivery completed for PO ${po.purchaseOrderNumber}. Please confirm receipt of your requested materials.`,
           type: 'Delivery'
         });
       }
     } else {
-      // Notify Site Engineer of transit changes
-      if (po.materialRequest?.requestedBy) {
+      if (requesterId) {
         await Notification.create({
-          user: po.materialRequest.requestedBy,
+          user: requesterId,
           title: `Delivery Shipment ${status}`,
           message: `Your material shipment for PO ${po.purchaseOrderNumber} is now marked as "${status}". Driver: ${delivery.driver.name}.`,
           type: 'Delivery'

@@ -35,6 +35,7 @@ List<MenuItem> menuForRole(String role) {
       links.addAll(const [
         MenuItem(path: '/material-requests', label: 'Material Requests', icon: Icons.assignment_outlined),
         MenuItem(path: '/deliveries', label: 'Track Delivery', icon: Icons.local_shipping_outlined),
+        MenuItem(path: '/site-stock', label: 'Site Stock', icon: Icons.inventory_outlined),
       ]);
     case 'Project Manager':
       links.addAll(const [
@@ -171,6 +172,7 @@ String titleForPath(String path) {
     '/purchase-orders': 'Purchase Orders',
     '/deliveries': 'Deliveries',
     '/inventory': 'Inventory',
+    '/site-stock': 'Site Stock',
     '/payments': 'Payments',
     '/reports': 'Reports',
     '/audit-logs': 'Audit Logs',

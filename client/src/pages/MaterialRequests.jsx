@@ -325,13 +325,17 @@ const MaterialRequests = () => {
   const handleOpenReview = (request) => {
     setReviewingRequest(request);
     setReviewComments('');
-    setReviewAction('Approve');
+    // Accidental approve: open on Return so PM can quickly undo
+    setReviewAction(request.status === 'Approved' ? 'Return' : 'Approve');
     const lines = requestLines(request);
     const preferred = preferredSuppliersFromRequests(lines);
+    const existingInvite = (request.suppliers || []).map((s) => s._id || s).filter(Boolean);
     setSelectedSuppliers(
-      preferred.length > 0
-        ? preferred
-        : (request.suppliers || []).map((s) => s._id || s).filter(Boolean)
+      existingInvite.length > 0
+        ? existingInvite.map(String)
+        : preferred.length > 0
+          ? preferred
+          : []
     );
     setSuppliersError('');
     setIsReviewOpen(true);
@@ -597,13 +601,13 @@ const MaterialRequests = () => {
           </>
         )}
 
-        {/* Project Manager review / edit actions */}
-        {isPM && ['Pending', 'Returned', 'Rejected'].includes(r.status) && (
+        {/* Project Manager review / edit actions (Approved can still be updated before Ordered) */}
+        {isPM && ['Pending', 'Returned', 'Rejected', 'Approved'].includes(r.status) && (
           <>
             <button
               onClick={() => handleOpenReview(r)}
               className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-              title="Edit / Review"
+              title={r.status === 'Approved' ? 'Update decision' : 'Edit / Review'}
             >
               <FiEdit className="h-4 w-4" />
             </button>
@@ -613,6 +617,14 @@ const MaterialRequests = () => {
                 className="px-2.5 py-1.5 text-xs font-bold bg-brand-primary hover:bg-brand-primaryHover text-white rounded-lg shadow-sm transition-colors"
               >
                 Review Request
+              </button>
+            )}
+            {r.status === 'Approved' && (
+              <button
+                onClick={() => handleOpenReview(r)}
+                className="px-2.5 py-1.5 text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white rounded-lg shadow-sm transition-colors"
+              >
+                Update decision
               </button>
             )}
           </>
@@ -1028,9 +1040,13 @@ const MaterialRequests = () => {
           setReviewingRequest(null);
         }}
         title={
-          reviewItems.length > 1
-            ? `Review Request (${reviewItems.length} items)`
-            : 'Review Material Request'
+          reviewingRequest?.status === 'Approved'
+            ? reviewItems.length > 1
+              ? `Update decision (${reviewItems.length} items)`
+              : 'Update review decision'
+            : reviewItems.length > 1
+              ? `Review Request (${reviewItems.length} items)`
+              : 'Review Material Request'
         }
       >
         {reviewItems.length > 0 && budgetDetails && (
@@ -1168,9 +1184,13 @@ const MaterialRequests = () => {
             >
               {reviewSubmitting
                 ? 'Saving…'
-                : reviewItems.length > 1
-                  ? `Post Decision for ${reviewItems.length} Items`
-                  : 'Post Review Decision'}
+                : reviewingRequest?.status === 'Approved'
+                  ? reviewItems.length > 1
+                    ? `Update decision for ${reviewItems.length} items`
+                    : 'Update decision'
+                  : reviewItems.length > 1
+                    ? `Post Decision for ${reviewItems.length} Items`
+                    : 'Post Review Decision'}
             </button>
           </div>
         )}

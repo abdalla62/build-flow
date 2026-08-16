@@ -121,7 +121,7 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                   return ModuleListTile(
                     title: s['company']?.toString() ?? s['name']?.toString() ?? '',
                     subtitle:
-                        '${s['name']} · ${s['email']}\n${s['phone']} · ${s['paymentTerms']} · $stars',
+                        '${s['name']} · ${s['email']}\n${s['phone']} · $stars',
                     icon: Icons.local_shipping_outlined,
                     onTap: () => _openForm(existing: s),
                   );
@@ -150,13 +150,6 @@ class _SupplierFormDialog extends StatefulWidget {
 }
 
 class _SupplierFormDialogState extends State<_SupplierFormDialog> {
-  static const _paymentTerms = [
-    'Cash on Delivery',
-    'Net 15',
-    'Net 30',
-    'Net 60',
-  ];
-
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameCtrl;
   late final TextEditingController _companyCtrl;
@@ -165,7 +158,6 @@ class _SupplierFormDialogState extends State<_SupplierFormDialog> {
   late final TextEditingController _passwordCtrl;
   late final TextEditingController _addressCtrl;
 
-  late String _paymentTermsValue;
   late int _rating;
   final Set<String> _selectedCats = {};
   bool _obscure = true;
@@ -184,8 +176,6 @@ class _SupplierFormDialogState extends State<_SupplierFormDialog> {
     _passwordCtrl = TextEditingController();
     _addressCtrl = TextEditingController(text: e?['address']?.toString() ?? '');
 
-    final terms = e?['paymentTerms']?.toString() ?? 'Net 30';
-    _paymentTermsValue = _paymentTerms.contains(terms) ? terms : 'Net 30';
     _rating = (e?['performanceRating'] as num?)?.toInt() ?? 5;
     if (_rating < 1 || _rating > 5) _rating = 5;
 
@@ -218,7 +208,7 @@ class _SupplierFormDialogState extends State<_SupplierFormDialog> {
       'phone': _phoneCtrl.text.trim(),
       'email': _emailCtrl.text.trim(),
       'address': _addressCtrl.text.trim(),
-      'paymentTerms': _paymentTermsValue,
+      'paymentTerms': 'Net 30',
       'performanceRating': _rating,
       'suppliedCategories': _selectedCats.toList(),
       if (_isCreate) 'password': _passwordCtrl.text,
@@ -351,18 +341,6 @@ class _SupplierFormDialogState extends State<_SupplierFormDialog> {
                   ),
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Address is required' : null,
-                ),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  value: _paymentTermsValue,
-                  items: _paymentTerms
-                      .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                      .toList(),
-                  onChanged: (v) {
-                    if (v == null) return;
-                    setState(() => _paymentTermsValue = v);
-                  },
-                  decoration: const InputDecoration(labelText: 'Payment Terms'),
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<int>(

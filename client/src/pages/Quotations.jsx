@@ -35,10 +35,15 @@ const Quotations = () => {
   const [deliveryCost, setDeliveryCost] = useState('50');
   const [deliveryTimeDays, setDeliveryTimeDays] = useState('3');
   const [warrantyMonths, setWarrantyMonths] = useState('12');
-  const [paymentTerms, setPaymentTerms] = useState('Net 30');
   const [bidSubmitting, setBidSubmitting] = useState(false);
   const [awardSubmitting, setAwardSubmitting] = useState(false);
   const [editingBid, setEditingBid] = useState(false);
+
+  const [isDeclineOpen, setIsDeclineOpen] = useState(false);
+  const [decliningRequest, setDecliningRequest] = useState(null);
+  const [declineReason, setDeclineReason] = useState('No stock');
+  const [declineNotes, setDeclineNotes] = useState('');
+  const [declineSubmitting, setDeclineSubmitting] = useState(false);
 
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [comparingRequest, setComparingRequest] = useState(null);
@@ -131,10 +136,40 @@ const Quotations = () => {
     setDeliveryCost(String(first?.deliveryCost ?? '50'));
     setDeliveryTimeDays(String(first?.deliveryTimeDays ?? '3'));
     setWarrantyMonths(String(first?.warrantyMonths ?? '12'));
-    setPaymentTerms(first?.paymentTerms || 'Net 30');
     setEditingBid(Boolean(edit && mine.length > 0));
     setBiddingRequest(request);
     setIsBidOpen(true);
+  };
+
+  const handleOpenDecline = (request) => {
+    setDecliningRequest(request);
+    setDeclineReason('No stock');
+    setDeclineNotes('');
+    setIsDeclineOpen(true);
+  };
+
+  const onDeclineSubmit = async (e) => {
+    e.preventDefault();
+    if (!decliningRequest || declineSubmitting) return;
+    setDeclineSubmitting(true);
+    try {
+      const res = await axios.post('/api/quotations/decline', {
+        materialRequest: decliningRequest._id,
+        reason: declineReason,
+        notes: declineNotes.trim() || undefined
+      });
+      if (res.data.success) {
+        toast.success(res.data.message || 'Bidding request declined');
+        setIsDeclineOpen(false);
+        setDecliningRequest(null);
+        pageCache.invalidate('quotations:');
+        refreshQuotes();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to decline');
+    } finally {
+      setDeclineSubmitting(false);
+    }
   };
 
   const handleOpenCompare = async (request) => {
@@ -178,7 +213,7 @@ const Quotations = () => {
         deliveryCost: ship,
         deliveryTimeDays: days,
         warrantyMonths: Number(warrantyMonths) || 0,
-        paymentTerms
+        paymentTerms: 'Net 30'
       };
       const res = editingBid
         ? await axios.put('/api/quotations/batch', payload)
@@ -206,7 +241,7 @@ const Quotations = () => {
     try {
       const res = await axios.put(`/api/quotations/${quoteId}/select`);
       if (res.data.success) {
-        toast.success('Contract awarded! Purchase Order auto-generated.');
+        toast.success('Contract awarded! PO created. Other bidders were notified.');
         setIsCompareOpen(false);
         refreshQuotes();
         pageCache.invalidate('orders:');
@@ -294,14 +329,25 @@ const Quotations = () => {
       const myPending = myPendingQuotesFor(r);
       const hasMyPending = myPending.length > 0;
       return (
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {isSupplier && (
-          <button
-            onClick={() => handleOpenBid(r, hasMyPending)}
-            className="px-3 py-1.5 text-xs font-bold bg-brand-primary hover:bg-brand-primaryHover text-white rounded-lg shadow-sm transition-colors"
-          >
-            {hasMyPending ? 'Edit Bid' : 'Submit Bid'}
-          </button>
+          <>
+            <button
+              onClick={() => handleOpenBid(r, hasMyPending)}
+              className="px-3 py-1.5 text-xs font-bold bg-brand-primary hover:bg-brand-primaryHover text-white rounded-lg shadow-sm transition-colors"
+            >
+              {hasMyPending ? 'Edit Bid' : 'Submit Bid'}
+            </button>
+            {!hasMyPending && (
+              <button
+                onClick={() => handleOpenDecline(r)}
+                className="px-3 py-1.5 text-xs font-bold border border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                title="I don’t have this material / cannot supply"
+              >
+                No stock
+              </button>
+            )}
+          </>
         )}
         {isProc && (
           <button
@@ -402,30 +448,15 @@ const Quotations = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase">Warranty Limit (Months)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={warrantyMonths}
-                  onChange={(e) => setWarrantyMonths(e.target.value)}
-                  className="w-full mt-1.5 px-4 py-2 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase">Payment Terms offered</label>
-                <select
-                  value={paymentTerms}
-                  onChange={(e) => setPaymentTerms(e.target.value)}
-                  className="w-full mt-1.5 px-4 py-2.5 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
-                >
-                  <option value="Cash on Delivery">Cash on Delivery</option>
-                  <option value="Net 15">Net 15</option>
-                  <option value="Net 30">Net 30</option>
-                  <option value="Net 60">Net 60</option>
-                </select>
-              </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase">Warranty Limit (Months)</label>
+              <input
+                type="number"
+                min="0"
+                value={warrantyMonths}
+                onChange={(e) => setWarrantyMonths(e.target.value)}
+                className="w-full mt-1.5 px-4 py-2 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
+              />
             </div>
 
             <button
@@ -435,6 +466,76 @@ const Quotations = () => {
             >
               {bidSubmitting ? 'Saving…' : editingBid ? 'Save Bid Changes' : 'Post Bid Quotation'}
             </button>
+          </form>
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={isDeclineOpen}
+        onClose={() => {
+          if (declineSubmitting) return;
+          setIsDeclineOpen(false);
+          setDecliningRequest(null);
+        }}
+        title="Decline to bid"
+      >
+        {decliningRequest && (
+          <form onSubmit={onDeclineSubmit} className="space-y-4 py-2">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              Use this when you don’t have the material or cannot supply. The request will leave your
+              bidding board and the Project Manager will be notified.
+            </p>
+            <div className="bg-slate-50 dark:bg-slate-950/30 border border-slate-100 dark:border-slate-800 p-3 rounded-xl">
+              <p className="text-xs text-slate-500">Project: {decliningRequest.project?.name}</p>
+              {requestLines(decliningRequest).map((line) => (
+                <p key={lineId(line)} className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                  {line.quantity} {line.material?.unit} of {line.material?.name}
+                </p>
+              ))}
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase">Reason</label>
+              <select
+                value={declineReason}
+                onChange={(e) => setDeclineReason(e.target.value)}
+                className="w-full mt-1.5 px-4 py-2 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
+              >
+                <option value="No stock">No stock</option>
+                <option value="Cannot supply">Cannot supply</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase">Note (optional)</label>
+              <input
+                type="text"
+                value={declineNotes}
+                onChange={(e) => setDeclineNotes(e.target.value)}
+                maxLength={500}
+                placeholder="e.g. Out of stock until next week"
+                className="w-full mt-1.5 px-4 py-2 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                disabled={declineSubmitting}
+                onClick={() => {
+                  setIsDeclineOpen(false);
+                  setDecliningRequest(null);
+                }}
+                className="flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={declineSubmitting}
+                className="flex-1 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-60 text-white font-bold py-2.5 text-sm"
+              >
+                {declineSubmitting ? 'Saving…' : 'Confirm decline'}
+              </button>
+            </div>
           </form>
         )}
       </Modal>
@@ -531,9 +632,6 @@ const Quotations = () => {
                         </span>
                         <span>
                           Warranty: <strong>{group.warrantyMonths} months</strong>
-                        </span>
-                        <span>
-                          Terms: <strong>{group.paymentTerms}</strong>
                         </span>
                       </div>
 

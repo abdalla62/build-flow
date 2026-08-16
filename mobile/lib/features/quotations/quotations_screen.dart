@@ -116,6 +116,111 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
     if (submitted == true) _load();
   }
 
+  Future<void> _openDecline(Map<String, dynamic> request) async {
+    final reason = ValueNotifier<String>('No stock');
+    final notesCtrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Decline to bid'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Use when you don’t have the material. PM will be notified and this leaves your board.',
+                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Project: ${popName(request['project'])}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                ...quoteRequestLines(request).map(
+                  (l) => Text(
+                    '${l['quantity']} ${l['material'] is Map ? (l['material'] as Map)['unit'] ?? '' : ''} ${popName(l['material'])}',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ValueListenableBuilder<String>(
+                  valueListenable: reason,
+                  builder: (_, value, __) {
+                    return DropdownButtonFormField<String>(
+                      value: value,
+                      decoration: const InputDecoration(labelText: 'Reason'),
+                      items: const [
+                        DropdownMenuItem(value: 'No stock', child: Text('No stock')),
+                        DropdownMenuItem(
+                          value: 'Cannot supply',
+                          child: Text('Cannot supply'),
+                        ),
+                        DropdownMenuItem(value: 'Other', child: Text('Other')),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) reason.value = v;
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: notesCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Note (optional)',
+                  ),
+                  maxLength: 500,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Confirm decline'),
+            ),
+          ],
+        );
+      },
+    );
+
+    final notes = notesCtrl.text;
+    final chosenReason = reason.value;
+    notesCtrl.dispose();
+    reason.dispose();
+    if (ok != true || !mounted) return;
+
+    try {
+      final res = await ref.read(apiRepositoryProvider).declineQuotation(
+            materialRequestId: popId(request),
+            reason: chosenReason,
+            notes: notes,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            res['message']?.toString() ?? 'Declined bidding request',
+          ),
+        ),
+      );
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+    }
+  }
+
   Future<void> _openCompare(Map<String, dynamic> request) async {
     final id = popId(request);
     List<Map<String, dynamic>> quotes = [];
@@ -183,7 +288,7 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                                   ),
                                   subtitle: Text(
                                     'Unit \$${q['unitPrice']} · Delivery \$${q['deliveryCost']}\n'
-                                    '${q['deliveryTimeDays']} days · ${q['paymentTerms']}',
+                                    '${q['deliveryTimeDays']} days',
                                   ),
                                   isThreeLine: true,
                                   trailing: selected
@@ -230,7 +335,9 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
       await ref.read(apiRepositoryProvider).selectQuotation(id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Contract awarded — PO created')),
+        const SnackBar(
+          content: Text('Contract awarded — PO created. Other bidders were notified.'),
+        ),
       );
       _load();
     } catch (e) {
@@ -392,8 +499,7 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                               ],
                             ),
                             const SizedBox(height: 12),
-                            // Match web: Supplier + Admin can Submit Bid; Proc + Admin Compare.
-                            if (isSupplier || role == 'Administrator')
+                            if (isSupplier || role == 'Administrator') ...[
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
@@ -414,6 +520,17 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                                   ),
                                 ),
                               ),
+                              if (_myPendingQuotes(r).isEmpty && !already) ...[
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton(
+                                    onPressed: () => _openDecline(r),
+                                    child: const Text('No stock / Decline'),
+                                  ),
+                                ),
+                              ],
+                            ],
                             if (canProcure) ...[
                               if (isSupplier || role == 'Administrator')
                                 const SizedBox(height: 8),
@@ -460,16 +577,8 @@ class _SubmitBidDialogState extends ConsumerState<_SubmitBidDialog> {
   late final TextEditingController _deliveryCost;
   late final TextEditingController _days;
   late final TextEditingController _warranty;
-  String _paymentTerms = 'Net 30';
   bool _submitting = false;
   String? _error;
-
-  static const _terms = [
-    'Cash on Delivery',
-    'Net 15',
-    'Net 30',
-    'Net 60',
-  ];
 
   List<Map<String, dynamic>> get _lines => quoteRequestLines(widget.request);
 
@@ -511,8 +620,6 @@ class _SubmitBidDialogState extends ConsumerState<_SubmitBidDialog> {
     _warranty = TextEditingController(
       text: (first?['warrantyMonths'] as num?)?.toString() ?? '12',
     );
-    final terms = first?['paymentTerms']?.toString();
-    if (terms != null && _terms.contains(terms)) _paymentTerms = terms;
   }
 
   @override
@@ -548,7 +655,7 @@ class _SubmitBidDialogState extends ConsumerState<_SubmitBidDialog> {
         'deliveryCost': double.tryParse(_deliveryCost.text.trim()) ?? 0,
         'deliveryTimeDays': int.tryParse(_days.text.trim()) ?? 1,
         'warrantyMonths': int.tryParse(_warranty.text.trim()) ?? 0,
-        'paymentTerms': _paymentTerms,
+        'paymentTerms': 'Net 30',
       };
       if (widget.editing) {
         await ref.read(apiRepositoryProvider).updateQuotationBatch(body);
@@ -716,22 +823,6 @@ class _SubmitBidDialogState extends ConsumerState<_SubmitBidDialog> {
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  initialValue: _paymentTerms,
-                  items: _terms
-                      .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                      .toList(),
-                  onChanged: _submitting
-                      ? null
-                      : (v) {
-                          if (v == null) return;
-                          setState(() => _paymentTerms = v);
-                        },
-                  decoration: const InputDecoration(
-                    labelText: 'Payment Terms offered',
-                  ),
                 ),
               ],
             ),

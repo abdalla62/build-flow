@@ -517,6 +517,20 @@ class ApiRepository {
     return Map<String, dynamic>.from(data);
   }
 
+  Future<Map<String, dynamic>> declineQuotation({
+    required String materialRequestId,
+    String reason = 'No stock',
+    String? notes,
+  }) async {
+    final data = await _post('/api/quotations/decline', data: {
+      'materialRequest': materialRequestId,
+      'reason': reason,
+      if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+    });
+    _ensureSuccess(data);
+    return Map<String, dynamic>.from(data);
+  }
+
   Future<Map<String, dynamic>> getMySupplier() async {
     final data = await _get('/api/suppliers/me');
     _ensureSuccess(data);
@@ -788,6 +802,32 @@ class ApiRepository {
     final data = await _post('/api/inventory/adjust', data: body);
     _ensureSuccess(data);
     return Map<String, dynamic>.from(data['log'] as Map);
+  }
+
+  Future<({List<Map<String, dynamic>> stocks, List<Map<String, dynamic>> projects})>
+      getProjectStock({String? projectId}) async {
+    final data = await _get(
+      '/api/inventory/project-stock',
+      params: {
+        if (projectId != null && projectId.isNotEmpty) 'projectId': projectId,
+      },
+    );
+    _ensureSuccess(data);
+    final stocks = (data['stocks'] as List? ?? [])
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+    final projects = (data['projects'] as List? ?? [])
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+    return (stocks: stocks, projects: projects);
+  }
+
+  Future<Map<String, dynamic>> recordSiteUsage(Map<String, dynamic> body) async {
+    final data = await _post('/api/inventory/site-usage', data: body);
+    _ensureSuccess(data);
+    return Map<String, dynamic>.from(
+      (data['stock'] as Map?) ?? <String, dynamic>{},
+    );
   }
 
   // ── Notifications ──────────────────────────────────────────────────────

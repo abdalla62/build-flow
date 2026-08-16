@@ -125,11 +125,21 @@ exports.getRequests = async (req, res, next) => {
         supplierProfile._id.toString(),
         ...linkedIds.map((id) => id.toString())
       ]);
+      const idList = [...idSet];
 
-      query.$or = [
-        { suppliers: { $in: [...idSet] } },
-        { suppliers: { $exists: false } },
-        { suppliers: { $size: 0 } }
+      query.$and = [
+        {
+          $or: [
+            { suppliers: { $in: idList } },
+            { suppliers: { $exists: false } },
+            { suppliers: { $size: 0 } }
+          ]
+        },
+        {
+          declinedBySuppliers: {
+            $not: { $elemMatch: { supplier: { $in: idList } } }
+          }
+        }
       ];
     }
     // Admin / Procurement / Accountant / Delivery Staff can read all
@@ -436,6 +446,10 @@ async function applyReviewToRequest(request, { action, comments, suppliers, user
   if (Array.isArray(suppliers) && suppliers.length > 0) {
     request.suppliers = suppliers;
   }
+  // Fresh invite cycle — clear prior declines so suppliers can bid again
+  if (action === 'Approve') {
+    request.declinedBySuppliers = [];
+  }
   await request.save();
 
   await Approval.create({
@@ -497,6 +511,9 @@ async function applyReviewToRequest(request, { action, comments, suppliers, user
   return request;
 }
 
+const REVIEWABLE_STATUSES = ['Pending', 'Returned', 'Rejected', 'Approved'];
+const LOCKED_REVIEW_STATUSES = ['Ordered', 'Delivered', 'Cancelled'];
+
 function validateReviewPayload({ action, comments, suppliers }) {
   if (!['Approve', 'Reject', 'Return'].includes(action)) {
     return 'Invalid review action';
@@ -508,6 +525,26 @@ function validateReviewPayload({ action, comments, suppliers }) {
     return 'Select at least one supplier for quotations before approving';
   }
   return null;
+}
+
+async function assertCanUpdateApprovedBatch(siblingIds) {
+  const Quotation = require('../models/Quotation');
+  const awarded = await Quotation.countDocuments({
+    materialRequest: { $in: siblingIds },
+    status: 'Selected'
+  });
+  if (awarded > 0) {
+    return 'Cannot change decision — a supplier bid was already awarded (PO created)';
+  }
+  return null;
+}
+
+async function closePendingBidsForRequests(requestIds) {
+  const Quotation = require('../models/Quotation');
+  await Quotation.updateMany(
+    { materialRequest: { $in: requestIds }, status: 'Pending' },
+    { $set: { status: 'Rejected' } }
+  );
 }
 
 // @desc    Review / Approve / Reject / Return material request
@@ -534,14 +571,28 @@ exports.reviewRequest = async (req, res, next) => {
       ? await populateRequest(MaterialRequest.find({ batchId: request.batchId }))
       : [request];
 
-    const reviewable = siblings.filter((r) =>
-      ['Pending', 'Returned', 'Rejected'].includes(r.status)
-    );
+    if (siblings.some((r) => LOCKED_REVIEW_STATUSES.includes(r.status))) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot change review once the request is ordered or delivered'
+      });
+    }
+
+    const reviewable = siblings.filter((r) => REVIEWABLE_STATUSES.includes(r.status));
     if (reviewable.length === 0) {
       return res.status(400).json({
         success: false,
-        error: 'Cannot change review once the request is approved or ordered'
+        error: 'No reviewable request lines found'
       });
+    }
+
+    const siblingIds = reviewable.map((r) => r._id);
+    const wasApproved = reviewable.some((r) => r.status === 'Approved');
+    if (wasApproved) {
+      const lockErr = await assertCanUpdateApprovedBatch(siblingIds);
+      if (lockErr) {
+        return res.status(400).json({ success: false, error: lockErr });
+      }
     }
 
     let last = request;
@@ -555,6 +606,11 @@ exports.reviewRequest = async (req, res, next) => {
         notify: i === 0,
         itemCount: reviewable.length
       });
+    }
+
+    // Accidental approve undo: close open bids so suppliers cannot keep quoting
+    if (wasApproved && (action === 'Return' || action === 'Reject')) {
+      await closePendingBidsForRequests(siblingIds);
     }
 
     res.status(200).json({
@@ -606,11 +662,24 @@ exports.bulkReviewRequests = async (req, res, next) => {
         skipped.push({ id: request._id, reason: 'Not authorized' });
         continue;
       }
-      if (!['Pending', 'Returned', 'Rejected'].includes(request.status)) {
+      if (LOCKED_REVIEW_STATUSES.includes(request.status)) {
+        skipped.push({ id: request._id, reason: `Status is ${request.status}` });
+        continue;
+      }
+      if (!REVIEWABLE_STATUSES.includes(request.status)) {
         skipped.push({ id: request._id, reason: `Status is ${request.status}` });
         continue;
       }
 
+      if (request.status === 'Approved') {
+        const lockErr = await assertCanUpdateApprovedBatch([request._id]);
+        if (lockErr) {
+          skipped.push({ id: request._id, reason: lockErr });
+          continue;
+        }
+      }
+
+      const wasApproved = request.status === 'Approved';
       await applyReviewToRequest(request, {
         action,
         comments,
@@ -618,6 +687,9 @@ exports.bulkReviewRequests = async (req, res, next) => {
         user: req.user,
         req
       });
+      if (wasApproved && (action === 'Return' || action === 'Reject')) {
+        await closePendingBidsForRequests([request._id]);
+      }
       reviewed.push(request._id);
     }
 
@@ -706,6 +778,7 @@ exports.receiveMaterials = async (req, res, next) => {
 
     const Inventory = require('../models/Inventory');
     const Material = require('../models/Material');
+    const { applyProjectStockChange } = require('../utils/projectStock');
 
     if (damagedQty > 0) {
       request.damagedReported = {
@@ -714,14 +787,18 @@ exports.receiveMaterials = async (req, res, next) => {
         reportedAt: Date.now()
       };
 
-      await Inventory.create({
-        material: request.material._id,
-        project: request.project._id,
-        quantity: damagedQty,
-        type: 'Stock Out',
-        referenceType: 'Adjustment',
-        referenceId: request._id
-      });
+      try {
+        await applyProjectStockChange({
+          projectId: request.project._id,
+          materialId: request.material._id,
+          quantity: damagedQty,
+          type: 'Stock Out',
+          referenceType: 'Adjustment',
+          referenceId: request._id
+        });
+      } catch (err) {
+        return res.status(400).json({ success: false, error: err.message });
+      }
 
       await Material.findByIdAndUpdate(request.material._id, {
         $inc: { currentStock: -damagedQty }
@@ -742,14 +819,18 @@ exports.receiveMaterials = async (req, res, next) => {
         reportedAt: Date.now()
       };
 
-      await Inventory.create({
-        material: request.material._id,
-        project: request.project._id,
-        quantity: missingQty,
-        type: 'Stock Out',
-        referenceType: 'Adjustment',
-        referenceId: request._id
-      });
+      try {
+        await applyProjectStockChange({
+          projectId: request.project._id,
+          materialId: request.material._id,
+          quantity: missingQty,
+          type: 'Stock Out',
+          referenceType: 'Adjustment',
+          referenceId: request._id
+        });
+      } catch (err) {
+        return res.status(400).json({ success: false, error: err.message });
+      }
 
       await Material.findByIdAndUpdate(request.material._id, {
         $inc: { currentStock: -missingQty }

@@ -20,6 +20,7 @@ import PurchaseOrders from './pages/PurchaseOrders';
 import Payments from './pages/Payments';
 import Deliveries from './pages/Deliveries';
 import Inventory from './pages/Inventory';
+import SiteStock from './pages/SiteStock';
 import Reports from './pages/Reports';
 import AuditLogs from './pages/AuditLogs';
 import Unauthorized from './pages/Unauthorized';
@@ -61,6 +62,7 @@ const App = () => {
             </Route>
             <Route path="/deliveries" element={<Deliveries />} />
             <Route path="/inventory" element={<Inventory />} />
+            <Route path="/site-stock" element={<SiteStock />} />
             <Route path="/reports" element={<Reports />} />
 
             {/* Admin Only Route */}

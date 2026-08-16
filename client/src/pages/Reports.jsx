@@ -52,6 +52,13 @@ const ADMIN_REPORT_META = [
     icon: FiPackage,
     hintKey: 'totalQtyOut',
     hintPrefix: 'Qty out: '
+  },
+  {
+    id: 'supplierPerformance',
+    label: 'Supplier Performance',
+    icon: FiLayers,
+    hintKey: 'supplierCount',
+    hintPrefix: 'Suppliers: '
   }
 ];
 
@@ -83,6 +90,13 @@ const SUPPLIER_REPORT_META = [
     icon: FiAlertCircle,
     hintKey: 'totalOutstanding',
     hintPrefix: 'Outstanding: $'
+  },
+  {
+    id: 'myPerformance',
+    label: 'My Performance',
+    icon: FiClipboard,
+    hintKey: 'completedOrders',
+    hintPrefix: 'Completed: '
   }
 ];
 

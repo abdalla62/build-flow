@@ -257,13 +257,22 @@ const PurchaseOrders = () => {
       </div>
     )},
     { key: 'items', label: 'Fulfillment Items', render: (o) => {
-      const item = o.items[0];
+      const lines = Array.isArray(o.items) ? o.items : [];
+      if (lines.length === 0) {
+        return <span className="text-xs text-slate-400">No items</span>;
+      }
       return (
-        <div>
-          <p className="font-bold text-slate-800 dark:text-slate-200">
-            {item?.quantity} x {item?.material?.name}
-          </p>
-          <p className="text-xs text-slate-500">Unit Price: ${item?.unitPrice?.toFixed(2)}</p>
+        <div className="space-y-1.5">
+          {lines.map((item, idx) => (
+            <div key={item._id || idx}>
+              <p className="font-bold text-slate-800 dark:text-slate-200">
+                {item?.quantity} x {item?.material?.name || 'Material'}
+              </p>
+              <p className="text-xs text-slate-500">
+                Unit Price: ${Number(item?.unitPrice || 0).toFixed(2)}
+              </p>
+            </div>
+          ))}
         </div>
       );
     }},

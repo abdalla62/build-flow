@@ -67,7 +67,33 @@ const MaterialRequestSchema = new mongoose.Schema({
     quantity: { type: Number, default: 0 },
     comments: { type: String, default: '' },
     reportedAt: { type: Date }
-  }
+  },
+  // Suppliers who declined to bid (e.g. no stock)
+  declinedBySuppliers: [{
+    supplier: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Supplier',
+      required: true
+    },
+    reason: {
+      type: String,
+      enum: ['No stock', 'Cannot supply', 'Other'],
+      default: 'No stock'
+    },
+    notes: {
+      type: String,
+      default: '',
+      trim: true
+    },
+    declinedAt: {
+      type: Date,
+      default: Date.now
+    },
+    declinedByUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  }]
 }, {
   timestamps: true
 });

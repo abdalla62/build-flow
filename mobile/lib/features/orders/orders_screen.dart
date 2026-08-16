@@ -703,13 +703,12 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                   itemBuilder: (_, i) {
                     final o = _items[i];
                     final items = o['items'];
-                    final first = (items is List && items.isNotEmpty)
-                        ? Map<String, dynamic>.from(items.first as Map)
-                        : <String, dynamic>{};
-                    final material = first['material'];
-                    final qty = first['quantity'];
-                    final unitPrice = first['unitPrice'];
-                    final materialName = popName(material);
+                    final lineMaps = (items is List)
+                        ? items
+                            .whereType<Map>()
+                            .map((e) => Map<String, dynamic>.from(e))
+                            .toList()
+                        : <Map<String, dynamic>>[];
                     final date = o['createdAt'] != null
                         ? DateFormat.yM().format(
                             DateTime.tryParse(o['createdAt'].toString()) ??
@@ -787,17 +786,42 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            Text(
-                              '$qty x $materialName',
-                              style: const TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                            Text(
-                              'Unit Price: ${_money(unitPrice)}',
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 12,
-                              ),
-                            ),
+                            if (lineMaps.isEmpty)
+                              const Text(
+                                'No items',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              )
+                            else
+                              ...lineMaps.map((line) {
+                                final material = line['material'];
+                                final qty = line['quantity'];
+                                final unitPrice = line['unitPrice'];
+                                final materialName = popName(material);
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 6),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '$qty x $materialName',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Unit Price: ${_money(unitPrice)}',
+                                        style: const TextStyle(
+                                          color: AppColors.textSecondary,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
                             const SizedBox(height: 10),
                             Wrap(
                               spacing: 8,

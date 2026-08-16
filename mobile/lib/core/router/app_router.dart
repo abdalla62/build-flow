@@ -11,6 +11,7 @@ import 'package:construction_material_mobile_app/features/common/unauthorized_sc
 import 'package:construction_material_mobile_app/features/dashboard/dashboard_screen.dart';
 import 'package:construction_material_mobile_app/features/deliveries/deliveries_screen.dart';
 import 'package:construction_material_mobile_app/features/inventory/inventory_screen.dart';
+import 'package:construction_material_mobile_app/features/inventory/site_stock_screen.dart';
 import 'package:construction_material_mobile_app/features/materials/materials_screen.dart';
 import 'package:construction_material_mobile_app/features/notifications/notifications_screen.dart';
 import 'package:construction_material_mobile_app/features/orders/orders_screen.dart';
@@ -90,6 +91,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/payments', builder: (_, __) => const PaymentsScreen()),
           GoRoute(path: '/deliveries', builder: (_, __) => const DeliveriesScreen()),
           GoRoute(path: '/inventory', builder: (_, __) => const InventoryScreen()),
+          GoRoute(path: '/site-stock', builder: (_, __) => const SiteStockScreen()),
           GoRoute(path: '/reports', builder: (_, __) => const ReportsScreen()),
           GoRoute(path: '/audit-logs', builder: (_, __) => const AuditScreen()),
           GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:construction_material_mobile_app/core/theme/app_theme.dart';
@@ -232,7 +232,7 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
             .toList() ??
         [];
     final canReview = (role == 'Project Manager' || role == 'Administrator') &&
-        ['Pending', 'Returned', 'Rejected'].contains(status);
+        ['Pending', 'Returned', 'Rejected', 'Approved'].contains(status);
 
     final requesterId = popId(req['requestedBy']);
     // Server only allows the original Site Engineer requester to edit/resubmit
@@ -473,7 +473,8 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
                   final status = r['status']?.toString() ?? '';
                   final canReview =
                       (role == 'Project Manager' || role == 'Administrator') &&
-                          ['Pending', 'Returned', 'Rejected'].contains(status);
+                          ['Pending', 'Returned', 'Rejected', 'Approved']
+                              .contains(status);
                   final uid =
                       ref.watch(authNotifierProvider).state.user?.id ?? '';
                   final canResubmit = role == 'Site Engineer' &&
@@ -503,7 +504,9 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
                     trailing: canReview
                         ? TextButton(
                             onPressed: () => _openItem(r),
-                            child: const Text('Review'),
+                            child: Text(
+                              status == 'Approved' ? 'Update' : 'Review',
+                            ),
                           )
                         : canConfirm
                             ? TextButton(
@@ -555,6 +558,10 @@ class _ReviewRequestDialogState extends ConsumerState<_ReviewRequestDialog> {
   @override
   void initState() {
     super.initState();
+    final status = widget.request['status']?.toString() ?? '';
+    if (status == 'Approved') {
+      _action = 'Return';
+    }
     final existing = widget.request['suppliers'];
     if (existing is List) {
       for (final s in existing) {
@@ -648,12 +655,19 @@ class _ReviewRequestDialogState extends ConsumerState<_ReviewRequestDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final status = widget.request['status']?.toString() ?? '';
+    final lineCount = requestLines(widget.request).length;
+    final isUpdate = status == 'Approved';
+    final title = isUpdate
+        ? (lineCount > 1
+            ? 'Update decision ($lineCount items)'
+            : 'Update review decision')
+        : (lineCount > 1
+            ? 'Review Request ($lineCount items)'
+            : 'Review Material Request');
+
     return AlertDialog(
-      title: Text(
-        requestLines(widget.request).length > 1
-            ? 'Review Request (${requestLines(widget.request).length} items)'
-            : 'Review Material Request',
-      ),
+      title: Text(title),
       content: SizedBox(
         width: 440,
         child: SingleChildScrollView(
@@ -954,7 +968,7 @@ class _ReviewRequestDialogState extends ConsumerState<_ReviewRequestDialog> {
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                 )
-              : const Text('Post Review Decision'),
+              : Text(isUpdate ? 'Update decision' : 'Post Review Decision'),
         ),
       ],
     );
