@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:construction_material_mobile_app/core/theme/app_theme.dart';
 import 'package:construction_material_mobile_app/core/utils/media_url.dart';
+import 'package:construction_material_mobile_app/core/utils/sort_po.dart';
 import 'package:construction_material_mobile_app/providers/app_providers.dart';
 import 'package:construction_material_mobile_app/shared/widgets/ui.dart';
 
@@ -77,7 +78,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
           );
       if (!mounted) return;
       setState(() {
-        _items = res.items;
+        _items = sortByPoNumberDesc(res.items);
         _totalPages = res.totalPages < 1 ? 1 : res.totalPages;
       });
     } catch (e) {

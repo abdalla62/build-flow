@@ -16,6 +16,7 @@ import {
 } from 'react-icons/fi';
 import { mediaUrl, openUploadedFile } from '../utils/mediaUrl';
 import { pageCache } from '../utils/pageCache';
+import { sortByPoNumberDesc } from '../utils/sortPo';
 
 const PurchaseOrders = () => {
   const { user } = useAuth();
@@ -61,7 +62,7 @@ const PurchaseOrders = () => {
   } = useForm();
 
   const fetchOrders = async ({ soft = false } = {}) => {
-    const key = `orders:${currentPage}:${statusFilter || ''}:${paymentFilter || ''}:${search || ''}`;
+    const key = `orders:poDesc:${currentPage}:${statusFilter || ''}:${paymentFilter || ''}:${search || ''}`;
     const cached = pageCache.get(key);
     if (cached && !soft) {
       setOrders(cached.orders);
@@ -81,10 +82,11 @@ const PurchaseOrders = () => {
         }
       });
       if (res.data.success) {
-        setOrders(res.data.orders);
+        const sorted = sortByPoNumberDesc(res.data.orders);
+        setOrders(sorted);
         setTotalPages(res.data.totalPages);
         pageCache.set(key, {
-          orders: res.data.orders,
+          orders: sorted,
           totalPages: res.data.totalPages
         });
       }

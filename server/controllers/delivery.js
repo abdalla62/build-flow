@@ -150,22 +150,22 @@ exports.getDeliveries = async (req, res, next) => {
     const pageNum = Math.max(1, Number(page) || 1);
     const limitNum = Math.max(1, Number(limit) || 10);
 
-    // Chronological queue: open jobs first (soonest date/slot), then completed
+    // Latest PO first (PO-2026-00005 above 00004), then newest delivery
     const sortedIds = await Delivery.aggregate([
       { $match: query },
       {
-        $addFields: {
-          isDone: {
-            $cond: [{ $in: ['$status', ['Delivered', 'Cancelled']] }, 1, 0]
-          }
+        $lookup: {
+          from: 'purchaseorders',
+          localField: 'purchaseOrder',
+          foreignField: '_id',
+          as: 'poDoc'
         }
       },
+      { $unwind: { path: '$poDoc', preserveNullAndEmptyArrays: true } },
       {
         $sort: {
-          isDone: 1,
-          deliveryDate: 1,
-          timeSlot: 1,
-          createdAt: 1
+          'poDoc.purchaseOrderNumber': -1,
+          createdAt: -1
         }
       },
       { $skip: (pageNum - 1) * limitNum },

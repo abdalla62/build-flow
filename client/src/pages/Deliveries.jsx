@@ -23,6 +23,7 @@ import {
 } from 'react-icons/fi';
 import { mediaUrl, openUploadedFile } from '../utils/mediaUrl';
 import { pageCache } from '../utils/pageCache';
+import { sortByPoNumberDesc } from '../utils/sortPo';
 
 const getTodayLocal = () => {
   const d = new Date();
@@ -140,7 +141,7 @@ const Deliveries = () => {
   }, [watchPurchaseOrder, setValue]);
 
   const fetchDeliveries = async ({ soft = false } = {}) => {
-    const key = `deliveries:list:${currentPage}:${statusFilter || ''}`;
+    const key = `deliveries:list:poDesc:${currentPage}:${statusFilter || ''}`;
     const cached = pageCache.get(key);
     if (cached && !soft) {
       setDeliveries(cached.deliveries);
@@ -158,10 +159,14 @@ const Deliveries = () => {
         }
       });
       if (res.data.success) {
-        setDeliveries(res.data.deliveries);
+        const sorted = sortByPoNumberDesc(
+          res.data.deliveries,
+          (d) => d?.purchaseOrder?.purchaseOrderNumber
+        );
+        setDeliveries(sorted);
         setTotalPages(res.data.totalPages);
         pageCache.set(key, {
-          deliveries: res.data.deliveries,
+          deliveries: sorted,
           totalPages: res.data.totalPages
         });
       }
@@ -194,8 +199,12 @@ const Deliveries = () => {
         }
       });
       if (res.data.success) {
-        setCalendarDeliveries(res.data.deliveries);
-        pageCache.set(key, res.data.deliveries);
+        const sorted = sortByPoNumberDesc(
+          res.data.deliveries,
+          (d) => d?.purchaseOrder?.purchaseOrderNumber
+        );
+        setCalendarDeliveries(sorted);
+        pageCache.set(key, sorted);
       }
     } catch (err) {
       toast.error('Failed to load calendar deliveries');
@@ -205,7 +214,7 @@ const Deliveries = () => {
   };
 
   const fetchSchedulingResources = async () => {
-    const cached = pageCache.get('deliveries:resources');
+    const cached = pageCache.get('deliveries:resources:poDesc');
     if (cached) {
       setDrivers(cached.drivers);
       setAcceptedPOs(cached.acceptedPOs);
@@ -222,10 +231,10 @@ const Deliveries = () => {
       const poRes = await axios.get('/api/orders', { params: { status: 'Accepted', limit: 100 } });
       let accepted = [];
       if (poRes.data.success) {
-        accepted = poRes.data.orders;
+        accepted = sortByPoNumberDesc(poRes.data.orders);
         setAcceptedPOs(accepted);
       }
-      pageCache.set('deliveries:resources', { drivers: driversList, acceptedPOs: accepted });
+      pageCache.set('deliveries:resources:poDesc', { drivers: driversList, acceptedPOs: accepted });
     } catch (err) {
       console.error(err);
     }

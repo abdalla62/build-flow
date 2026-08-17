@@ -19,6 +19,7 @@ import {
 } from 'react-icons/fi';
 import { mediaUrl, openUploadedFile } from '../utils/mediaUrl';
 import { pageCache } from '../utils/pageCache';
+import { sortByPoNumberDesc } from '../utils/sortPo';
 
 const Payments = () => {
   const { user } = useAuth();
@@ -78,7 +79,7 @@ const Payments = () => {
   };
 
   const fetchActivePOs = async () => {
-    const key = 'payments:activePOs';
+    const key = 'payments:activePOs:poDesc';
     const cached = pageCache.get(key);
     if (cached) {
       setActivePOs(cached);
@@ -87,14 +88,16 @@ const Payments = () => {
     try {
       const res = await axios.get('/api/orders', { params: { limit: 100 } });
       if (res.data.success) {
-        const filterPOs = res.data.orders.filter(
-          (o) =>
-            o.paymentStatus !== 'Paid' &&
-            o.paymentStatus !== 'Cancelled' &&
-            o.status === 'Delivered' &&
-            o.status !== 'Rejected' &&
-            o.status !== 'Cancelled' &&
-            Boolean(o.invoiceFile)
+        const filterPOs = sortByPoNumberDesc(
+          res.data.orders.filter(
+            (o) =>
+              o.paymentStatus !== 'Paid' &&
+              o.paymentStatus !== 'Cancelled' &&
+              o.status === 'Delivered' &&
+              o.status !== 'Rejected' &&
+              o.status !== 'Cancelled' &&
+              Boolean(o.invoiceFile)
+          )
         );
         setActivePOs(filterPOs);
         pageCache.set(key, filterPOs);

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:construction_material_mobile_app/core/theme/app_theme.dart';
+import 'package:construction_material_mobile_app/core/utils/sort_po.dart';
 import 'package:construction_material_mobile_app/providers/app_providers.dart';
 import 'package:construction_material_mobile_app/shared/widgets/ui.dart';
 
@@ -55,7 +56,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
       final api = ref.read(apiRepositoryProvider);
       final orders = await api.getOrders(limit: 100);
       final pays = await api.getPayments(limit: 100);
-      final payable = orders.items.where(_isPayablePo).toList();
+      final payable = sortByPoNumberDesc(orders.items.where(_isPayablePo).toList());
       if (!mounted) return;
 
       final recorded = await showDialog<bool>(

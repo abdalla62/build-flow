@@ -40,7 +40,7 @@ exports.getOrders = async (req, res, next) => {
       .populate('items.material', 'name unit')
       .limit(limit * 1)
       .skip((page - 1) * limit)
-      .sort({ createdAt: -1 });
+      .sort({ purchaseOrderNumber: -1, createdAt: -1 });
 
     res.status(200).json({
       success: true,

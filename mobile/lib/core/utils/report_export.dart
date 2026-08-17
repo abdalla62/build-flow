@@ -210,7 +210,7 @@ Future<void> shareAllExcelReports({
     if (i == 0 && defaultSheet != null) {
       excel.rename(defaultSheet, safeName);
     } else {
-      excel.copy(defaultSheet ?? excel.sheets.first, safeName);
+      excel.copy(defaultSheet ?? excel.sheets.keys.first, safeName);
     }
 
     _fillExcelSheet(

@@ -818,7 +818,7 @@ async function buildTaxSummaryReport(start, end, label) {
   const inPeriod = { $gte: start, $lt: end };
   const orders = await PurchaseOrder.find({ createdAt: inPeriod })
     .populate('supplier', 'company name')
-    .sort({ createdAt: -1 })
+    .sort({ purchaseOrderNumber: -1, createdAt: -1 })
     .limit(500)
     .lean();
 
@@ -874,7 +874,7 @@ async function buildPOFinancialsReport(start, end, label) {
       populate: { path: 'project', select: 'name' }
     })
     .populate('items.material', 'name unit')
-    .sort({ createdAt: -1 })
+    .sort({ purchaseOrderNumber: -1, createdAt: -1 })
     .limit(500)
     .lean();
 
@@ -1280,7 +1280,7 @@ exports.getReportStats = async (req, res, next) => {
             populate: { path: 'project', select: 'name' }
           })
           .populate('items.material', 'name unit')
-          .sort({ createdAt: -1 })
+          .sort({ purchaseOrderNumber: -1, createdAt: -1 })
           .limit(500),
         Payment.find({
           $or: [{ paymentDate: inPeriod }, { createdAt: inPeriod }]
@@ -1309,7 +1309,7 @@ exports.getReportStats = async (req, res, next) => {
         })
           .populate('supplier', 'company name')
           .populate('items.material', 'name unit')
-          .sort({ createdAt: -1 })
+          .sort({ purchaseOrderNumber: -1, createdAt: -1 })
           .limit(500),
         Inventory.find({ type: 'Stock Out', createdAt: inPeriod })
           .populate('material', 'name unit')
@@ -1702,7 +1702,7 @@ exports.getSupplierReportStats = async (req, res, next) => {
         .limit(500),
       PurchaseOrder.find({ supplier: sid, createdAt: inPeriod })
         .populate('items.material', 'name unit')
-        .sort({ createdAt: -1 })
+        .sort({ purchaseOrderNumber: -1, createdAt: -1 })
         .limit(500),
       Payment.find({
         $or: [{ paymentDate: inPeriod }, { createdAt: inPeriod }]
@@ -1719,7 +1719,7 @@ exports.getSupplierReportStats = async (req, res, next) => {
         paymentStatus: { $in: ['Unpaid', 'Partially Paid', 'Overdue'] }
       })
         .populate('items.material', 'name unit')
-        .sort({ createdAt: -1 })
+        .sort({ purchaseOrderNumber: -1, createdAt: -1 })
         .limit(500)
     ]);
 
