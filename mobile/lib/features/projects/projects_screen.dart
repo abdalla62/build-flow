@@ -15,6 +15,14 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
   bool _loading = true;
   bool _saving = false;
   String? _error;
+  String _statusFilter = '';
+
+  bool get _isAdmin =>
+      ref.read(authNotifierProvider).state.user?.isAdmin == true;
+
+  List<String> get _statusFilterOptions => _isAdmin
+      ? const ['Pending', 'Active', 'Completed', 'On Hold']
+      : const ['Pending', 'Active'];
 
   @override
   void initState() {
@@ -28,7 +36,10 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
       _error = null;
     });
     try {
-      final res = await ref.read(apiRepositoryProvider).getProjects(limit: 50);
+      final res = await ref.read(apiRepositoryProvider).getProjects(
+            limit: 50,
+            status: _statusFilter.isEmpty ? null : _statusFilter,
+          );
       if (mounted) setState(() => _items = res.items);
     } catch (e) {
       if (mounted) {
@@ -138,7 +149,7 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
                       items: [
                         const DropdownMenuItem(value: 'Pending', child: Text('Pending')),
                         const DropdownMenuItem(value: 'Active', child: Text('Active')),
-                        if (existing != null) ...const [
+                        if (existing != null && _isAdmin) ...const [
                           DropdownMenuItem(value: 'Completed', child: Text('Completed')),
                           DropdownMenuItem(value: 'On Hold', child: Text('On Hold')),
                         ],
@@ -226,36 +237,66 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
     if (_loading) return const LoadingView();
     if (_error != null) return ErrorView(message: _error!, onRetry: _load);
 
+    final isAdmin = ref.watch(authNotifierProvider).state.user?.isAdmin == true;
+
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: _items.isEmpty
-            ? ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: [
-                  SizedBox(
-                    height: 240,
-                    child: EmptyView(message: 'No projects', onAction: _load),
-                  ),
-                ],
-              )
-            : ListView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(0, 8, 0, 88),
-                itemCount: _items.length,
-                itemBuilder: (_, i) {
-                  final p = _items[i];
-                  final managerName = popName(p['manager'], 'Unassigned');
-                  return ModuleListTile(
-                    title: p['name']?.toString() ?? '',
-                    subtitle:
-                        '${p['location']} · Budget: ${p['budget']}\nPM: $managerName',
-                    status: p['status']?.toString(),
-                    icon: Icons.work_outline,
-                    onTap: () => _save(existing: p),
-                  );
-                },
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: DropdownButtonFormField<String>(
+              key: ValueKey('project-status-$_statusFilter-$isAdmin'),
+              initialValue: _statusFilter,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Status',
+                isDense: true,
               ),
+              items: [
+                const DropdownMenuItem(value: '', child: Text('All Statuses')),
+                ..._statusFilterOptions.map(
+                  (s) => DropdownMenuItem(value: s, child: Text(s)),
+                ),
+              ],
+              onChanged: (v) {
+                setState(() => _statusFilter = v ?? '');
+                _load();
+              },
+            ),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _load,
+              child: _items.isEmpty
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(
+                          height: 240,
+                          child: EmptyView(message: 'No projects', onAction: _load),
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 88),
+                      itemCount: _items.length,
+                      itemBuilder: (_, i) {
+                        final p = _items[i];
+                        final managerName = popName(p['manager'], 'Unassigned');
+                        return ModuleListTile(
+                          title: p['name']?.toString() ?? '',
+                          subtitle:
+                              '${p['location']} · Budget: ${p['budget']}\nPM: $managerName',
+                          status: p['status']?.toString(),
+                          icon: Icons.work_outline,
+                          onTap: isAdmin ? () => _save(existing: p) : null,
+                        );
+                      },
+                    ),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: ref.watch(authNotifierProvider).state.user?.isAdmin == true
           ? FloatingActionButton(

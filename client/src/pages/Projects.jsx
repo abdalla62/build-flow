@@ -270,8 +270,12 @@ const Projects = () => {
             <option value="">All Statuses</option>
             <option value="Pending">Pending</option>
             <option value="Active">Active</option>
-            <option value="Completed">Completed</option>
-            <option value="On Hold">On Hold</option>
+            {isAdmin && (
+              <>
+                <option value="Completed">Completed</option>
+                <option value="On Hold">On Hold</option>
+              </>
+            )}
           </select>
         </div>
       </div>
