@@ -65,7 +65,14 @@ export const AuthProvider = ({ children }) => {
       }
       return null;
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Email or password is incorrect. Please check and try again.');
+      const apiError = err.response?.data?.error;
+      if (apiError) {
+        toast.error(apiError);
+      } else if (!err.response) {
+        toast.error('Cannot reach the API. Check VITE_API_URL / CORS / Render status.');
+      } else {
+        toast.error('Email or password is incorrect. Please check and try again.');
+      }
       return null;
     } finally {
       setLoading(false);

@@ -59,24 +59,27 @@ app.use(
   })
 );
 
-// Enable CORS (web + Flutter mobile / local tooling)
+// Enable CORS (web on Vercel + Flutter mobile / local tooling)
 const corsOrigins = (
   process.env.CORS_ORIGINS ||
-  'http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173'
+  'http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,https://build-flow-umber.vercel.app'
 )
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean);
 
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (corsOrigins.includes(origin) || corsOrigins.includes('*')) return true;
+  // Vercel production + preview URLs for this app
+  if (/^https:\/\/build-flow[a-z0-9-]*\.vercel\.app$/i.test(origin)) return true;
+  return false;
+}
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow non-browser clients (Flutter mobile) with no Origin header
-      if (!origin) return callback(null, true);
-      if (corsOrigins.includes(origin) || corsOrigins.includes('*')) {
-        return callback(null, true);
-      }
-      if (process.env.NODE_ENV !== 'production') {
+      if (isAllowedOrigin(origin) || process.env.NODE_ENV !== 'production') {
         return callback(null, true);
       }
       return callback(new Error(`CORS blocked for origin: ${origin}`));
