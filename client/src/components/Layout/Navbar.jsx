@@ -4,6 +4,7 @@ import { FiMenu, FiSun, FiMoon, FiBell, FiSearch, FiUser, FiLogOut, FiSettings }
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { mediaUrl } from '../../utils/mediaUrl';
 
 const Navbar = ({ toggleSidebar, sidebarCollapsed }) => {
   const { user, logout, theme, toggleTheme } = useAuth();
@@ -219,7 +220,7 @@ const Navbar = ({ toggleSidebar, sidebarCollapsed }) => {
           >
             {user?.avatar ? (
               <img
-                src={user.avatar}
+                src={mediaUrl(user.avatar)}
                 alt={user.name}
                 className="h-8 w-8 rounded-full border border-brand-primary/40 object-cover shadow-bf-sm"
               />

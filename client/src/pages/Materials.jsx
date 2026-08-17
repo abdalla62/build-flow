@@ -7,6 +7,7 @@ import Table from '../components/UI/Table';
 import Modal from '../components/UI/Modal';
 import { FiPlus, FiBox, FiSearch, FiEdit, FiTrash2, FiAlertTriangle } from 'react-icons/fi';
 import { pageCache } from '../utils/pageCache';
+import { mediaUrl } from '../utils/mediaUrl';
 
 const Materials = () => {
   const { user } = useAuth();
@@ -209,7 +210,7 @@ const Materials = () => {
     { key: 'name', label: 'Stock Name', render: (m) => (
       <div className="flex items-center gap-3">
         {m.image ? (
-          <img src={m.image} alt={m.name} className="h-10 w-10 rounded-lg object-cover shrink-0 border border-slate-200 dark:border-slate-700" />
+          <img src={mediaUrl(m.image)} alt={m.name} className="h-10 w-10 rounded-lg object-cover shrink-0 border border-slate-200 dark:border-slate-700" />
         ) : (
           <div className="h-10 w-10 rounded-lg bg-brand-primary/10 dark:bg-brand-primary/10 text-brand-primary flex items-center justify-center shrink-0">
             <FiBox className="h-5 w-5" />

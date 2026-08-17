@@ -1,12 +1,16 @@
-# Optional blueprint — configure in Render dashboard if preferred.
+# Optional blueprint — API-only on Render when frontend is hosted on Vercel.
 services:
   - type: web
-    name: build-flow
+    name: build-flow-api
     runtime: node
     plan: free
     rootDir: .
-    buildCommand: npm install --prefix client && npm run build --prefix client && npm install --prefix server && rm -rf server/public && mkdir -p server/public && cp -r client/dist/. server/public/
+    buildCommand: npm install --prefix server
     startCommand: npm start --prefix server
     envVars:
       - key: NODE_ENV
         value: production
+      - key: SERVE_SPA
+        value: "false"
+      # Set in Render dashboard (not committed):
+      # MONGODB_URI, JWT_SECRET, CORS_ORIGINS, CLIENT_URL, SMTP_*

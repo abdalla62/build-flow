@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { mediaUrl } from '../utils/mediaUrl';
 import { FiUser, FiMail, FiLock, FiKey, FiSave, FiCamera, FiTruck } from 'react-icons/fi';
 
 const Profile = () => {
@@ -11,13 +12,13 @@ const Profile = () => {
   const [profileSubmitting, setProfileSubmitting] = useState(false);
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [companySubmitting, setCompanySubmitting] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState(user?.avatar || '');
+  const [avatarPreview, setAvatarPreview] = useState(mediaUrl(user?.avatar) || '');
   const [avatarFile, setAvatarFile] = useState(null);
   const [removeAvatar, setRemoveAvatar] = useState(false);
 
   useEffect(() => {
     if (!avatarFile && !removeAvatar) {
-      setAvatarPreview(user?.avatar || '');
+      setAvatarPreview(mediaUrl(user?.avatar) || '');
     }
   }, [user?.avatar, avatarFile, removeAvatar]);
 

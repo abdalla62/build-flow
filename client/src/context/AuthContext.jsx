@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { pageCache } from '../utils/pageCache';
+import { setAuthToken } from '../lib/api';
 
 const AuthContext = createContext();
 
@@ -42,8 +43,8 @@ export const AuthProvider = ({ children }) => {
           setUser(res.data.user);
         }
       } catch (err) {
-        // Not logged in or expired token, clear state
         setUser(null);
+        setAuthToken(null);
       } finally {
         setLoading(false);
       }
@@ -57,6 +58,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await axios.post('/api/auth/login', { email, password });
       if (res.data.success) {
+        setAuthToken(res.data.token);
         setUser(res.data.user);
         toast.success(`Welcome back, ${res.data.user.name}!`);
         return res.data.user;
@@ -76,6 +78,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await axios.post('/api/auth/register', { name, email, password, role });
       if (res.data.success) {
+        setAuthToken(res.data.token);
         setUser(res.data.user);
         toast.success(`Account created successfully! Welcome, ${res.data.user.name}`);
         return true;
@@ -92,11 +95,13 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await axios.get('/api/auth/logout');
+    } catch (err) {
+      // still clear local session
+    } finally {
+      setAuthToken(null);
       setUser(null);
       pageCache.clear();
       toast.success('Logged out successfully');
-    } catch (err) {
-      toast.error('Logout failed');
     }
   };
 
@@ -124,6 +129,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await axios.put(`/api/auth/reset-password/${token}`, { password });
       if (res.data.success) {
+        setAuthToken(res.data.token);
         setUser(res.data.user);
         toast.success('Password reset completed successfully!');
         return true;

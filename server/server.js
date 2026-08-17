@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const dotenv = require('dotenv');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
@@ -75,7 +76,10 @@ app.use(
       if (corsOrigins.includes(origin) || corsOrigins.includes('*')) {
         return callback(null, true);
       }
-      return callback(null, true); // permissive while migrating full system to mobile
+      if (process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,
   })
@@ -103,14 +107,19 @@ app.use('/api/system', require('./routes/system'));
 // Centralized API error handling (before SPA fallback)
 app.use(errorHandler);
 
-// Production: serve built React web app (client/dist copied to server/public)
+// Production: optionally serve built React app (monolith). Set SERVE_SPA=false when frontend is on Vercel.
 const clientDist = path.join(__dirname, 'public');
-if (process.env.NODE_ENV === 'production') {
+const serveSpa =
+  process.env.NODE_ENV === 'production' &&
+  process.env.SERVE_SPA !== 'false' &&
+  fs.existsSync(path.join(clientDist, 'index.html'));
+
+if (serveSpa) {
   app.use(express.static(clientDist));
   app.get(/^\/(?!api\/|uploads\/).*/, (req, res) => {
     res.sendFile(path.join(clientDist, 'index.html'));
   });
-} else {
+} else if (process.env.NODE_ENV !== 'production') {
   app.get('/', (req, res) => {
     res.json({
       message: 'Welcome to the Construction Material Procurement Management API',

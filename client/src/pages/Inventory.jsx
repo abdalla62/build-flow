@@ -13,6 +13,7 @@ import {
   FiSettings
 } from 'react-icons/fi';
 import { pageCache } from '../utils/pageCache';
+import { mediaUrl } from '../utils/mediaUrl';
 
 const Inventory = () => {
   const { user } = useAuth();
@@ -177,7 +178,7 @@ const Inventory = () => {
         <div className="flex items-center gap-3">
           {m.image ? (
             <img
-              src={m.image}
+              src={mediaUrl(m.image)}
               alt={m.name}
               className="h-10 w-10 rounded-lg object-cover shrink-0 border border-slate-200 dark:border-slate-700"
             />
@@ -316,7 +317,7 @@ const Inventory = () => {
               >
                 <div className="flex items-center gap-3">
                   {alt.image ? (
-                    <img src={alt.image} alt={alt.name} className="h-10 w-10 rounded-lg object-cover" />
+                    <img src={mediaUrl(alt.image)} alt={alt.name} className="h-10 w-10 rounded-lg object-cover" />
                   ) : null}
                   <div>
                     <h4 className="font-bold text-slate-800 dark:text-slate-100">{alt.name}</h4>

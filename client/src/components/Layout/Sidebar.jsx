@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { mediaUrl } from '../../utils/mediaUrl';
 import {
   FiGrid,
   FiUsers,
@@ -136,7 +137,7 @@ const Sidebar = ({ collapsed, mobileOpen = false, onNavigate }) => {
           <div className="mb-3 flex items-center gap-3 overflow-hidden rounded-xl bg-white/5 p-3">
             {user?.avatar ? (
               <img
-                src={user.avatar}
+                src={mediaUrl(user.avatar)}
                 alt={user.name}
                 className="h-9 w-9 shrink-0 rounded-full border border-brand-primary/40 object-cover"
               />
