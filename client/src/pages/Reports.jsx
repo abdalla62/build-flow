@@ -10,11 +10,29 @@ import {
   FiPackage,
   FiCalendar,
   FiLayers,
-  FiClipboard
+  FiClipboard,
+  FiBox,
+  FiBriefcase,
+  FiBook,
+  FiXCircle,
+  FiBarChart2
 } from 'react-icons/fi';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+  Cell
+} from 'recharts';
 import { useAuth } from '../context/AuthContext';
-import { downloadExcel } from '../utils/exportExcel';
-import { downloadPdf } from '../utils/exportPdf';
+import { downloadExcel, downloadExcelWorkbook } from '../utils/exportExcel';
+import { downloadPdf, downloadPdfBundle } from '../utils/exportPdf';
 import { pageCache } from '../utils/pageCache';
 
 const ADMIN_REPORT_META = [
@@ -24,6 +42,27 @@ const ADMIN_REPORT_META = [
     icon: FiFileText,
     hintKey: 'procurementValue',
     hintPrefix: 'Value: $'
+  },
+  {
+    id: 'materialRequests',
+    label: 'Material Requests',
+    icon: FiClipboard,
+    hintKey: 'requestCount',
+    hintPrefix: 'Requests: '
+  },
+  {
+    id: 'projectBudget',
+    label: 'Project Budget',
+    icon: FiBriefcase,
+    hintKey: 'totalRemaining',
+    hintPrefix: 'Remaining: $'
+  },
+  {
+    id: 'siteStock',
+    label: 'Site Stock',
+    icon: FiBox,
+    hintKey: 'lineCount',
+    hintPrefix: 'Lines: '
   },
   {
     id: 'supplierPayments',
@@ -54,11 +93,115 @@ const ADMIN_REPORT_META = [
     hintPrefix: 'Qty out: '
   },
   {
+    id: 'quotationBidding',
+    label: 'Quotation & Bidding',
+    icon: FiLayers,
+    hintKey: 'bidCount',
+    hintPrefix: 'Bids: '
+  },
+  {
+    id: 'damagedMissing',
+    label: 'Damaged & Missing',
+    icon: FiAlertCircle,
+    hintKey: 'issueCount',
+    hintPrefix: 'Issues: '
+  },
+  {
     id: 'supplierPerformance',
     label: 'Supplier Performance',
     icon: FiLayers,
     hintKey: 'supplierCount',
     hintPrefix: 'Suppliers: '
+  },
+  {
+    id: 'inventoryLedger',
+    label: 'Inventory Ledger',
+    icon: FiBook,
+    hintKey: 'movementCount',
+    hintPrefix: 'Movements: '
+  },
+  {
+    id: 'taxSummary',
+    label: 'Tax Summary',
+    icon: FiFileText,
+    hintKey: 'totalTax',
+    hintPrefix: 'Tax: $'
+  },
+  {
+    id: 'supplierDecline',
+    label: 'Supplier Declines',
+    icon: FiXCircle,
+    hintKey: 'declineCount',
+    hintPrefix: 'Declines: '
+  }
+];
+
+const PM_REPORT_META = [
+  {
+    id: 'myMaterialRequests',
+    label: 'My Requests',
+    icon: FiClipboard,
+    hintKey: 'requestCount',
+    hintPrefix: 'Requests: '
+  },
+  {
+    id: 'myProjectBudget',
+    label: 'My Budget',
+    icon: FiBriefcase,
+    hintKey: 'totalRemaining',
+    hintPrefix: 'Remaining: $'
+  },
+  {
+    id: 'myDeliveries',
+    label: 'My Deliveries',
+    icon: FiTruck,
+    hintKey: 'deliveryCount',
+    hintPrefix: 'Shipments: '
+  },
+  {
+    id: 'myMaterialUsage',
+    label: 'Site Usage',
+    icon: FiPackage,
+    hintKey: 'totalQtyOut',
+    hintPrefix: 'Qty out: '
+  },
+  {
+    id: 'damagedMissing',
+    label: 'Damaged & Missing',
+    icon: FiAlertCircle,
+    hintKey: 'issueCount',
+    hintPrefix: 'Issues: '
+  }
+];
+
+const ACCOUNTANT_REPORT_META = [
+  {
+    id: 'paymentSummary',
+    label: 'Payments',
+    icon: FiDollarSign,
+    hintKey: 'totalPaid',
+    hintPrefix: 'Paid: $'
+  },
+  {
+    id: 'outstandingBySupplier',
+    label: 'Outstanding by Supplier',
+    icon: FiAlertCircle,
+    hintKey: 'supplierCount',
+    hintPrefix: 'Suppliers: '
+  },
+  {
+    id: 'taxSummary',
+    label: 'Tax Summary',
+    icon: FiFileText,
+    hintKey: 'totalTax',
+    hintPrefix: 'Tax: $'
+  },
+  {
+    id: 'poFinancials',
+    label: 'PO Financials',
+    icon: FiClipboard,
+    hintKey: 'poCount',
+    hintPrefix: 'POs: '
   }
 ];
 
@@ -113,48 +256,265 @@ function formatCell(v) {
   return s;
 }
 
+const CHART_COLORS = ['#0d9488', '#0891b2', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6'];
+
+function ReportCharts({ charts, role }) {
+  if (!charts || typeof charts !== 'object') return null;
+
+  const stockMovement = charts.stockMovement || [];
+  const requestsByStatus = charts.requestsByStatus || [];
+  const procurementByProject = charts.procurementByProject || [];
+  const paymentsByMethod = charts.paymentsByMethod || [];
+  const declinesBySupplier = charts.declinesBySupplier || [];
+  const budgetUsage = charts.budgetUsage || [];
+  const taxVsTotal = charts.taxVsTotal || [];
+
+  const hasAdminCharts =
+    stockMovement.length ||
+    requestsByStatus.length ||
+    procurementByProject.length ||
+    paymentsByMethod.length ||
+    declinesBySupplier.length;
+  const hasPMCharts = requestsByStatus.length || budgetUsage.length;
+  const hasAccountantCharts = paymentsByMethod.length || taxVsTotal.length;
+
+  if (
+    (role === 'Administrator' || role === 'Procurement Officer') &&
+    !hasAdminCharts
+  ) {
+    return null;
+  }
+  if (role === 'Project Manager' && !hasPMCharts) return null;
+  if (role === 'Accountant' && !hasAccountantCharts) return null;
+
+  return (
+    <div className="bg-brand-card dark:bg-brand-darkCard border border-brand-border dark:border-brand-darkBorder rounded-2xl p-4 sm:p-6 shadow-sm space-y-6">
+      <div className="flex items-center gap-2">
+        <FiBarChart2 className="text-brand-primary" />
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Charts</h2>
+      </div>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {(role === 'Administrator' || role === 'Procurement Officer') && (
+          <>
+            {stockMovement.length > 0 && (
+              <ChartCard title="Stock In vs Out (qty)">
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={stockMovement}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#0d9488" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            )}
+            {requestsByStatus.length > 0 && (
+              <ChartCard title="Requests by status">
+                <ResponsiveContainer width="100%" height={240}>
+                  <PieChart>
+                    <Pie
+                      data={requestsByStatus}
+                      dataKey="value"
+                      nameKey="label"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label={({ label, value }) => `${label}: ${value}`}
+                    >
+                      {requestsByStatus.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            )}
+            {procurementByProject.length > 0 && (
+              <ChartCard title="Procurement by project ($)">
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={procurementByProject} layout="vertical" margin={{ left: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis type="number" tick={{ fontSize: 11 }} />
+                    <YAxis type="category" dataKey="label" width={100} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#6366f1" radius={[0, 6, 6, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            )}
+            {declinesBySupplier.length > 0 && (
+              <ChartCard title="Declines by supplier">
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={declinesBySupplier}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={60} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#ef4444" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            )}
+          </>
+        )}
+        {role === 'Project Manager' && budgetUsage.length > 0 && (
+          <ChartCard title="Budget used vs remaining ($)">
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={budgetUsage}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Bar dataKey="value" fill="#0891b2" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        )}
+        {(role === 'Administrator' ||
+          role === 'Procurement Officer' ||
+          role === 'Accountant') &&
+          paymentsByMethod.length > 0 && (
+            <ChartCard title="Payments by method ($)">
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={paymentsByMethod}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          )}
+        {role === 'Accountant' && taxVsTotal.length > 0 && (
+          <ChartCard title="Tax vs grand total ($)">
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={taxVsTotal}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Bar dataKey="value" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ChartCard({ title, children }) {
+  return (
+    <div className="rounded-xl border border-brand-border dark:border-brand-darkBorder p-4 bg-slate-50/50 dark:bg-slate-900/30">
+      <p className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">{title}</p>
+      {children}
+    </div>
+  );
+}
+
 function currentMonthValue() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+function todayValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function monthStartValue() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
+function defaultTabForRole(role) {
+  if (role === 'Supplier') return 'myBids';
+  if (role === 'Project Manager') return 'myMaterialRequests';
+  if (role === 'Accountant') return 'paymentSummary';
+  return 'monthlyProcurement';
+}
+
+function reportUrlForRole(role) {
+  if (role === 'Supplier') return '/api/reports/supplier';
+  if (role === 'Project Manager') return '/api/reports/pm';
+  if (role === 'Accountant') return '/api/reports/accountant';
+  return '/api/reports';
+}
+
+function reportMetaForRole(role) {
+  if (role === 'Supplier') return SUPPLIER_REPORT_META;
+  if (role === 'Project Manager') return PM_REPORT_META;
+  if (role === 'Accountant') return ACCOUNTANT_REPORT_META;
+  return ADMIN_REPORT_META;
+}
+
 const Reports = () => {
   const { user } = useAuth();
-  const isSupplierView = user?.role === 'Supplier';
-  const reportMeta = isSupplierView ? SUPPLIER_REPORT_META : ADMIN_REPORT_META;
+  const role = user?.role;
+  const isSupplierView = role === 'Supplier';
+  const isPMView = role === 'Project Manager';
+  const isAccountantView = role === 'Accountant';
+  const reportMeta = reportMetaForRole(role);
 
   const [reports, setReports] = useState({});
+  const [charts, setCharts] = useState(null);
   const [company, setCompany] = useState('');
+  const [periodLabel, setPeriodLabel] = useState('');
+  const [dateMode, setDateMode] = useState('month');
   const [month, setMonth] = useState(currentMonthValue);
+  const [fromDate, setFromDate] = useState(monthStartValue);
+  const [toDate, setToDate] = useState(todayValue);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(
-    isSupplierView ? 'myBids' : 'monthlyProcurement'
-  );
+  const [activeTab, setActiveTab] = useState(defaultTabForRole(role));
 
   useEffect(() => {
-    setActiveTab(isSupplierView ? 'myBids' : 'monthlyProcurement');
-  }, [isSupplierView]);
+    setActiveTab(defaultTabForRole(role));
+  }, [role]);
+
+  const queryParams = useMemo(() => {
+    if (dateMode === 'range') {
+      return { from: fromDate, to: toDate };
+    }
+    return { month };
+  }, [dateMode, month, fromDate, toDate]);
+
+  const cacheKey = useMemo(() => {
+    const base = `reports:${role || 'admin'}:${dateMode === 'range' ? `${fromDate}:${toDate}` : month}`;
+    return base;
+  }, [role, dateMode, month, fromDate, toDate]);
 
   const fetchReports = async ({ soft = false } = {}) => {
-    const key = `reports:${isSupplierView ? 'supplier' : 'admin'}:${month}`;
-    const cached = pageCache.get(key);
+    const cached = pageCache.get(cacheKey);
     if (cached && !soft) {
       setReports(cached.reports || {});
+      setCharts(cached.charts || null);
       setCompany(cached.company || '');
+      setPeriodLabel(cached.periodLabel || '');
       setLoading(false);
     } else if (!cached) {
       setLoading(true);
     }
 
     try {
-      const url = isSupplierView ? '/api/reports/supplier' : '/api/reports';
-      const res = await axios.get(url, { params: { month } });
+      const url = reportUrlForRole(role);
+      const res = await axios.get(url, { params: queryParams });
       if (res.data.success) {
+        const label =
+          res.data.period?.label ||
+          res.data.month ||
+          (dateMode === 'range' ? `${fromDate} → ${toDate}` : month);
         setReports(res.data.reports || {});
+        setCharts(res.data.charts || null);
         setCompany(res.data.company || '');
-        pageCache.set(key, {
+        setPeriodLabel(label);
+        pageCache.set(cacheKey, {
           reports: res.data.reports || {},
-          company: res.data.company || ''
+          charts: res.data.charts || null,
+          company: res.data.company || '',
+          periodLabel: label
         });
       }
     } catch (err) {
@@ -166,10 +526,27 @@ const Reports = () => {
 
   useLayoutEffect(() => {
     fetchReports();
-  }, [month, isSupplierView]);
+  }, [cacheKey, role]);
 
   const active = reports[activeTab];
   const day = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const exportPeriod = periodLabel || (dateMode === 'range' ? `${fromDate}_${toDate}` : month);
+
+  const collectExportSections = () =>
+    reportMeta
+      .map((t) => {
+        const r = reports[t.id];
+        if (!r?.headers?.length) return null;
+        return {
+          id: t.id,
+          sheetName: t.label,
+          title: r.title || t.label,
+          subtitle: r.description || `Period: ${exportPeriod}`,
+          headers: r.headers,
+          rows: (r.rows || []).map((row) => row.map(formatCell))
+        };
+      })
+      .filter(Boolean);
 
   const exportExcel = () => {
     if (!active?.headers?.length) {
@@ -178,13 +555,13 @@ const Reports = () => {
     }
     try {
       downloadExcel(
-        `${activeTab}_${month}_${day}.xlsx`,
+        `${activeTab}_${exportPeriod}_${day}.xlsx`,
         active.headers,
         (active.rows || []).map((row) => row.map(formatCell)),
         active.title || 'Report',
         {
           title: active.title || 'Report',
-          subtitle: active.description || `Period: ${month}`
+          subtitle: active.description || `Period: ${exportPeriod}`
         }
       );
       toast.success('Excel downloaded');
@@ -200,15 +577,54 @@ const Reports = () => {
     }
     try {
       downloadPdf(
-        `${activeTab}_${month}_${day}.pdf`,
+        `${activeTab}_${exportPeriod}_${day}.pdf`,
         active.title || 'Report',
         active.headers,
         active.rows || [],
-        active.description || `Period: ${month}`
+        active.description || `Period: ${exportPeriod}`
       );
       toast.success('PDF downloaded');
     } catch {
       toast.error('Failed to export PDF');
+    }
+  };
+
+  const exportAllExcel = () => {
+    const sheets = collectExportSections();
+    if (!sheets.length) {
+      toast.error('No report data to export');
+      return;
+    }
+    try {
+      downloadExcelWorkbook(`all_reports_${exportPeriod}_${day}.xlsx`, sheets);
+      toast.success(`Excel downloaded (${sheets.length} reports)`);
+    } catch {
+      toast.error('Failed to export all reports');
+    }
+  };
+
+  const exportAllPdf = () => {
+    const sections = collectExportSections();
+    if (!sections.length) {
+      toast.error('No report data to export');
+      return;
+    }
+    try {
+      downloadPdfBundle(
+        `all_reports_${exportPeriod}_${day}.pdf`,
+        isSupplierView
+          ? 'My Activity — All Reports'
+          : isPMView
+            ? 'My Project Reports — All'
+            : isAccountantView
+              ? 'Financial Reports — All'
+              : 'BuildFlow — All Reports',
+        `Period: ${exportPeriod} · ${sections.length} reports`,
+        sections
+      );
+      toast.success(`PDF downloaded (${sections.length} reports)`);
+    } catch {
+      toast.error('Failed to export all reports');
     }
   };
 
@@ -221,25 +637,68 @@ const Reports = () => {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="bf-page-title">
-            {isSupplierView ? 'My Activity Report' : 'Export Reports'}
+            {isSupplierView
+              ? 'My Activity Report'
+              : isPMView
+                ? 'My Project Reports'
+                : isAccountantView
+                  ? 'Financial Reports'
+                  : 'Export Reports'}
           </h1>
           <p className="bf-page-subtitle">
             {isSupplierView
               ? `Review bids, purchase orders, and payments${company ? ` for ${company}` : ''} (PDF / Excel).`
-              : 'Monthly procurement, supplier payments, delivery schedule, outstanding balances, and material usage (PDF / Excel).'}
+              : isPMView
+                ? 'Requests, budget, deliveries, site usage and receipt issues on your projects (PDF / Excel).'
+                : isAccountantView
+                  ? 'Payments, outstanding balances, tax and PO financials (PDF / Excel).'
+                  : 'Procurement, requests, budget, bidding, site stock, payments & more (PDF / Excel).'}
           </p>
         </div>
-        <div className="flex flex-nowrap items-center gap-2 shrink-0">
-          <label className="inline-flex items-center gap-2 rounded-xl border border-brand-border dark:border-brand-darkBorder bg-brand-card dark:bg-brand-darkCard px-3 py-2 text-sm shrink-0">
-            <FiCalendar className="text-slate-400" />
-            <input
-              type="month"
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              className="bg-transparent outline-none text-slate-700 dark:text-slate-200"
-            />
-          </label>
-          <div className="inline-flex items-center gap-2 shrink-0">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 shrink-0">
+          <select
+            value={dateMode}
+            onChange={(e) => setDateMode(e.target.value)}
+            className="rounded-xl border border-brand-border dark:border-brand-darkBorder bg-brand-card dark:bg-brand-darkCard px-3 py-2 text-sm"
+          >
+            <option value="month">By month</option>
+            <option value="range">Custom range</option>
+          </select>
+          {dateMode === 'month' ? (
+            <label className="inline-flex items-center gap-2 rounded-xl border border-brand-border dark:border-brand-darkBorder bg-brand-card dark:bg-brand-darkCard px-3 py-2 text-sm shrink-0">
+              <FiCalendar className="text-slate-400" />
+              <input
+                type="month"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                className="bg-transparent outline-none text-slate-700 dark:text-slate-200"
+              />
+            </label>
+          ) : (
+            <div className="inline-flex flex-wrap items-center gap-2">
+              <label className="inline-flex items-center gap-2 rounded-xl border border-brand-border dark:border-brand-darkBorder bg-brand-card dark:bg-brand-darkCard px-3 py-2 text-sm">
+                <span className="text-xs text-slate-400">From</span>
+                <input
+                  type="date"
+                  value={fromDate}
+                  max={toDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="bg-transparent outline-none text-slate-700 dark:text-slate-200"
+                />
+              </label>
+              <label className="inline-flex items-center gap-2 rounded-xl border border-brand-border dark:border-brand-darkBorder bg-brand-card dark:bg-brand-darkCard px-3 py-2 text-sm">
+                <span className="text-xs text-slate-400">To</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  min={fromDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="bg-transparent outline-none text-slate-700 dark:text-slate-200"
+                />
+              </label>
+            </div>
+          )}
+          <div className="inline-flex items-center gap-2 shrink-0 flex-wrap">
             <button
               type="button"
               onClick={exportExcel}
@@ -254,14 +713,36 @@ const Reports = () => {
             >
               <FiDownload /> PDF
             </button>
+            <button
+              type="button"
+              onClick={exportAllExcel}
+              title="Download every report in one Excel file (one sheet each)"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-800 dark:bg-slate-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-900 whitespace-nowrap"
+            >
+              <FiDownload /> All Excel
+            </button>
+            <button
+              type="button"
+              onClick={exportAllPdf}
+              title="Download every report in one PDF"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-400 dark:border-slate-500 text-slate-700 dark:text-slate-200 px-4 py-2.5 text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 whitespace-nowrap"
+            >
+              <FiDownload /> All PDF
+            </button>
           </div>
         </div>
       </div>
 
+      {periodLabel && (
+        <p className="text-xs font-semibold text-slate-500">
+          Period: <span className="text-brand-primary">{periodLabel}</span>
+        </p>
+      )}
+
+      <ReportCharts charts={charts} role={role} />
+
       <div
-        className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
-          isSupplierView ? 'xl:grid-cols-4' : 'xl:grid-cols-5'
-        }`}
+        className={`grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-3`}
       >
         {reportMeta.map((t) => {
           const Icon = t.icon;

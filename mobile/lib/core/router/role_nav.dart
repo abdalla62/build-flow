@@ -41,6 +41,7 @@ List<MenuItem> menuForRole(String role) {
       links.addAll(const [
         MenuItem(path: '/projects', label: 'Projects', icon: Icons.work_outline),
         MenuItem(path: '/material-requests', label: 'Review Requests', icon: Icons.check_box_outlined),
+        MenuItem(path: '/reports', label: 'Reports', icon: Icons.bar_chart_outlined),
       ]);
     case 'Procurement Officer':
       links.addAll(const [
@@ -62,6 +63,7 @@ List<MenuItem> menuForRole(String role) {
       links.addAll(const [
         MenuItem(path: '/purchase-orders', label: 'Purchase Orders', icon: Icons.description_outlined),
         MenuItem(path: '/payments', label: 'Record Payments', icon: Icons.payments_outlined),
+        MenuItem(path: '/reports', label: 'Reports', icon: Icons.bar_chart_outlined),
       ]);
     case 'Delivery Staff':
       links.add(const MenuItem(

@@ -907,12 +907,27 @@ class ApiRepository {
 
   Future<Map<String, dynamic>> getReports({
     String? month,
+    String? from,
+    String? to,
     bool supplierView = false,
+    bool pmView = false,
+    bool accountantView = false,
   }) async {
+    final path = supplierView
+        ? '/api/reports/supplier'
+        : pmView
+            ? '/api/reports/pm'
+            : accountantView
+                ? '/api/reports/accountant'
+                : '/api/reports';
     final data = await _get(
-      supplierView ? '/api/reports/supplier' : '/api/reports',
+      path,
       params: {
-        if (month != null && month.isNotEmpty) 'month': month,
+        if (from != null && from.isNotEmpty && to != null && to.isNotEmpty) ...{
+          'from': from,
+          'to': to,
+        } else if (month != null && month.isNotEmpty)
+          'month': month,
       },
     );
     _ensureSuccess(data);

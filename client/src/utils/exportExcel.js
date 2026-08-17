@@ -16,30 +16,17 @@ function styleCell(value, style) {
   return { v: value == null ? '' : value, t: typeof value === 'number' ? 'n' : 's', s: style };
 }
 
-/**
- * Styled Excel download matching PDF report look (teal header, title, zebra rows).
- * @param {string} filename
- * @param {string[]} headers
- * @param {(string|number)[][]} rows
- * @param {string} [sheetName='Report']
- * @param {{ title?: string, subtitle?: string }} [meta]
- */
-export function downloadExcel(filename, headers, rows, sheetName = 'Report', meta = {}) {
-  const title = meta.title || sheetName || 'Report';
+function createStyledWorksheet(headers, rows, meta = {}) {
+  const title = meta.title || 'Report';
   const subtitle = meta.subtitle || '';
   const colCount = Math.max(headers.length, 1);
-  const dataStartRow = 3; // 0-index: title, subtitle, blank, then header
+  const dataStartRow = 3;
 
   const aoa = [];
-  // Row 0: title
   aoa.push([title, ...Array(Math.max(0, colCount - 1)).fill('')]);
-  // Row 1: subtitle
   aoa.push([subtitle, ...Array(Math.max(0, colCount - 1)).fill('')]);
-  // Row 2: spacer
   aoa.push(Array(colCount).fill(''));
-  // Row 3: headers
   aoa.push(headers.map((h) => h ?? ''));
-  // Data
   for (const row of rows) {
     const padded = headers.map((_, i) => cellText(row?.[i]));
     aoa.push(padded);
@@ -47,7 +34,6 @@ export function downloadExcel(filename, headers, rows, sheetName = 'Report', met
 
   const worksheet = XLSX.utils.aoa_to_sheet(aoa);
 
-  // Merge title / subtitle across columns
   if (colCount > 1) {
     worksheet['!merges'] = [
       { s: { r: 0, c: 0 }, e: { r: 0, c: colCount - 1 } },
@@ -83,7 +69,6 @@ export function downloadExcel(filename, headers, rows, sheetName = 'Report', met
     fill: { patternType: 'solid', fgColor: { rgb: ZEBRA } }
   };
 
-  // Apply styles cell-by-cell
   for (let c = 0; c < colCount; c++) {
     const titleRef = XLSX.utils.encode_cell({ r: 0, c });
     const subRef = XLSX.utils.encode_cell({ r: 1, c });
@@ -105,7 +90,6 @@ export function downloadExcel(filename, headers, rows, sheetName = 'Report', met
         worksheet[ref] = styleCell('', style);
       } else {
         worksheet[ref].s = style;
-        // Prefer text for formatted date strings
         if (typeof worksheet[ref].v === 'string') worksheet[ref].t = 's';
       }
     }
@@ -122,14 +106,60 @@ export function downloadExcel(filename, headers, rows, sheetName = 'Report', met
   });
 
   worksheet['!rows'] = [
-    { hpt: 26 }, // title
-    { hpt: 18 }, // subtitle
-    { hpt: 8 }, // spacer
-    { hpt: 22 }, // header
+    { hpt: 26 },
+    { hpt: 18 },
+    { hpt: 8 },
+    { hpt: 22 },
     ...rows.map(() => ({ hpt: 18 }))
   ];
 
+  return worksheet;
+}
+
+/**
+ * Styled Excel download matching PDF report look (teal header, title, zebra rows).
+ * @param {string} filename
+ * @param {string[]} headers
+ * @param {(string|number)[][]} rows
+ * @param {string} [sheetName='Report']
+ * @param {{ title?: string, subtitle?: string }} [meta]
+ */
+export function downloadExcel(filename, headers, rows, sheetName = 'Report', meta = {}) {
+  const title = meta.title || sheetName || 'Report';
+  const worksheet = createStyledWorksheet(headers, rows, {
+    title,
+    subtitle: meta.subtitle || ''
+  });
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, String(sheetName).slice(0, 31));
+  XLSX.writeFile(workbook, filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`);
+}
+
+/**
+ * Multi-sheet Excel workbook — one tab per report.
+ * @param {string} filename
+ * @param {{ sheetName: string, headers: string[], rows: any[][], title?: string, subtitle?: string }[]} sheets
+ */
+export function downloadExcelWorkbook(filename, sheets) {
+  const workbook = XLSX.utils.book_new();
+  const usedNames = new Set();
+
+  for (const sheet of sheets) {
+    let name = String(sheet.sheetName || sheet.title || 'Report').slice(0, 31);
+    const base = name;
+    let n = 2;
+    while (usedNames.has(name)) {
+      name = `${base.slice(0, 28)}_${n}`.slice(0, 31);
+      n += 1;
+    }
+    usedNames.add(name);
+
+    const worksheet = createStyledWorksheet(sheet.headers, sheet.rows, {
+      title: sheet.title || name,
+      subtitle: sheet.subtitle || ''
+    });
+    XLSX.utils.book_append_sheet(workbook, worksheet, name);
+  }
+
   XLSX.writeFile(workbook, filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`);
 }

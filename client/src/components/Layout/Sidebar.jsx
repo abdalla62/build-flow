@@ -50,7 +50,8 @@ const Sidebar = ({ collapsed, mobileOpen = false, onNavigate }) => {
     } else if (role === 'Project Manager') {
       links.push(
         { path: '/projects', label: 'Projects', icon: FiBriefcase },
-        { path: '/material-requests', label: 'Review Requests', icon: FiCheckSquare }
+        { path: '/material-requests', label: 'Review Requests', icon: FiCheckSquare },
+        { path: '/reports', label: 'Reports', icon: FiFileText }
       );
     } else if (role === 'Procurement Officer') {
       links.push(
@@ -70,7 +71,8 @@ const Sidebar = ({ collapsed, mobileOpen = false, onNavigate }) => {
     } else if (role === 'Accountant') {
       links.push(
         { path: '/purchase-orders', label: 'Purchase Orders', icon: FiFileText },
-        { path: '/payments', label: 'Record Payments', icon: FiDollarSign }
+        { path: '/payments', label: 'Record Payments', icon: FiDollarSign },
+        { path: '/reports', label: 'Reports', icon: FiFileText }
       );
     } else if (role === 'Delivery Staff') {
       links.push(

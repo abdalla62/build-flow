@@ -127,6 +127,8 @@ let server;
 const startServer = async () => {
   await connectDB();
   await seedRoles();
+  const { startReportScheduler } = require('./utils/reportScheduler');
+  startReportScheduler();
   server = app.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
   });
