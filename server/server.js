@@ -119,10 +119,10 @@ if (serveSpa) {
   app.get(/^\/(?!api\/|uploads\/).*/, (req, res) => {
     res.sendFile(path.join(clientDist, 'index.html'));
   });
-} else if (process.env.NODE_ENV !== 'production') {
+} else {
   app.get('/', (req, res) => {
     res.json({
-      message: 'Welcome to the Construction Material Procurement Management API',
+      message: 'BuildFlow API is running',
       status: 'Running',
       version: '1.0.0'
     });
