@@ -432,7 +432,7 @@ class _RecordPaymentDialogState extends ConsumerState<_RecordPaymentDialog> {
 
     final amount = parsePayAmount(_amountCtrl.text);
     if (!(amount >= 0.01)) {
-      setState(() => _error = 'Minimum payment is \$0.01 (type 0.01 or 001)');
+      setState(() => _error = 'Minimum is \$0.01 (use 0.01)');
       return;
     }
     if (_poRemaining > 0 && amount > _poRemaining) {
@@ -451,7 +451,8 @@ class _RecordPaymentDialogState extends ConsumerState<_RecordPaymentDialog> {
         'paymentMethod': _method,
       };
       if (_method == 'Mobile Wallet') {
-        payload['accountNo'] = _accountCtrl.text.trim();
+        payload['accountNo'] =
+            _accountCtrl.text.trim().replaceFirst(RegExp(r'^\+'), '');
       } else {
         payload['referenceNumber'] = _refCtrl.text.trim();
       }
@@ -463,10 +464,9 @@ class _RecordPaymentDialogState extends ConsumerState<_RecordPaymentDialog> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          duration: const Duration(seconds: 5),
           content: Text(
-            _method == 'Mobile Wallet'
-                ? 'WaafiPay charge approved — payment recorded!'
-                : 'Payment recorded successfully!',
+            '\$${amount.toStringAsFixed(2)} Ayaad Ku\nbixisay adeega\nJAAMACADDA\nJAMHURIYA',
           ),
         ),
       );
@@ -480,285 +480,359 @@ class _RecordPaymentDialogState extends ConsumerState<_RecordPaymentDialog> {
     }
   }
 
+  String _digitsPhone(String? raw) =>
+      (raw ?? '').trim().replaceFirst(RegExp(r'^\+'), '');
+
+  Future<void> _pickReceipt() async {
+    if (_submitting) return;
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'docx'],
+    );
+    if (result == null || result.files.single.path == null) return;
+    setState(() {
+      _receiptPath = result.files.single.path;
+      _receiptName = result.files.single.name;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final preview = parsePayAmount(_amountCtrl.text);
     final showPreview = preview >= 0.01 && _poRemaining > 0;
     final isWallet = _method == 'Mobile Wallet';
 
-    return AlertDialog(
-      title: const Text('Record Payment Payout'),
-      content: SizedBox(
-        width: 440,
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440, maxHeight: 720),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 8, 16),
+          child: Form(
+            key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (_error != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.danger.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: AppColors.danger.withValues(alpha: 0.35),
-                      ),
-                    ),
-                    child: Text(
-                      _error!,
-                      style: const TextStyle(
-                        color: AppColors.danger,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
-                DropdownButtonFormField<String>(
-                  initialValue: _poId,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Select Purchase Order',
-                  ),
-                  hint: const Text('Select PO (Delivered + Invoice)'),
-                  items: widget.payableOrders
-                      .map(
-                        (o) => DropdownMenuItem(
-                          value: popId(o),
-                          child: Text(
-                            _poLabel(o),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Record Payment Payout',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
                         ),
-                      )
-                      .toList(),
-                  onChanged: _submitting ? null : _onPoChanged,
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Please select a PO' : null,
-                ),
-                if (widget.payableOrders.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 6),
-                    child: Text(
-                      'No payable POs yet. Need: invoice uploaded + status Delivered + not fully paid.',
-                      style: TextStyle(
-                        color: AppColors.accent,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ),
-                if (_poId != null) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                      color: AppColors.primary.withValues(alpha: 0.05),
+                    IconButton(
+                      onPressed: _submitting
+                          ? null
+                          : () => Navigator.pop(context, false),
+                      icon: const Icon(Icons.close),
                     ),
+                  ],
+                ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.only(right: 8, bottom: 8),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        if (_error != null) ...[
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.danger.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: AppColors.danger.withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Text(
+                              _error!,
+                              style: const TextStyle(
+                                color: AppColors.danger,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                        DropdownButtonFormField<String>(
+                          initialValue: _poId,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'SELECT PURCHASE ORDER',
+                          ),
+                          hint: const Text('Select PO (Delivered + Invoice)'),
+                          items: widget.payableOrders
+                              .map(
+                                (o) => DropdownMenuItem(
+                                  value: popId(o),
+                                  child: Text(
+                                    _poLabel(o),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: _submitting ? null : _onPoChanged,
+                          validator: (v) =>
+                              v == null || v.isEmpty ? 'Please select a PO' : null,
+                        ),
+                        if (widget.payableOrders.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 6),
+                            child: Text(
+                              'No payable POs yet. Need: invoice uploaded + status Delivered + not fully paid.',
+                              style: TextStyle(
+                                color: AppColors.accent,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        if (_poId != null) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.border),
+                              color: AppColors.primary.withValues(alpha: 0.05),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'PO LEDGER STATUS',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _LedgerStat(
+                                        'Total Price',
+                                        '\$${_poTotal.toStringAsFixed(2)}',
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: _LedgerStat(
+                                        'Paid Before',
+                                        '\$${_poPaidBefore.toStringAsFixed(2)}',
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: _LedgerStat(
+                                        'Outstanding',
+                                        '\$${_poRemaining.toStringAsFixed(2)}',
+                                        highlight: true,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          initialValue: _method,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'PAYMENT METHOD',
+                          ),
+                          items: _methods
+                              .map(
+                                (m) => DropdownMenuItem(
+                                  value: m.$1,
+                                  child: Text(m.$2, overflow: TextOverflow.ellipsis),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: _submitting
+                              ? null
+                              : (v) {
+                                  if (v == null) return;
+                                  setState(() => _method = v);
+                                },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _amountCtrl,
+                          enabled: !_submitting,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'PAYMENT AMOUNT (\$)',
+                            hintText: '0.01',
+                            helperText: 'Ugu Yaraan Geli \$0.01 (cent)',
+                            helperMaxLines: 2,
+                          ),
+                          onChanged: (_) => setState(() {}),
+                          validator: (v) {
+                            final n = parsePayAmount(v);
+                            if (!(n >= 0.01)) {
+                              return 'Minimum is \$0.01 (use 0.01)';
+                            }
+                            if (_poRemaining > 0 && n > _poRemaining) {
+                              return 'Cannot exceed \$${_poRemaining.toStringAsFixed(2)}';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        if (isWallet)
+                          TextFormField(
+                            controller: _accountCtrl,
+                            enabled: !_submitting,
+                            keyboardType: TextInputType.phone,
+                            decoration: const InputDecoration(
+                              labelText: 'PAYER MOBILE (EVC )',
+                              hintText: '+25261XXXXXXX',
+                              helperText:
+                                  'Fadlan Geli Telefoonka Lacagta Laga Dirayo (\$0.01)',
+                              helperMaxLines: 2,
+                              prefixIcon: Icon(Icons.phone_android, size: 20),
+                            ),
+                            validator: (v) {
+                              final s = _digitsPhone(v);
+                              if (s.isEmpty) {
+                                return 'Mobile account is required for WaafiPay';
+                              }
+                              if (!RegExp(r'^(252)?6\d{8}$|^0?6\d{8}$')
+                                  .hasMatch(s)) {
+                                return 'Use +25261XXXXXXX';
+                              }
+                              return null;
+                            },
+                          )
+                        else
+                          TextFormField(
+                            controller: _refCtrl,
+                            enabled: !_submitting,
+                            decoration: const InputDecoration(
+                              labelText: 'Transaction Reference Code',
+                              hintText: 'e.g. TXN-94920942',
+                            ),
+                            validator: (v) {
+                              if ((v ?? '').trim().isEmpty) {
+                                return 'Transaction reference is required';
+                              }
+                              return null;
+                            },
+                          ),
+                        const SizedBox(height: 12),
                         const Text(
-                          'PO LEDGER STATUS',
+                          'PAYMENT RECEIPT (OPTIONAL)',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.w800,
+                            letterSpacing: 0.4,
                             color: AppColors.textSecondary,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _LedgerStat(
-                                'Total Price',
-                                '\$${_poTotal.toStringAsFixed(2)}',
+                        InkWell(
+                          onTap: _submitting ? null : _pickReceipt,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 22,
+                            ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppColors.slate400.withValues(alpha: 0.55),
+                                style: BorderStyle.solid,
+                                width: 1.4,
                               ),
                             ),
-                            Expanded(
-                              child: _LedgerStat(
-                                'Paid Before',
-                                '\$${_poPaidBefore.toStringAsFixed(2)}',
-                              ),
+                            child: Column(
+                              children: [
+                                const Icon(
+                                  Icons.upload,
+                                  color: AppColors.primary,
+                                  size: 22,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _receiptName ??
+                                      'Click to choose receipt (optional)',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'PDF, JPG, PNG, or DOCX',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
                             ),
-                            Expanded(
-                              child: _LedgerStat(
-                                'Outstanding',
-                                '\$${_poRemaining.toStringAsFixed(2)}',
-                                highlight: true,
-                              ),
+                          ),
+                        ),
+                        if (showPreview) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            'Amount: \$${preview.toStringAsFixed(2)} · New Remaining: \$${(_poRemaining - preview).toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w600,
                             ),
-                          ],
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 46,
+                          child: ElevatedButton.icon(
+                            onPressed: _submitting ? null : _submit,
+                            icon: _submitting
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.attach_money, size: 18),
+                            label: Text(
+                              _submitting
+                                  ? (isWallet
+                                      ? 'Waiting for WaafiPay / PIN…'
+                                      : 'Saving…')
+                                  : (isWallet
+                                      ? 'Charge Mobile Wallet'
+                                      : 'Post Payment Record'),
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                ],
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _method,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Payment Method',
-                  ),
-                  items: _methods
-                      .map(
-                        (m) => DropdownMenuItem(
-                          value: m.$1,
-                          child: Text(m.$2, overflow: TextOverflow.ellipsis),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: _submitting
-                      ? null
-                      : (v) {
-                          if (v == null) return;
-                          setState(() => _method = v);
-                        },
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _amountCtrl,
-                  enabled: !_submitting,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'Payment Amount (\$)',
-                    hintText: '0.01 or 001',
-                    helperText:
-                        'Ugu yaraan \$0.01 — qor 0.01 ama 001 (cent). Tusaale: 005 = \$0.05',
-                    helperMaxLines: 2,
-                  ),
-                  onChanged: (_) => setState(() {}),
-                  validator: (v) {
-                    final n = parsePayAmount(v);
-                    if (!(n >= 0.01)) {
-                      return 'Minimum is \$0.01 (use 0.01 or 001)';
-                    }
-                    if (_poRemaining > 0 && n > _poRemaining) {
-                      return 'Cannot exceed \$${_poRemaining.toStringAsFixed(2)}';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                if (isWallet)
-                  TextFormField(
-                    controller: _accountCtrl,
-                    enabled: !_submitting,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
-                      labelText: 'Payer Mobile (EVC / ZAAD)',
-                      hintText: '2526XXXXXXXX',
-                      helperText:
-                          'Telefoonka PIN ka aqbal. Test: 001 (= \$0.01) ama 0.01',
-                      helperMaxLines: 2,
-                      prefixIcon: Icon(Icons.phone_android, size: 20),
-                    ),
-                    validator: (v) {
-                      final s = (v ?? '').trim();
-                      if (s.isEmpty) {
-                        return 'Mobile account is required for WaafiPay';
-                      }
-                      if (!RegExp(r'^(252)?6\d{8}$|^0?6\d{8}$').hasMatch(s)) {
-                        return 'Use 2526XXXXXXXX';
-                      }
-                      return null;
-                    },
-                  )
-                else
-                  TextFormField(
-                    controller: _refCtrl,
-                    enabled: !_submitting,
-                    decoration: const InputDecoration(
-                      labelText: 'Transaction Reference Code',
-                      hintText: 'e.g. TXN-94920942',
-                    ),
-                    validator: (v) {
-                      if ((v ?? '').trim().isEmpty) {
-                        return 'Transaction reference is required';
-                      }
-                      return null;
-                    },
-                  ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _submitting
-                      ? null
-                      : () async {
-                          final result = await FilePicker.platform.pickFiles(
-                            type: FileType.custom,
-                            allowedExtensions: const [
-                              'pdf',
-                              'jpg',
-                              'jpeg',
-                              'png',
-                              'docx',
-                            ],
-                          );
-                          if (result == null ||
-                              result.files.single.path == null) {
-                            return;
-                          }
-                          setState(() {
-                            _receiptPath = result.files.single.path;
-                            _receiptName = result.files.single.name;
-                          });
-                        },
-                  icon: const Icon(Icons.upload_file, size: 18),
-                  label: Text(
-                    _receiptName == null
-                        ? 'Payment receipt (optional) PDF/JPG/PNG/DOCX'
-                        : 'Receipt: $_receiptName',
-                  ),
-                ),
-                if (showPreview) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    'Amount: \$${preview.toStringAsFixed(2)} · New Remaining: \$${(_poRemaining - preview).toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _submitting ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton.icon(
-          onPressed: _submitting ? null : _submit,
-          icon: _submitting
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(Icons.attach_money, size: 18),
-          label: Text(
-            _submitting
-                ? (isWallet ? 'Waiting for WaafiPay / PIN…' : 'Saving…')
-                : (isWallet ? 'Charge Mobile Wallet' : 'Post Payment Record'),
-          ),
-        ),
-      ],
     );
   }
 }

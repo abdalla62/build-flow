@@ -172,7 +172,7 @@ const Payments = () => {
     if (submitting) return;
     const amount = parsePayAmount(data.paidAmount);
     if (!(amount >= 0.01)) {
-      toast.error('Minimum payment is $0.01 (type 0.01 or 001)');
+      toast.error('Minimum payment is (type 0.01)');
       return;
     }
     if (amount > poRemaining) {
@@ -202,9 +202,10 @@ const Payments = () => {
       });
       if (res.data.success) {
         toast.success(
-          data.paymentMethod === 'Mobile Wallet'
-            ? 'WaafiPay charge approved — payment recorded!'
-            : 'Payment recorded successfully!'
+          <span className="whitespace-pre-line leading-snug">
+            {`$${amount.toFixed(2)} Ayaad Ku\nbixisay adeega\nJAAMACADDA\nJAMHURIYA`}
+          </span>,
+          { duration: 5000 }
         );
         setIsRecordOpen(false);
         setReceiptFileObj(null);
@@ -437,7 +438,7 @@ const Payments = () => {
               <input
                 type="text"
                 inputMode="decimal"
-                placeholder="0.01 or 001"
+                placeholder="0.01"
                 className={`w-full mt-1.5 px-4 py-2.5 border ${
                   errors.paidAmount ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
                 } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
@@ -445,7 +446,7 @@ const Payments = () => {
                   required: 'Required',
                   validate: (v) => {
                     const n = parsePayAmount(v);
-                    if (!(n >= 0.01)) return 'Minimum is $0.01 (use 0.01 or 001)';
+                    if (!(n >= 0.01)) return 'Minimum is $0.01 (use 0.01)';
                     if (poRemaining > 0 && n > poRemaining) {
                       return `Cannot exceed $${Number(poRemaining).toFixed(2)}`;
                     }
@@ -457,17 +458,17 @@ const Payments = () => {
                 <p className="mt-1 text-xs text-red-500 font-semibold">{errors.paidAmount.message}</p>
               )}
               <p className="mt-1 text-[11px] text-slate-400">
-                Ugu yaraan $0.01 — qor <strong>0.01</strong> ama <strong>001</strong> (cent). Tusaale: 005 = $0.05
+                Ugu Yaraan Geli $0.01 (cent) <strong></strong>  
               </p>
             </div>
           </div>
 
           {watchMethod === 'Mobile Wallet' ? (
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase">Payer Mobile (EVC / ZAAD)</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase">Payer Mobile (EVC )</label>
               <input
                 type="text"
-                placeholder="2526XXXXXXXX"
+                placeholder="+25261XXXXXXX"
                 className={`w-full mt-1.5 px-4 py-2 border ${
                   errors.accountNo ? 'border-red-500' : 'border-brand-border dark:border-brand-darkBorder'
                 } bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary`}
@@ -475,7 +476,7 @@ const Payments = () => {
                   required: 'Mobile account is required for WaafiPay',
                   pattern: {
                     value: /^(252)?6\d{8}$|^0?6\d{8}$/,
-                    message: 'Use 2526XXXXXXXX'
+                    message: 'Use +25261XXXXXXX'
                   }
                 })}
               />
@@ -483,7 +484,7 @@ const Payments = () => {
                 <p className="mt-1 text-xs text-red-500 font-semibold">{errors.accountNo.message}</p>
               )}
               <p className="mt-1 text-[11px] text-slate-400 flex items-center gap-1">
-                <FiSmartphone /> Telefoonka PIN ka aqbal. Test: 001 (= $0.01) ama 0.01
+                <FiSmartphone /> Fadlan Geli Telefoonka Lacagta Laga Dirayo ($0.01)
               </p>
             </div>
           ) : (
@@ -515,7 +516,7 @@ const Payments = () => {
                 {receiptFileObj ? receiptFileObj.name : 'Click to choose receipt (optional)'}
               </span>
               <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                PDF, JPG, PNG, or DOCX · bank slip / transfer proof
+                PDF, JPG, PNG, or DOCX
               </span>
               <input
                 type="file"

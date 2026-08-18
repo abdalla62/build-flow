@@ -431,6 +431,9 @@ const Users = () => {
               {errors.vehiclePlateCode && (
                 <p className="mt-1 text-xs text-red-500 font-semibold">{errors.vehiclePlateCode.message}</p>
               )}
+              <p className="mt-1 text-[11px] text-slate-400">
+                Each driver must have a unique plate. Two staff cannot share the same vehicle.
+              </p>
             </div>
           )}
 
@@ -479,6 +482,9 @@ const Users = () => {
                 placeholder="e.g. TRK-4820"
                 className="w-full mt-1.5 px-4 py-2 border border-brand-border dark:border-brand-darkBorder bg-slate-50 dark:bg-slate-950 rounded-xl text-sm outline-none focus:border-brand-primary"
               />
+              <p className="mt-1 text-[11px] text-slate-400">
+                Each driver must have a unique plate. Two staff cannot share the same vehicle.
+              </p>
             </div>
           )}
 

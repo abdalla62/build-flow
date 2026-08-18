@@ -781,6 +781,9 @@ class _EditUserRoleDialogState extends ConsumerState<_EditUserRoleDialog> {
                     decoration: const InputDecoration(
                       labelText: 'Vehicle Plate Code',
                       hintText: 'e.g. TRK-4820',
+                      helperText:
+                          'Each driver must have a unique plate. Two staff cannot share the same vehicle.',
+                      helperMaxLines: 2,
                     ),
                     validator: (v) {
                       if (!_isDelivery) return null;
@@ -1052,6 +1055,9 @@ class _CreateUserDialogState extends ConsumerState<_CreateUserDialog> {
                           decoration: const InputDecoration(
                             labelText: 'Vehicle Plate Code',
                             hintText: 'e.g. TRK-4820',
+                            helperText:
+                                'Each driver must have a unique plate. Two staff cannot share the same vehicle.',
+                            helperMaxLines: 2,
                           ),
                           validator: (v) {
                             if (!_isDelivery) return null;

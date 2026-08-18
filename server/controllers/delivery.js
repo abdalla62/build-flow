@@ -27,6 +27,40 @@ const toDateOnlyYMD = (value) => {
   return `${y}-${m}-${day}`;
 };
 
+const BUSY_DELIVERY_STATUSES = [
+  'Scheduled',
+  'Preparing',
+  'Dispatched',
+  'In Transit',
+  'Delayed',
+  'Rescheduled'
+];
+
+/** Same driver + same calendar day + same time slot cannot hold two open jobs. */
+async function findDriverTimeSlotConflict({ driverId, dateYmd, timeSlot, excludeId }) {
+  const slot = String(timeSlot || '').trim();
+  if (!driverId || !dateYmd || !slot) return null;
+
+  const query = {
+    driver: toObjectId(driverId),
+    timeSlot: slot,
+    status: { $in: BUSY_DELIVERY_STATUSES }
+  };
+  if (excludeId) query._id = { $ne: excludeId };
+
+  const openJobs = await Delivery.find(query)
+    .populate('purchaseOrder', 'purchaseOrderNumber')
+    .select('deliveryDate timeSlot purchaseOrder status')
+    .lean();
+
+  return openJobs.find((job) => toDateOnlyYMD(job.deliveryDate) === dateYmd) || null;
+}
+
+function driverBusySlotError(conflict, timeSlot) {
+  const po = conflict?.purchaseOrder?.purchaseOrderNumber || 'PO kale';
+  return `Darawalkan wuxuu hore u haystaa delivery isla maalintaas iyo isla saacadda (${timeSlot}). Mashruuca: ${po}. Dooro darawal kale ama time slot kale.`;
+}
+
 // @desc    Schedule delivery for accepted PO
 // @route   POST /api/deliveries
 // @access  Private/Procurement Officer
@@ -79,6 +113,22 @@ exports.scheduleDelivery = async (req, res, next) => {
     }
 
     const lockedDeliveryDate = submittedYmd;
+    const lockedSlot = String(timeSlot || '').trim();
+    if (!lockedSlot) {
+      return res.status(400).json({ success: false, error: 'Time slot is required' });
+    }
+
+    const slotConflict = await findDriverTimeSlotConflict({
+      driverId: driver,
+      dateYmd: lockedDeliveryDate,
+      timeSlot: lockedSlot
+    });
+    if (slotConflict) {
+      return res.status(400).json({
+        success: false,
+        error: driverBusySlotError(slotConflict, lockedSlot)
+      });
+    }
 
     const delivery = await Delivery.create({
       purchaseOrder,
@@ -90,7 +140,7 @@ exports.scheduleDelivery = async (req, res, next) => {
       deliveryAddress,
       deliveryDate: lockedDeliveryDate,
       originalDeliveryDate: lockedDeliveryDate,
-      timeSlot,
+      timeSlot: lockedSlot,
       status: 'Scheduled'
     });
 
@@ -334,10 +384,28 @@ exports.rescheduleDelivery = async (req, res, next) => {
 
     const originalDate = delivery.deliveryDate;
     const previousTimeSlot = delivery.timeSlot;
-    const newDate = new Date(newDeliveryDate);
+    const newDateYmd = toDateOnlyYMD(newDeliveryDate);
+    if (!newDateYmd) {
+      return res.status(400).json({ success: false, error: 'New delivery date is invalid' });
+    }
+    const newDate = new Date(`${newDateYmd}T00:00:00.000Z`);
     const newSlot = timeSlot && String(timeSlot).trim()
       ? String(timeSlot).trim()
       : delivery.timeSlot;
+
+    const driverId = delivery.driver?._id || delivery.driver;
+    const slotConflict = await findDriverTimeSlotConflict({
+      driverId,
+      dateYmd: newDateYmd,
+      timeSlot: newSlot,
+      excludeId: delivery._id
+    });
+    if (slotConflict) {
+      return res.status(400).json({
+        success: false,
+        error: driverBusySlotError(slotConflict, newSlot)
+      });
+    }
 
     if (!delivery.originalDeliveryDate) {
       delivery.originalDeliveryDate = originalDate;

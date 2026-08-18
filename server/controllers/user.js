@@ -2,6 +2,27 @@ const User = require('../models/User');
 const Role = require('../models/Role');
 const logActivity = require('../utils/audit');
 
+function normalizePlate(plate) {
+  return String(plate || '').trim().toUpperCase();
+}
+
+async function findPlateOwner(plate, excludeUserId) {
+  const normalized = normalizePlate(plate);
+  if (!normalized) return null;
+
+  const query = {
+    vehiclePlateCode: { $exists: true, $nin: ['', null] }
+  };
+  if (excludeUserId) query._id = { $ne: excludeUserId };
+
+  const owners = await User.find(query).select('name email vehiclePlateCode').lean();
+  return owners.find((u) => normalizePlate(u.vehiclePlateCode) === normalized) || null;
+}
+
+function plateTakenError(owner, plate) {
+  return `Vehicle Plate Code ${normalizePlate(plate)} waxaa hore u isticmaalaya ${owner.name}. Qof walba waa inuu lahaadaa plate gaar ah.`;
+}
+
 // @desc    Get all users (paginated + filters)
 // @route   GET /api/users
 // @access  Private/Admin
@@ -94,6 +115,13 @@ exports.updateUserRole = async (req, res, next) => {
           error: 'Vehicle Plate Code is required for Delivery Staff'
         });
       }
+      const plateOwner = await findPlateOwner(vehiclePlateCode, req.params.id);
+      if (plateOwner) {
+        return res.status(400).json({
+          success: false,
+          error: plateTakenError(plateOwner, vehiclePlateCode)
+        });
+      }
     }
 
     const user = await User.findById(req.params.id);
@@ -109,7 +137,7 @@ exports.updateUserRole = async (req, res, next) => {
     const oldRole = user.role;
     user.role = role;
     if (role === 'Delivery Staff') {
-      user.vehiclePlateCode = String(vehiclePlateCode).trim();
+      user.vehiclePlateCode = normalizePlate(vehiclePlateCode);
       user.vehicleType = '';
       user.vehicleModel = '';
     } else {
@@ -153,6 +181,13 @@ exports.createUser = async (req, res, next) => {
           error: 'Vehicle Plate Code is required for Delivery Staff'
         });
       }
+      const plateOwner = await findPlateOwner(vehiclePlateCode);
+      if (plateOwner) {
+        return res.status(400).json({
+          success: false,
+          error: plateTakenError(plateOwner, vehiclePlateCode)
+        });
+      }
     }
 
     const emailExists = await User.findOne({ email });
@@ -166,7 +201,7 @@ exports.createUser = async (req, res, next) => {
       password,
       role,
       status: status || 'Active',
-      vehiclePlateCode: role === 'Delivery Staff' ? String(vehiclePlateCode).trim() : '',
+      vehiclePlateCode: role === 'Delivery Staff' ? normalizePlate(vehiclePlateCode) : '',
       vehicleType: '',
       vehicleModel: ''
     });
